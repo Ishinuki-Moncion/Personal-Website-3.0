@@ -27,16 +27,38 @@
   renderer.setSize(w, h);
   mount.appendChild(renderer.domElement);
 
+  /* Fail-loud onBeforeCompile helper — a silent no-op replace() would ship an
+     unpatched material (e.g. after a three version bump), so warn instead. */
+  function patchShader(src, find, insert) {
+    if (!src.includes(find)) { console.warn('[scene] shader chunk missing:', find); return src; }
+    return src.replace(find, insert);
+  }
+
   // ---- particle fields ----
+  // Points are patched to render as ROUND, depth-faded sprites: PointsMaterial's
+  // default square pixels + FogExp2 brighten additively-blended points toward the
+  // fog colour, so fog is off and a manual smoothstep depth fade replaces it.
   function makeField(count, color, spread, size, op) {
     const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * spread;
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const mat = new THREE.PointsMaterial({
-      color, size, transparent: true, opacity: op,
+      color, size, transparent: true, opacity: op, fog: false,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
     });
+    mat.onBeforeCompile = s => {
+      s.vertexShader = 'varying float vDepth;\n' + patchShader(s.vertexShader,
+        '#include <project_vertex>',
+        '#include <project_vertex>\n  vDepth = -mvPosition.z;');
+      s.fragmentShader = 'varying float vDepth;\n' + patchShader(s.fragmentShader,
+        'vec4 diffuseColor = vec4( diffuse, opacity );',
+        `float pd = length(gl_PointCoord - 0.5);
+         if (pd > 0.5) discard;
+         vec4 diffuseColor = vec4(diffuse,
+           opacity * smoothstep(0.5, 0.18, pd) * smoothstep(64.0, 18.0, vDepth));`);
+    };
+    mat.customProgramCacheKey = () => 'field-round';
     return new THREE.Points(geo, mat);
   }
   const fieldCyan = makeField(LITE ? 1100 : 2600, CYAN, 46, 0.05, 0.9);
@@ -115,7 +137,40 @@
 
   const mouse = { x: 0, y: 0 };
   addEventListener('pointermove', e => { mouse.x = (e.clientX / innerWidth) * 2 - 1; mouse.y = (e.clientY / innerHeight) * 2 - 1; });
-  addEventListener('resize', () => { w = innerWidth; h = innerHeight; camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h); });
+
+  /* Debounced resize — raw handler reallocated the GL backbuffer dozens of
+     times/sec during window drags, and iOS fires resize on URL-bar collapse
+     mid-scroll, so small height-only deltas on touch are ignored entirely. */
+  let maxScroll = Math.max(1, document.body.scrollHeight - innerHeight);
+  let resizeTm;
+  addEventListener('resize', () => {
+    clearTimeout(resizeTm);
+    resizeTm = setTimeout(() => {
+      if (coarse && innerWidth === w && Math.abs(innerHeight - h) < 120) return;
+      w = innerWidth; h = innerHeight;
+      camera.aspect = w / h; camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      maxScroll = Math.max(1, document.body.scrollHeight - innerHeight);
+    }, 150);
+  });
+  // content height also changes without a window resize (boot unlock, images)
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => {
+      maxScroll = Math.max(1, document.body.scrollHeight - innerHeight);
+    }).observe(document.body);
+  }
+
+  /* Mobile Safari evicts WebGL contexts under memory pressure — without these
+     handlers the canvas freezes dead. */
+  renderer.domElement.addEventListener('webglcontextlost', e => {
+    e.preventDefault();
+    if (reduced) return;            // no loop exists in the static branch
+    running = false; cancelAnimationFrame(raf);
+  });
+  renderer.domElement.addEventListener('webglcontextrestored', () => {
+    if (reduced) { render(); return; }   // re-draw the single static frame
+    if (!document.hidden && !running) { running = true; raf = requestAnimationFrame(loop); }
+  });
 
   const render = () => renderer.render(scene, camera);
 
@@ -125,29 +180,40 @@
   let warp = 0;
   window.__sceneWarp = () => { warp = 1; };
 
-  let raf, running = true, t = 0;
-  function loop() {
+  /* Delta-time: the old `t += 0.005` per frame ran the whole scene at 2x on
+     120Hz displays (ProMotion phones, gaming monitors). Normalised to the same
+     speed as 60Hz: 0.005/frame @60fps = 0.3/s. Clamped so a stalled tab can't
+     jump time on resume. */
+  let raf, running = true, t = 0, last = performance.now();
+  function loop(now) {
     if (!running) return;
     raf = requestAnimationFrame(loop);
-    t += 0.005;
-    const maxScroll = Math.max(1, document.body.scrollHeight - innerHeight);
-    const scrollN = scrollY / maxScroll;
+    const dt = Math.min((now - last) / 1000, 0.033); last = now;
+    t += dt * 0.3;
+    const scrollN = Math.min(1, Math.max(0, scrollY / maxScroll));
+    const f = dt * 60;   // per-frame speeds scale to real elapsed time
 
-    fieldCyan.rotation.y -= 0.0004; fieldAmber.rotation.x += 0.0005; fieldDeep.rotation.y += 0.0002;
+    /* Autonomous drift — phones never fire pointermove, so without this the
+       LITE scene reads as parked. Slow beat-frequency wobble on every speed. */
+    const drift = 0.7 + 0.6 * Math.sin(t * 0.31) * Math.sin(t * 0.113 + 1.7);
+
+    fieldCyan.rotation.y -= 0.0004 * f * drift;
+    fieldAmber.rotation.x += 0.0005 * f * drift;
+    fieldDeep.rotation.y += 0.0002 * f;
     grid.position.z = ((t * 6 + scrollN * 70) % 4) - 2;
 
     // outer-core assembly motion
-    const breath = 1 + Math.sin(t * 1.5) * 0.03;
-    coreGroup.rotation.y += 0.0011;
+    const breath = 1 + Math.sin(t * 1.5) * (0.025 + 0.012 * Math.sin(t * 0.21));
+    coreGroup.rotation.y += 0.0011 * f * drift;
     coreGroup.scale.setScalar(breath);
     // ease the whole assembly toward the pointer for a subtle gyroscopic tilt
     coreGroup.rotation.x += ((-mouse.y * 0.32) - coreGroup.rotation.x) * 0.03;
     coreGroup.rotation.z += ((mouse.x * 0.22) - coreGroup.rotation.z) * 0.03;
-    ghost.rotation.y -= 0.0026; ghost.rotation.x += 0.0014;
-    ring.rotation.z += 0.006;
+    ghost.rotation.y -= 0.0026 * f * (2.0 - drift); ghost.rotation.x += 0.0014 * f;
+    ring.rotation.z += 0.006 * f * (0.5 + drift);
     nodeMat.size = 0.055 + (Math.sin(t * 3) * 0.5 + 0.5) * 0.03;
     nodeMat.opacity = 0.4 + (Math.sin(t * 3) * 0.5 + 0.5) * 0.3;
-    core.rotation.y -= 0.004; core.rotation.x += 0.003;
+    core.rotation.y -= 0.004 * f; core.rotation.x += 0.003 * f;
 
     // breathing distortion — twin travelling waves; applied IN PLACE to both the
     // node lattice (icoGeo) and the wire buffer using each vertex's rest position.
@@ -180,8 +246,18 @@
   }
   raf = requestAnimationFrame(loop);
 
+  /* Re-entry-guarded pause/resume — the old `running = !hidden; if (running)
+     requestAnimationFrame(loop)` could start a SECOND concurrent loop chain on
+     a rapid hidden->visible flip (one raf handle can't cancel two callbacks),
+     permanently doubling scene speed and GPU work. */
   document.addEventListener('visibilitychange', () => {
-    running = !document.hidden;
-    if (running) raf = requestAnimationFrame(loop); else cancelAnimationFrame(raf);
+    if (document.hidden) {
+      running = false;
+      cancelAnimationFrame(raf);
+    } else if (!running) {
+      running = true;
+      last = performance.now();   // don't lerp across the hidden gap
+      raf = requestAnimationFrame(loop);
+    }
   });
 })();
