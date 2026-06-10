@@ -72,7 +72,10 @@
   // coreGroup carries the mouse gyro tilt; `spin` (its child) carries the
   // y-rotation, so the globe can rotate without fighting the tilt easing.
   const coreGroup = new THREE.Group();
-  coreGroup.position.set(3, 0.4, -2);
+  // host page may reposition the globe (the lab centres it); the portfolio's
+  // hero layout is the default
+  const OFF = window.__SCENE_OFFSET || [3, 0.4, -2];
+  coreGroup.position.set(OFF[0], OFF[1], OFF[2]);
   scene.add(coreGroup);
   const spin = new THREE.Group();
   coreGroup.add(spin);
