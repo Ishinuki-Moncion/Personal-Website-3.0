@@ -89,6 +89,7 @@
   document.querySelectorAll('.nav-link[data-sec]').forEach(a => { navLinks[a.getAttribute('data-sec')] = a; });
 
   let ticking = false;
+  let lastActive = 'home', lastPing = 0;
   function frame() {
     const y = scrollY;
     const max = Math.max(1, document.body.scrollHeight - innerHeight);
@@ -114,6 +115,14 @@
     if (scrollY < 80) active = 'home';
     Object.entries(hudLinks).forEach(([k, a]) => a.classList.toggle('active', k === active));
     Object.entries(navLinks).forEach(([k, a]) => a.classList.toggle('active', k === active));
+
+    // entering a new section pings the scene (globe ripple + ring flash);
+    // cooldown keeps fast scrolling from strobing it
+    if (active !== lastActive) {
+      lastActive = active;
+      const now = performance.now();
+      if (window.__scenePing && now - lastPing > 600) { lastPing = now; window.__scenePing(); }
+    }
     ticking = false;
   }
   function onScroll() { if (ticking) return; ticking = true; requestAnimationFrame(frame); }
