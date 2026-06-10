@@ -149,8 +149,11 @@
     if (!strip) return;
     sources.forEach((src, i) => {
       const t = document.createElement('button');
-      t.className = 'lb-thumb'; t.style.backgroundImage = `url("${src}")`;
+      // 140px derivatives — the strip used to decode the multi-MB originals
+      t.className = 'lb-thumb';
+      t.style.backgroundImage = `url("${src.replace('images/', 'images/thumbs/')}")`;
       t.setAttribute('data-cursor', 'VIEW');
+      t.setAttribute('aria-label', 'Show photograph ' + (i + 1));
       t.addEventListener('click', () => show(i));
       strip.appendChild(t);
     });
@@ -158,12 +161,43 @@
   buildStrip();
   const thumbs = strip ? [...strip.children] : [];
 
+  /* Image strategy: inline styles ship 140px thumbs as instant placeholders;
+     the 640px tile swaps in when a shot nears the viewport; only the lightbox
+     ever touches the full-size originals. */
+  shots.forEach((s, i) => s.setAttribute('aria-label', 'View photograph ' + (i + 1) + ' full screen'));
+  const upgradeTile = s => {
+    const m = s.querySelector('.media'), src = s.getAttribute('data-src');
+    if (m && src) m.style.backgroundImage = `url("${src.replace('images/', 'images/tiles/')}")`;
+  };
+  // rAF + rect check, NOT IntersectionObserver — same reasoning as effects.js
+  // (IO misbehaves in scaled/preview iframes). Self-prunes to zero work.
+  const pendingTiles = [...shots];
+  function checkTiles() {
+    for (let i = pendingTiles.length - 1; i >= 0; i--) {
+      const r = pendingTiles[i].getBoundingClientRect();
+      if (r.top < innerHeight + 400 && r.bottom > -400) {
+        upgradeTile(pendingTiles[i]);
+        pendingTiles.splice(i, 1);
+      }
+    }
+  }
+  let tileTick = false;
+  function onTileScroll() {
+    if (tileTick || !pendingTiles.length) return;
+    tileTick = true;
+    requestAnimationFrame(() => { tileTick = false; checkTiles(); });
+  }
+  addEventListener('scroll', onTileScroll, { passive: true });
+  addEventListener('resize', onTileScroll, { passive: true });
+  checkTiles();
+
   function show(i) {
     lbIndex = (i + sources.length) % sources.length;
     if (lbImg) {
       lbImg.classList.add('swapping');
       setTimeout(() => {
         lbImg.src = sources[lbIndex];
+        lbImg.alt = 'Gallery photograph ' + (lbIndex + 1) + ' of ' + sources.length;
         lbImg.classList.remove('swapping');
       }, 180);
     }
@@ -174,8 +208,25 @@
     if (active && active.scrollIntoView) { /* avoid scrollIntoView per guidance */ }
     if (active && strip) strip.scrollLeft = active.offsetLeft - strip.clientWidth / 2 + active.clientWidth / 2;
   }
-  function openLb(i) { show(i); lb.classList.add('open'); document.body.style.overflow = 'hidden'; }
-  function closeLb() { lb.classList.remove('open'); document.body.style.overflow = ''; }
+  /* Focus management: remember the trigger, move focus into the dialog on
+     open, restore it on close — without this a keyboard user is left tabbing
+     the page underneath an open modal. */
+  let lbReturnFocus = null;
+  function openLb(i) {
+    if (!lb) return;
+    lbReturnFocus = document.activeElement;
+    show(i);
+    lb.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    const c = $('.lb-close'); if (c) c.focus();
+  }
+  function closeLb() {
+    if (!lb) return;
+    lb.classList.remove('open');
+    document.body.style.overflow = '';
+    if (lbReturnFocus && lbReturnFocus.focus) lbReturnFocus.focus();
+    lbReturnFocus = null;
+  }
 
   shots.forEach((s, i) => s.addEventListener('click', () => openLb(i)));
   $('.lb-close') && $('.lb-close').addEventListener('click', closeLb);
@@ -187,6 +238,14 @@
     if (e.key === 'Escape') closeLb();
     else if (e.key === 'ArrowLeft') show(lbIndex - 1);
     else if (e.key === 'ArrowRight') show(lbIndex + 1);
+    else if (e.key === 'Tab') {
+      // trap Tab inside the open lightbox
+      const f = [...lb.querySelectorAll('button')].filter(b => b.offsetParent !== null);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
   });
 
   // touch swipe inside the lightbox
@@ -201,12 +260,19 @@
   /* ---------------- MOBILE MENU ---------------- */
   const burger = $('.nav-burger');
   const mmenu = $('#mobileMenu');
+  let menuReturnFocus = null;
   function setMenu(open) {
     document.body.classList.toggle('menu-open', open);
     if (burger) burger.setAttribute('aria-expanded', open ? 'true' : 'false');
     if (mmenu) mmenu.setAttribute('aria-hidden', open ? 'false' : 'true');
     if (burger) burger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
     document.body.style.overflow = open ? 'hidden' : '';
+    if (open) {
+      menuReturnFocus = document.activeElement;
+      const c = $('.mm-close'); if (c) c.focus();
+    } else if (menuReturnFocus && menuReturnFocus.focus) {
+      menuReturnFocus.focus(); menuReturnFocus = null;
+    }
   }
   burger && burger.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open')));
   $('.mm-close') && $('.mm-close').addEventListener('click', () => setMenu(false));
@@ -216,10 +282,16 @@
   /* ---------------- CONTROL DECK ---------------- */
   const deck = $('.deck');
   const deckToggle = $('.deck-toggle');
-  deckToggle && deckToggle.addEventListener('click', () => deck.classList.toggle('open'));
+  deckToggle && deck && deckToggle.addEventListener('click', () => deck.classList.toggle('open'));
   document.addEventListener('click', e => {
-    if (deck && deck.classList.contains('open') && !deck.contains(e.target) && !deckToggle.contains(e.target))
+    if (deck && deckToggle && deck.classList.contains('open') && !deck.contains(e.target) && !deckToggle.contains(e.target))
       deck.classList.remove('open');
+  });
+  addEventListener('keydown', e => {
+    if (e.key === 'Escape' && deck && deck.classList.contains('open')) {
+      deck.classList.remove('open');
+      deckToggle && deckToggle.focus();
+    }
   });
 
   // hero variant segment
@@ -240,9 +312,11 @@
   const scanSwitch = $('.switch[data-switch="scan"]');
   let scanOn = true;
   try { scanOn = localStorage.getItem('daikie-scan') !== '0'; } catch (e) {}
+  const crt = document.querySelector('.crt');
   function applyScan() {
-    document.querySelector('.crt').style.display = scanOn ? '' : 'none';
+    if (crt) crt.style.display = scanOn ? '' : 'none';
     scanSwitch && scanSwitch.classList.toggle('on', scanOn);
+    scanSwitch && scanSwitch.setAttribute('aria-pressed', scanOn ? 'true' : 'false');
     try { localStorage.setItem('daikie-scan', scanOn ? '1' : '0'); } catch (e) {}
   }
   scanSwitch && scanSwitch.addEventListener('click', () => { scanOn = !scanOn; applyScan(); });

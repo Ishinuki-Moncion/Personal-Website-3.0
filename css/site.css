@@ -169,12 +169,12 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
 @keyframes bootWipe {
   to { clip-path: inset(0 0 100% 0); opacity: 1; }
 }
-.boot::before { /* scanline sweep during boot */
-  content: ''; position: absolute; left: 0; right: 0; height: 140px;
+.boot::before { /* scanline sweep during boot — transform, not `top` (no layout/frame) */
+  content: ''; position: absolute; left: 0; right: 0; top: -140px; height: 140px;
   background: linear-gradient(180deg, transparent, rgba(57,240,255,0.06), transparent);
   animation: bootScan 2.6s linear infinite; pointer-events: none;
 }
-@keyframes bootScan { from { top: -140px; } to { top: 100%; } }
+@keyframes bootScan { from { transform: translateY(0); } to { transform: translateY(calc(100vh + 280px)); } }
 .boot-grid {
   position: absolute; inset: 0; opacity: 0.5; pointer-events: none;
   background-image:
@@ -354,7 +354,7 @@ section { position: relative; }
 
 /* reveal primitives */
 [data-reveal] { opacity: 0; transform: translateY(28px); transition:
-  opacity .8s var(--ease-out), transform .8s var(--ease-out); will-change: opacity, transform; }
+  opacity .8s var(--ease-out), transform .8s var(--ease-out); }
 [data-reveal="left"] { transform: translateX(-36px); }
 [data-reveal="right"] { transform: translateX(36px); }
 [data-reveal="scale"] { transform: scale(0.94); }
@@ -389,7 +389,7 @@ section { position: relative; }
 .hero h1 { font-weight: 200; letter-spacing: -0.035em; line-height: 0.82;
   font-size: clamp(64px, 13vw, 230px); color: #f4feff; text-shadow: var(--bloom-cyan); }
 .hero h1 .amberline { color: #fff6ec; text-shadow: 0 0 30px rgba(255,158,44,0.4); }
-.hero h1 .ch { display: inline-block; will-change: transform, opacity; }
+.hero h1 .ch { display: inline-block; }
 /* occasional RGB-split glitch for drama (driven by JS, gated on reduced-motion) */
 .hero h1.glx { animation: heroGlx .4s linear; }
 @keyframes heroGlx {
@@ -417,9 +417,9 @@ section { position: relative; }
   font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.25em;
   font-size: 9px; color: var(--cyan); display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .scroll-cue .track { width: 1px; height: 40px; background: var(--line); position: relative; overflow: hidden; }
-.scroll-cue .track::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 14px;
+.scroll-cue .track::after { content: ''; position: absolute; left: 0; right: 0; top: -14px; height: 14px;
   background: var(--cyan); box-shadow: 0 0 8px var(--cyan); animation: cueDrop 2.2s var(--ease-io) infinite; }
-@keyframes cueDrop { 0% { top: -14px; } 60%, 100% { top: 100%; } }
+@keyframes cueDrop { 0% { transform: translateY(0); } 60%, 100% { transform: translateY(54px); } }
 .sys-online { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.25em; color: var(--amber);
   animation: flick 4s steps(1) infinite; }
 @keyframes flick { 0%,97%,100% { opacity: 0.9; } 98% { opacity: 0.2; } }
@@ -475,10 +475,11 @@ section { position: relative; }
 
 .row { display: block; border-top: 1px solid var(--line); padding-block: clamp(26px, 3.4vw, 46px);
   position: relative; transition: background .5s var(--ease-out); }
-.row::before { content: ''; position: absolute; left: 0; top: -1px; height: 1px; width: 0;
+.row::before { content: ''; position: absolute; left: 0; top: -1px; height: 1px; width: 100%;
   background: linear-gradient(90deg, var(--cyan), transparent); box-shadow: 0 0 10px var(--cyan);
-  transition: width .6s var(--ease-out); }
-.row:hover::before { width: 100%; }
+  transform: scaleX(0); transform-origin: left;
+  transition: transform .6s var(--ease-out); }
+.row:hover::before { transform: scaleX(1); }
 .row:hover { background: linear-gradient(90deg, rgba(57,240,255,0.04), transparent 70%); }
 .work-grid { display: grid; grid-template-columns: 7fr 5fr; gap: clamp(16px, 3vw, 44px); align-items: baseline; }
 .proj-grid { display: grid; grid-template-columns: auto 7fr 4fr; gap: clamp(12px, 2.5vw, 44px); align-items: baseline; }
@@ -578,7 +579,8 @@ section { position: relative; }
 .contact h2 em { font-style: normal; color: var(--cyan); }
 .pills { display: flex; flex-wrap: wrap; gap: 14px; margin-top: clamp(36px, 5vw, 64px); }
 .pill { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.04em; color: var(--cyan);
-  border: 1px solid var(--line); border-radius: 75px; padding: 11px 24px; transition: all .3s var(--ease-out);
+  border: 1px solid var(--line); border-radius: 75px; padding: 11px 24px;
+  transition: color .3s var(--ease-out), border-color .3s var(--ease-out), box-shadow .3s var(--ease-out);
   position: relative; overflow: hidden; cursor: none; }
 .pill span { position: relative; z-index: 1; }
 .pill::before { content: ''; position: absolute; inset: 0; background: var(--cyan);
@@ -628,3 +630,59 @@ section { position: relative; }
 
 /* utility: katakana ticker scramble color */
 .scramble-on { color: var(--cyan); text-shadow: 0 0 14px rgba(57,240,255,0.5); }
+
+/* ============================================================
+   v3.1 addendum — accessibility, touch & typographic hardening
+   ============================================================ */
+
+/* Visible keyboard focus everywhere. Mandatory companion to cursor:none —
+   without it a keyboard or low-vision user has no idea where they are. */
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.pill:focus-visible, .hud-btn:focus-visible, .boot-skip:focus-visible,
+.lb-close:focus-visible, .mm-close:focus-visible { box-shadow: 0 0 14px rgba(57, 240, 255, 0.4); }
+
+/* skip link — first tab stop, visible only when focused */
+.skip-link { position: fixed; top: 10px; left: 10px; z-index: 9999;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--cyan); background: var(--panel-solid); border: 1px solid var(--cyan);
+  padding: 10px 16px; transform: translateY(-200%); transition: transform .2s; }
+.skip-link:focus { transform: none; }
+
+/* screen-reader-only text */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* anchor jumps land clear of the fixed nav */
+section[id] { scroll-margin-top: clamp(64px, 10vh, 96px); }
+
+/* modals own their scroll chain — page no longer rubber-bands behind them */
+.lightbox, .mobile-menu { overscroll-behavior: contain; }
+.lb-strip { overscroll-behavior-x: contain; }
+
+/* numeric readouts hold width (clock, counters, positions, dates) */
+.clock, .stat .n, .lb-pos, .gallery-count, .proj-year, .row-date,
+.coord, .mm-coord { font-variant-numeric: tabular-nums; }
+
+/* headline rag + prose orphan control (no-ops where unsupported) */
+.hero h1, .heading-xl, .about-lead, .contact h2 { text-wrap: balance; }
+.about-bio p, .row-desc, .row-sub { text-wrap: pretty; }
+
+/* enlarged switch hit area without changing its 38x20 look */
+.switch::before { content: ''; position: absolute; inset: -12px; }
+
+/* comfortable touch targets on coarse pointers; desktop density untouched */
+@media (pointer: coarse) {
+  .lb-nav button, .lb-close, .mm-close, .hud-btn, .boot-skip, .seg button {
+    min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+    touch-action: manipulation; }
+  .nav-burger { width: 44px; height: 44px; }
+}
+
+/* fixed chrome respects notches / home indicator (with viewport-fit=cover) */
+.nav { padding-left: max(clamp(20px, 4vw, 40px), env(safe-area-inset-left));
+  padding-right: max(clamp(20px, 4vw, 40px), env(safe-area-inset-right));
+  padding-top: max(18px, env(safe-area-inset-top)); }
+.nav.scrolled { padding-top: max(14px, env(safe-area-inset-top)); }
+.deck-toggle { bottom: calc(22px + env(safe-area-inset-bottom)); left: calc(22px + env(safe-area-inset-left)); }
+.deck { bottom: calc(74px + env(safe-area-inset-bottom)); left: calc(22px + env(safe-area-inset-left)); }
+.mobile-menu { padding-bottom: max(clamp(20px, 6vw, 40px), env(safe-area-inset-bottom)); }

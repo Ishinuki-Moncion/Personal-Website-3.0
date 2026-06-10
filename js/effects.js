@@ -129,16 +129,21 @@
   addEventListener('scroll', onScroll, { passive: true });
   addEventListener('resize', onScroll, { passive: true });
 
-  /* ---- live Tokyo clock ---- */
+  /* ---- live Tokyo clock ----
+     Intl.DateTimeFormat instead of the old new Date(toLocaleString()) round
+     trip, which is implementation-defined off V8 (can yield Invalid Date).
+     Skips work while the tab is hidden — the readout is invisible anyway. */
   const clockEls = [...document.querySelectorAll('[data-clock]')];
+  const clockFmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+  });
   function tickClock() {
-    if (!clockEls.length) return;
-    const tokyo = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
-    const p = n => String(n).padStart(2, '0');
-    const txt = `JST ${p(tokyo.getHours())}:${p(tokyo.getMinutes())}:${p(tokyo.getSeconds())}`;
+    if (!clockEls.length || document.hidden) return;
+    const txt = `JST ${clockFmt.format(new Date())}`;
     clockEls.forEach(el => { el.textContent = txt; });
   }
   setInterval(tickClock, 1000); tickClock();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) tickClock(); });
 
   /* ---- init ---- */
   let inited = false;

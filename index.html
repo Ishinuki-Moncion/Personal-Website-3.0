@@ -2,21 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Ishinuki Daikie — Developer &amp; Photographer</title>
 <meta name="description" content="Ishinuki Daikie — software developer and photographer based in Tokyo, Japan." />
+<meta name="theme-color" content="#05060a" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@200;300;400;500;600&family=JetBrains+Mono:wght@400;500;600&family=M+PLUS+Rounded+1c:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/site.css" />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@200;400&family=JetBrains+Mono:wght@400;500&family=M+PLUS+Rounded+1c:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/site.css?v=3.1" />
 </head>
 <body data-booting>
+<a class="skip-link" href="#main">Skip to content</a>
 
 <!-- ============ BOOT ============ -->
 <div class="boot" id="boot">
   <div class="boot-grid"></div>
   <div class="boot-inner">
-    <div class="boot-title">daikieOS</div>
+    <div class="boot-title" translate="no">daikieOS</div>
     <div class="boot-lines"></div>
     <div class="boot-bar-wrap"><div class="boot-bar"></div></div>
     <div class="boot-pct">000%</div>
@@ -39,8 +41,8 @@
 <!-- ============ NAV ============ -->
 <nav class="nav">
   <a class="brand" href="#home" data-cursor="home">
-    <span class="dia">◆</span>
-    <span class="name">ISHINUKI_DAIKIE</span>
+    <span class="dia" aria-hidden="true">◆</span>
+    <span class="name" translate="no">ISHINUKI_DAIKIE</span>
   </a>
   <div class="nav-right">
     <div class="nav-links">
@@ -50,7 +52,7 @@
       <a class="nav-link always" href="#contact" data-sec="contact" data-en="Contact" data-ja="連絡">Contact</a>
     </div>
     <div class="nav-meta">
-      <span class="clock" data-clock>JST --:--:--</span>
+      <span class="clock" data-clock aria-hidden="true">JST --:--:--</span>
       <span>TOKYO // 東京</span>
     </div>
     <button class="hud-btn lang-btn" aria-label="Toggle language" data-cursor="toggle"><span class="swap">EN / 日本</span></button>
@@ -62,7 +64,7 @@
 <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
   <div class="mm-grid"></div>
   <div class="mm-head">
-    <span class="mm-tag">daikieOS // NAV_INDEX</span>
+    <span class="mm-tag" translate="no">daikieOS // NAV_INDEX</span>
     <button class="mm-close" aria-label="Close menu" data-cursor="close">CLOSE ✕</button>
   </div>
   <nav class="mm-links">
@@ -74,8 +76,8 @@
     <a href="#contact" data-mm><span class="mm-idx">05</span><span class="mm-label">Contact</span><span class="mm-ja">連絡</span></a>
   </nav>
   <div class="mm-foot">
-    <span class="clock" data-clock>JST --:--:--</span>
-    <span class="mm-coord">35.6762° N, 139.6503° E — TOKYO // 東京</span>
+    <span class="clock" data-clock aria-hidden="true">JST --:--:--</span>
+    <span class="mm-coord" translate="no">35.6762° N, 139.6503° E — TOKYO // 東京</span>
   </div>
 </div>
 
@@ -89,7 +91,7 @@
   <a href="#contact" data-sec="contact"><span class="lbl">Contact</span><span class="tick"></span></a>
 </div>
 
-<main>
+<main id="main">
   <!-- ============ HERO ============ -->
   <section class="hero" id="home">
     <div class="hero-kicker">
@@ -97,15 +99,16 @@
       <span data-en="開発者 / 写真家 — Tokyo, Japan" data-ja="開発者 / 写真家 — 東京, 日本">開発者 / 写真家 — Tokyo, Japan</span>
     </div>
     <h1>
-      <span class="line" data-line="Ishinuki">Ishinuki</span><br />
-      <span class="line amberline" data-line="Daikie">Daikie</span>
+      <span class="sr-only">Ishinuki Daikie — developer and photographer in Tokyo</span>
+      <span class="line" data-line="Ishinuki" aria-hidden="true">Ishinuki</span><br />
+      <span class="line amberline" data-line="Daikie" aria-hidden="true">Daikie</span>
     </h1>
     <p class="hero-sub">
       <span class="hero-sub-text" data-text="Developer & photographer turning ideas into things people actually use — across the stack and through the lens."></span><span class="typ-caret"></span>
     </p>
     <div class="hero-foot">
       <div class="scroll-cue"><span class="track"></span><span data-en="Scroll to explore" data-ja="スクロール">Scroll to explore</span></div>
-      <div class="sys-online">● SYS//ONLINE</div>
+      <div class="sys-online" translate="no">● SYS//ONLINE</div>
     </div>
   </section>
 
@@ -113,13 +116,14 @@
   <section class="about" id="about">
     <div class="shell">
       <div class="sec-label"><span class="idx">[ 01 ]</span><span class="txt" data-en="About" data-ja="概要">About</span><span class="rule"></span></div>
+      <h2 class="sr-only">About</h2>
       <p class="about-lead" data-reveal data-en="A Tokyo-based developer &amp; photographer." data-ja="東京を拠点とする開発者・写真家。">A Tokyo-based developer &amp; photographer.</p>
       <div class="about-grid">
         <div class="about-bio">
-          <p data-reveal data-reveal-delay="0.05s">I'm Ishinuki Daikie, a developer who likes turning ideas into things people actually use. I studied Computer Science at The University of Texas at Dallas and work across the stack — React, Next.js, and Node/Express on PostgreSQL and REST APIs. Today I'm a Technical Producer at SeenThis Japan, building and converting advertising materials into open-web digital ad banners — I've shepherded 100+ campaigns from creation to execution.</p>
-          <p data-reveal data-reveal-delay="0.12s">I'm based in Tokyo by way of Dallas. After UTD I followed a deeper pull toward Japan and completed a Post-Graduate Program in Japan Studies at Soka University; I speak native English and conversational Japanese (JLPT N3). Photography is a real practice for me — it's where the engineer and the artist in me meet.</p>
+          <p data-reveal data-reveal-delay="0.05s">I’m Ishinuki Daikie, a developer who likes turning ideas into things people actually use. I studied Computer Science at The University of Texas at Dallas and work across the stack — React, Next.js, and Node/Express on PostgreSQL and REST APIs. Today I’m a Technical Producer at SeenThis Japan, building and converting advertising materials into open-web digital ad banners — I’ve shepherded 100+ campaigns from creation to execution.</p>
+          <p data-reveal data-reveal-delay="0.12s">I’m based in Tokyo by way of Dallas. After UTD I followed a deeper pull toward Japan and completed a Post-Graduate Program in Japan Studies at Soka University; I speak native English and conversational Japanese (JLPT N3). Photography is a real practice for me — it’s where the engineer and the artist in me meet.</p>
           <div class="stat-row">
-            <div class="stat" data-reveal data-reveal-delay="0.18s"><div class="n"><span data-count="100" data-suffix="+">0+</span></div><div class="l" data-en="Campaigns shipped" data-ja="キャンペーン">Campaigns shipped</div></div>
+            <div class="stat" data-reveal data-reveal-delay="0.18s"><div class="n"><span data-count="100" data-suffix="+" aria-hidden="true">0+</span><span class="sr-only">100+</span></div><div class="l" data-en="Campaigns shipped" data-ja="キャンペーン">Campaigns shipped</div></div>
             <div class="stat" data-reveal data-reveal-delay="0.24s"><div class="n">N3</div><div class="l" data-en="JLPT Japanese" data-ja="日本語能力">JLPT Japanese</div></div>
             <div class="stat" data-reveal data-reveal-delay="0.30s"><div class="n">東京</div><div class="l" data-en="Based in Tokyo" data-ja="東京在住">Based in Tokyo</div></div>
           </div>
@@ -129,7 +133,7 @@
           <div class="duo"></div>
           <div class="scanmask"></div>
           <span class="pcorner pc1"></span><span class="pcorner pc2"></span>
-          <span class="ptag">SUBJECT_01 // TOKYO</span>
+          <span class="ptag" translate="no">SUBJECT_01 // TOKYO</span>
         </div>
       </div>
     </div>
@@ -196,18 +200,18 @@
     </div>
     <div class="shell">
       <div class="gallery-grid" data-stagger>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-07.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/gallery-07.jpg')"></div><div class="sweep"></div><span class="id">IMG_01</span><span class="plus">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-03.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/gallery-03.jpg')"></div><div class="sweep"></div><span class="id">IMG_02</span><span class="plus">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-08.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/gallery-08.jpg')"></div><div class="sweep"></div><span class="id">IMG_03</span><span class="plus">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-16.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/gallery-16.jpg')"></div><div class="sweep"></div><span class="id">IMG_04</span><span class="plus">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-04.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/gallery-04.jpg')"></div><div class="sweep"></div><span class="id">IMG_05</span><span class="plus">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-13.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/gallery-13.jpg')"></div><div class="sweep"></div><span class="id">IMG_06</span><span class="plus">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-01.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/gallery-01.jpg')"></div><div class="sweep"></div><span class="id">IMG_07</span><span class="plus">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-02.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/gallery-02.jpg')"></div><div class="sweep"></div><span class="id">IMG_08</span><span class="plus">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-05.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/gallery-05.jpg')"></div><div class="sweep"></div><span class="id">IMG_09</span><span class="plus">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-09.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/gallery-09.jpg')"></div><div class="sweep"></div><span class="id">IMG_10</span><span class="plus">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-10.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/gallery-10.jpg')"></div><div class="sweep"></div><span class="id">IMG_11</span><span class="plus">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-11.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/gallery-11.jpg')"></div><div class="sweep"></div><span class="id">IMG_12</span><span class="plus">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-07.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-07.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_01</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-03.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-03.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_02</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-08.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-08.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_03</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-16.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-16.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_04</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-04.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-04.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_05</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-13.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-13.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_06</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-01.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-01.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_07</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-02.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-02.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_08</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-05.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-05.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_09</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-09.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-09.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_10</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-10.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-10.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_11</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-11.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-11.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_12</span><span class="plus" aria-hidden="true">＋</span></button>
       </div>
     </div>
   </section>
@@ -225,7 +229,7 @@
               <div class="row-title">Degree Planning Audit Tool</div>
               <p class="row-sub">Automated redundant degree-audit reporting, cutting manual calculation time — parsing source PDFs into clean generated documents.</p>
             </div>
-            <div class="proj-end"><span class="proj-tech">JavaScript · Node.js · Express</span><span class="proj-year">2022 <span class="row-arrow">↗</span></span></div>
+            <div class="proj-end"><span class="proj-tech">JavaScript · Node.js · Express</span><span class="proj-year">2022 <span class="row-arrow" aria-hidden="true">↗</span></span></div>
           </div>
         </a>
         <a class="row" href="https://github.com/Ishinuki-Moncion" target="_blank" rel="noopener" data-reveal data-cursor="open ↗">
@@ -235,7 +239,7 @@
               <div class="row-title">TimeFlies</div>
               <p class="row-sub">Real-time data transfer from a PostgreSQL backend to the front-end, using MikroORM for the data layer at HackUTD VIII.</p>
             </div>
-            <div class="proj-end"><span class="proj-tech">TypeScript · PostgreSQL · MikroORM</span><span class="proj-year">2021 <span class="row-arrow">↗</span></span></div>
+            <div class="proj-end"><span class="proj-tech">TypeScript · PostgreSQL · MikroORM</span><span class="proj-year">2021 <span class="row-arrow" aria-hidden="true">↗</span></span></div>
           </div>
         </a>
         <a class="row" href="https://github.com/Ishinuki-Moncion" target="_blank" rel="noopener" data-reveal data-cursor="open ↗">
@@ -245,7 +249,7 @@
               <div class="row-title">Debug</div>
               <p class="row-sub">A full-stack app for real-time collaborative code sharing — syntax highlighting and live sync backed by Firebase.</p>
             </div>
-            <div class="proj-end"><span class="proj-tech">React · Node.js · Firebase</span><span class="proj-year">2020 <span class="row-arrow">↗</span></span></div>
+            <div class="proj-end"><span class="proj-tech">React · Node.js · Firebase</span><span class="proj-year">2020 <span class="row-arrow" aria-hidden="true">↗</span></span></div>
           </div>
         </a>
       </div>
@@ -257,7 +261,7 @@
   <section class="contact" id="contact">
     <div class="shell">
       <div class="sec-label"><span class="idx">[ 05 ]</span><span class="txt" data-en="Contact" data-ja="連絡">Contact</span><span class="rule"></span></div>
-      <h2 data-reveal data-en="Let's make something." data-ja="一緒に作りましょう。">Let's make <em>something.</em></h2>
+      <h2 data-reveal data-en="Let’s make something." data-ja="一緒に作りましょう。">Let’s make <em>something.</em></h2>
       <div class="pills" data-reveal data-reveal-delay="0.1s">
         <a class="pill" href="https://github.com/Ishinuki-Moncion" target="_blank" rel="noopener" data-magnetic data-cursor="open ↗"><span>GitHub ↗</span></a>
         <a class="pill" href="https://www.linkedin.com/in/daikie-moncion-6a637b71/" target="_blank" rel="noopener" data-magnetic data-cursor="open ↗"><span>LinkedIn ↗</span></a>
@@ -265,15 +269,15 @@
       </div>
       <div class="footer">
         <span>© <span id="year"></span> Ishinuki Daikie — daikieOS</span>
-        <span class="coord">35.6762° N, 139.6503° E — 東京</span>
+        <span class="coord" translate="no">35.6762° N, 139.6503° E — 東京</span>
       </div>
     </div>
   </section>
 </main>
 
 <!-- ============ LIGHTBOX ============ -->
-<div class="lightbox" role="dialog" aria-label="Image viewer">
-  <div class="lb-meta"><span class="lb-id">IMG_01</span><br />ƒ/2.8 · 1/250s<br />SELECTED ARCHIVE</div>
+<div class="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+  <div class="lb-meta" translate="no"><span class="lb-id">IMG_01</span><br />ƒ/2.8 · 1/250s<br />SELECTED ARCHIVE</div>
   <button class="lb-close" data-cursor="close">CLOSE ✕</button>
   <div class="lb-stage">
     <span class="lb-corner" style="top:0;left:0;border-right:0;border-bottom:0"></span>
@@ -294,7 +298,7 @@
 <button class="deck-toggle" aria-label="Open control deck" data-cursor="tweak">
   <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round"><g class="gear"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></g></svg>
 </button>
-<div class="deck" role="dialog" aria-label="Control deck">
+<div class="deck" role="dialog" aria-modal="true" aria-label="Control deck">
   <h4>Control Deck</h4>
   <div class="grp">
     <label>Hero entrance</label>
@@ -324,12 +328,12 @@
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#05060a"/><text x="50" y="60" font-family="monospace" font-size="38" fill="#39f0ff" text-anchor="middle">◆</text></svg>
 </template>
 
-<script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+<script src="js/vendor/three.min.js?v=158"></script>
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-<script src="js/background.js"></script>
-<script src="js/boot.js"></script>
-<script src="js/cursor.js"></script>
-<script src="js/effects.js"></script>
-<script src="js/app.js"></script>
+<script src="js/background.js?v=3.1"></script>
+<script src="js/boot.js?v=3.1"></script>
+<script src="js/cursor.js?v=3.1"></script>
+<script src="js/effects.js?v=3.1"></script>
+<script src="js/app.js?v=3.1"></script>
 </body>
 </html>
