@@ -6,7 +6,7 @@
 
 **Architecture:** Keep the static no-build architecture and improve `js/background.js` in place. Add helper boundaries inside the existing IIFE, then connect section changes from `js/effects.js` through a tiny optional scene API.
 
-**Tech Stack:** Static HTML, CSS, vanilla JavaScript, Three.js r158 UMD build, browser canvas textures, `agent-browser` for visual verification.
+**Tech Stack:** Static HTML, CSS, vanilla JavaScript, generated global Three.js r158 vendor build, browser canvas textures, `agent-browser` for visual verification.
 
 ## Global Constraints
 

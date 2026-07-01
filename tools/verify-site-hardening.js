@@ -7,7 +7,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const index = read('index.html');
 const app = read('js/app.js');
 const background = read('js/background.js');
-const three = read('js/vendor/three.min.js');
+const three = read('js/vendor/three.global.min.js');
 
 const checks = [];
 
@@ -23,9 +23,11 @@ check(
 );
 
 check(
-  'vendored Three.js does not emit the build deprecation warning',
-  !three.includes('Scripts "build/three.js" and "build/three.min.js" are deprecated'),
-  'remove the local vendor warning line or replace the vendor build'
+  'vendored Three.js is a generated global build without the deprecated browser entry',
+  /Generated from three@0\.158\.0\/build\/three\.module\.min\.js/.test(three) &&
+    /globalThis\.THREE=/.test(three) &&
+    !three.includes('Scripts "build/three.js" and "build/three.min.js" are deprecated'),
+  'use the generated global build instead of the deprecated browser entry'
 );
 
 check(

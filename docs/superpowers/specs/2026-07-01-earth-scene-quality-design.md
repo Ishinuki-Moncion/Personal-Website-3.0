@@ -8,7 +8,7 @@ This is planning only. Runtime code changes happen later after this document and
 
 ## Current Context
 
-The site is a static portfolio that can be opened directly from `file://` and also served by a simple static server. The Three.js scene lives in `js/background.js` as a single IIFE loaded after `js/vendor/three.min.js` from `index.html`.
+The site is a static portfolio that can be opened directly from `file://` and also served by a simple static server. The Three.js scene lives in `js/background.js` as a single IIFE loaded after the local generated global Three vendor file from `index.html`.
 
 The current earth uses:
 
