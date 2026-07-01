@@ -79,6 +79,16 @@ body[data-booting] { overflow: hidden; }
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   transition: opacity 1.2s var(--ease-out);
 }
+.scene-debug {
+  position: fixed; right: 18px; bottom: 18px; z-index: 220;
+  max-width: min(360px, calc(100vw - 36px)); padding: 10px 12px;
+  border: 1px solid var(--line-strong); background: rgba(5, 6, 10, 0.82);
+  color: var(--cyan); font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.08em; line-height: 1.55; text-transform: uppercase;
+  box-shadow: 0 0 24px rgba(57, 240, 255, 0.18);
+  pointer-events: none; opacity: 0; visibility: hidden;
+}
+.scene-debug.on { opacity: 0.9; visibility: visible; }
 
 /* CRT / grain / vignette overlay */
 .crt {
@@ -447,6 +457,20 @@ section { position: relative; }
 .about-bio { display: grid; gap: 28px; }
 .about-bio p { font-size: clamp(15px, 1.3vw, 18px); line-height: 1.7; color: var(--fg); }
 .about-bio p + p { color: var(--muted); }
+.geo-trail {
+  display: grid; gap: 8px; max-width: 780px; padding-block: 4px 2px;
+  border-top: 1px solid var(--line); border-bottom: 1px solid rgba(255, 158, 44, 0.18);
+}
+.geo-kicker {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em;
+  color: var(--amber); text-transform: uppercase;
+}
+.geo-line {
+  font-family: var(--font-mono); font-size: clamp(18px, 2vw, 28px);
+  letter-spacing: 0.12em; color: var(--cyan); text-transform: uppercase;
+  text-shadow: var(--bloom-cyan);
+}
+.geo-copy { color: var(--muted); font-size: clamp(14px, 1.1vw, 16px); line-height: 1.65; max-width: 68ch; }
 .about-portrait { position: relative; aspect-ratio: 3 / 4; }
 .about-portrait .media { width: 100%; height: 100%; background-size: cover; background-position: center;
   filter: grayscale(40%) contrast(1.05) brightness(0.92); }

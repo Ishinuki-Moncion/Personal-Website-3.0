@@ -122,6 +122,7 @@
       lastActive = active;
       const now = performance.now();
       if (window.__scenePing && now - lastPing > 600) { lastPing = now; window.__scenePing(); }
+      if (window.__sceneFocus) window.__sceneFocus(active);
     }
     ticking = false;
   }

@@ -217,12 +217,14 @@
     lbReturnFocus = document.activeElement;
     show(i);
     lb.classList.add('open');
+    lb.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     const c = $('.lb-close'); if (c) c.focus();
   }
   function closeLb() {
     if (!lb) return;
     lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
     if (lbReturnFocus && lbReturnFocus.focus) lbReturnFocus.focus();
     lbReturnFocus = null;
@@ -282,14 +284,21 @@
   /* ---------------- CONTROL DECK ---------------- */
   const deck = $('.deck');
   const deckToggle = $('.deck-toggle');
-  deckToggle && deck && deckToggle.addEventListener('click', () => deck.classList.toggle('open'));
+  function setDeck(open) {
+    if (!deck || !deckToggle) return;
+    deck.classList.toggle('open', open);
+    deck.setAttribute('aria-hidden', open ? 'false' : 'true');
+    deckToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    deckToggle.setAttribute('aria-label', open ? 'Close control deck' : 'Open control deck');
+  }
+  deckToggle && deck && deckToggle.addEventListener('click', () => setDeck(!deck.classList.contains('open')));
   document.addEventListener('click', e => {
     if (deck && deckToggle && deck.classList.contains('open') && !deck.contains(e.target) && !deckToggle.contains(e.target))
-      deck.classList.remove('open');
+      setDeck(false);
   });
   addEventListener('keydown', e => {
     if (e.key === 'Escape' && deck && deck.classList.contains('open')) {
-      deck.classList.remove('open');
+      setDeck(false);
       deckToggle && deckToggle.focus();
     }
   });

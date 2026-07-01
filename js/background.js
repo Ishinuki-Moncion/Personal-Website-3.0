@@ -13,11 +13,37 @@
   const coarse = window.matchMedia('(hover: none), (pointer: coarse)').matches;
   const small = window.matchMedia('(max-width: 760px)').matches;
   const LITE = coarse || small;            // phones / tablets: lighter scene
-  const dpr = Math.min(window.devicePixelRatio || 1, LITE ? 1.5 : 2);
+  const sceneDebug = new URLSearchParams(location.search).get('sceneDebug') === '1';
+  const debugEl = sceneDebug ? document.querySelector('.scene-debug') : null;
+  function getQualityProfile() {
+    if (reduced) return {
+      name: 'reduced',
+      dpr: 1,
+      globeParticles: 2600,
+      fieldCounts: [360, 180, 120],
+      streaks: 12,
+    };
+    if (LITE) return {
+      name: 'lite',
+      dpr: Math.min(window.devicePixelRatio || 1, 1.5),
+      globeParticles: 2600,
+      fieldCounts: [1100, 520, 360],
+      streaks: 22,
+    };
+    return {
+      name: 'high',
+      dpr: Math.min(window.devicePixelRatio || 1, 2),
+      globeParticles: 7000,
+      fieldCounts: [2600, 1200, 900],
+      streaks: 40,
+    };
+  }
+  const quality = getQualityProfile();
+  const dpr = quality.dpr;
   let w = innerWidth, h = innerHeight;
   // globe detail scales with device class
   const R = 3.2;                       // globe radius
-  const GLOBE_N = LITE ? 2600 : 7000;  // land particle count
+  const GLOBE_N = quality.globeParticles;  // land particle count
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x05060a, 0.05);
@@ -28,6 +54,7 @@
   renderer.setPixelRatio(dpr);
   renderer.setSize(w, h);
   mount.appendChild(renderer.domElement);
+  if (debugEl) debugEl.classList.add('on');
 
   /* Fail-loud onBeforeCompile helper — a silent no-op replace() would ship an
      unpatched material (e.g. after a three version bump), so warn instead. */
@@ -36,15 +63,50 @@
     return src.replace(find, insert);
   }
 
+  function setFiniteAttribute(geometry, attrName, values, itemSize) {
+    for (let i = 0; i < values.length; i++) {
+      if (!Number.isFinite(values[i])) {
+        console.error('[scene] non-finite geometry value', {
+          geometry: geometry.name || '(unnamed)',
+          attribute: attrName,
+          index: i,
+          value: values[i],
+        });
+        return null;
+      }
+    }
+    const attr = new THREE.BufferAttribute(values, itemSize);
+    geometry.setAttribute(attrName, attr);
+    return attr;
+  }
+
+  function makeGeometry(name, values, itemSize) {
+    const geometry = new THREE.BufferGeometry();
+    geometry.name = name;
+    if (!setFiniteAttribute(geometry, 'position', values, itemSize)) return null;
+    return geometry;
+  }
+
+  function nameObject(object, name) {
+    object.name = name;
+    if (object.geometry && !object.geometry.name) object.geometry.name = name + ':geometry';
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    materials.forEach((material, i) => {
+      if (material && !material.name) material.name = name + (i ? ':material-' + i : ':material');
+    });
+    return object;
+  }
+
   // ---- particle fields ----
   // Points are patched to render as ROUND, depth-faded sprites: PointsMaterial's
   // default square pixels + FogExp2 brighten additively-blended points toward the
   // fog colour, so fog is off and a manual smoothstep depth fade replaces it.
   function makeField(count, color, spread, size, op) {
     const geo = new THREE.BufferGeometry();
+    geo.name = 'field-' + color.toString(16);
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * spread;
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    if (!setFiniteAttribute(geo, 'position', pos, 3)) return new THREE.Group();
     const mat = new THREE.PointsMaterial({
       color, size, transparent: true, opacity: op, fog: false,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
@@ -61,11 +123,11 @@
            opacity * smoothstep(0.5, 0.18, pd) * smoothstep(64.0, 18.0, vDepth));`);
     };
     mat.customProgramCacheKey = () => 'field-round';
-    return new THREE.Points(geo, mat);
+    return nameObject(new THREE.Points(geo, mat), geo.name);
   }
-  const fieldCyan = makeField(LITE ? 1100 : 2600, CYAN, 46, 0.05, 0.9);
-  const fieldAmber = makeField(LITE ? 520 : 1200, AMBER, 36, 0.06, 0.8);
-  const fieldDeep = makeField(LITE ? 360 : 900, 0x6fb7ff, 70, 0.035, 0.5);
+  const fieldCyan = makeField(quality.fieldCounts[0], CYAN, 46, 0.05, 0.9);
+  const fieldAmber = makeField(quality.fieldCounts[1], AMBER, 36, 0.06, 0.8);
+  const fieldDeep = makeField(quality.fieldCounts[2], 0x6fb7ff, 70, 0.035, 0.5);
   scene.add(fieldCyan, fieldAmber, fieldDeep);
 
   // ---- TOKYO DATA-GLOBE ----------------------------------------------------
@@ -74,7 +136,8 @@
   const coreGroup = new THREE.Group();
   // host page may reposition the globe (the lab centres it); the portfolio's
   // hero layout is the default
-  const OFF = window.__SCENE_OFFSET || [3, 0.4, -2];
+  const DEFAULT_OFFSET = LITE ? [5.8, 0.35, -4.5] : [3, 0.4, -2];
+  const OFF = window.__SCENE_OFFSET || DEFAULT_OFFSET;
   coreGroup.position.set(OFF[0], OFF[1], OFF[2]);
   scene.add(coreGroup);
   const spin = new THREE.Group();
@@ -87,10 +150,21 @@
   const MW = 384, MH = 192;
   const LAND = atob('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH//4AAA////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB////8P75//3hAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAc////H////////8AAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAB////4////////8AAAAAAf+AAAMAAAAAAAH8AAAAAAAAAAAAAAAAAAAAAAAAAAAYAP9/4A////////8AAAAA/8AAAAAAAAAAAAD+wAAAAAAAAAAAAAAAAAAAAAAAAAABnDn/4/////////4AAAAAfzgAAAAAAAAAAAAB8AAAAAAAAAAAAAAAAAAAAAAADwAAAAP/AB////////8AAAAAHgAAAAAAAAAAAAAAeAAAAAAAAAAAAAAAAAAAAAAAPEMA4+HOAD////////wAAAAAAAAAAAAAAPgAAAAH//AAAAAAAAAAAAAAAAAAAAAAAf/g8n/8AAAD//////4AAAAAAAAAAAAAfgAAAA////wAAAP+AAAAAAAAAAAAAAAAABgAAA/oAAAB//////4AAAAAAAAAAAAB4AAAAP///8AAAAAAAAAAAAAAAAAAAAAA/wAw8+MTgAAA//////wAAAAAAAAAAAADgAAAP/////vhgAA4AAAAAAAAAAAAAAAB+/tx+w98AAAAP/////AAAAAAAAAAAAAPAAOAP///////+AB4AAAAAAAAAAAAAAAD9//wew//+AAAf/////AAAAAAAAAAAAAeAAeX////////+EB/8AAAAAAAAD7AAAAAA//4B8f//4AAJ////7gAAAAAAAPwAAAHgB+f//////////////wAAAAAA///+AHYAf//E8BOf/AAO////+AAAAAAAH/4AAAAAA/f//////////////wAOwAAD////////h8GBex4P+AAB////wAAAAAAA///8AAAB8fP////////////////P/4AD////////4B8G/z4M/wAH///wAAAAAAAD////hx////P//////////////////+AA//////////////4A/8AH///AAAAAAAAH////xn///+f///////////////////+O/////////////8AB+fAH//8ABnwAAAAf///jP////////////////////////DwP/////////////7Af/EAD/+AAA/4AAAA/+H/gf////////////////////////AAAP////////////z4A/wAD/+AAA/gAAAB/8f/z////////////////////////8ADA////////////+AAAe4AB/8AAAAAAAAH/x///////////////////////////+AAD////////////4AQZDgAAf4AAAAAAAA//h/////////////////////////f/wAAH////////////wAAfwAAAfwAAAAAAAB//B///////////////////////+Of+AAAD//8/////////gAAf8AAABwAAAAAAAA//g+//////////////////////8B/wAAAAf8wAf///////gAAf8MAAAAAAAAAAAA//wE/////////////////////54HAAAAAAC8AAH///////4AAf+eAAAAAAAAAAIA4/Af////////////////////gAAOAAAAAAAzAAAf//////4AAP//AAAAAAAAAA8AA/AP///////////////////+AAB/AAAAAADAAAAP///////gAP//AAAAAAAAAA4AGeD////////////////////8AAD/AAAAAAcAAAAH///////8AP//gAAAAAAAAA8AGoB////////////////////wAAD+AAAAABAAAAAB////////x///8AAAAAAAAGeAGAH////////////////////AAAD+AAAAAAAAAAAJ////////w///+AAAAAAAAOHAH//////////////////////7AAD4AAAAAAAAAAAA////////4////gAAAAAAAOfB////////////////////////4ADgAAAAAAAAAAAAP///////4////AAAAAAAAMfz////////////////////////4ABgAAAAAAAAAAAAP///////////5AAAAAAAAAfv////////////////////////IAAAAAAAAAAAAAAAf//////////hjAAAAAAAAAgf////////////////////////MAAAAAAAAAAAAAAAC/////////+JD4AAAAAAAAD/////////////////////////cAAAAAAAAAAAAAAABf////////94H4AAAAAAAAf////////////////////////+QAAAAAAAAAAAAAAAB/////////74AcAAAAAAAAH////////////////////////8YAAAAAAAAAAAAAAAA//////////7QAAAAAAAAAD/////7x/8H//////////////4QAAAAAAAAAAAAAAAA///////////gAAAAAAAAAB//n//xz/4H//////////////wQAAAAAAAAAAAAAAAA//////////MAAAAAAAAAAB//j//gj/w///////////////gYAAAAAAAAAAAAAAAA/////////4AAAAAAAAAAGD/xx//AA/4f//////////////AeAAAAAAAAAAAAAAAB/////////wAAAAAAAAAAP/4E4f/AAP4P/////////////wB4AAAAAAAAAAAAAAAA/////////4AAAAAAAAAAP/4EeH/DwP8D/////////////ABgAAAAAAAAAAAAAAAB/////////gAAAAAAAAAAH/gEHnyf//+L///////////7/ABgAAAAAAAAAAAAAAAA////////+AAAAAAAAAAAP/AEBXD///+H///////////zcABgAAAAAAAAAAAAAAAA////////0AAAAAAAAAAAP/AABDh///8H///////////AOABgAAAAAAAAAAAAAAAAf///////0AAAAAAAAAAAH+AAcBz///8H///////////AeADAAAAAAAAAAAAAAAAAP///////4AAAAAAAAAAAH8A2EBB////H///////////+HAHAAAAAAAAAAAAAAAAAP///////4AAAAAAAAAAAAA/+AAAAP//////////////4HAfAAAAAAAAAAAAAAAAAH///////4AAAAAAAAAAAB///AAMBP//////////////gHH/AAAAAAAAAAAAAAAAAB///////gAAAAAAAAAAAB//+AAAAP//////////////wAMwAAAAAAAAAAAAAAAAAAf//////AAAAAAAAAAAAH///AAAAP//////////////4A8AAAAAAAAAAAAAAAAAAAf/////8AAAAAAAAAAAAP///8DgAf//////////////4AQAAAAAAAAAAAAAAAAAAAJ/////4AAAAAAAAAAAAP///+H+Mf//////////////8AQAAAAAAAAAAAAAAAAAAAN/////4AAAAAAAAAAAAP////3/////////////////4AAAAAAAAAAAAAAAAAAAAAE///jgYAAAAAAAAAAAAf/////////4////////////8AAAAAAAAAAAAAAAAAAAAACf//AAMAAAAAAAAAAAA//////////8////////////8AAAAAAAAAAAAAAAAAAAAAHP/8AAMAAAAAAAAAAAD////////P/8P///////////4AAAAAAAAAAAAAAAAAAAAABn/8AAOwAAAAAAAAAAH////////H/+Gf//////////wAAAAAAAAAAAAAAAAAAAAAAn/8AAGAAAAAAAAAAAP////////n//gf//////////wAAAAAAAAAAAAAAAAAAAAAAx/8AAAgAAAAAAAAAAP////////j//jAB/////////kAAAAAAAAAAAAAAAAAAAAAAI/8AAAAAAAAAAAAAAf////////x///gA/////////MAAAAAAAAAAAAAAAAAAAAAAAf8AAcAAAAAAAAAAAf////////x///4AP///////8IAAAAAAAAAAAAAAAAAAAAAAAf8AADgAAAAAAAAAA/////////4///8AP///P///gAAAAAAAAAAAAAAAgAAAAAAAAP8A4A4AAAAAAAAAA/////////8///4AG//4P//EAAAAAAAAAAAAAAAAAAAAAAAAAf+B4AeAAAAAAAAAAf////////8f//wAA//wH/+AAAAAAAAAAAAAAAAAAAAAAAAAAP+B4AA8AAAAAAAAAf////////8P//wAA//AD/+MAAAAAAAAAAAAAAAAAAAAAAAAAD/vwAxwwAAAAAAAAf////////+P//AAA//AB/+AAEAAAAAAAAAAAAAAAAAAAAAAAA//wAAAAAAAAAAAAf////////+H/+AAA/8AB//AAOAAAAAAAAAAAAAAAAAAAAAAAAH/wAAAAAAAAAAAA//////////D/wAAA/4ABv/gAMAAAAAAAAAAAAAAAAAAAAAAAAAH/gAAAAAAAAAAA//////////D/gAAAfgAAP/wAMAAAAAAAAAAAAAAAAAAAAAAAAAD/gAAAAAAAAAAB//////////z+AAAAfgAAP/wAMAAAAAAAAAAAAAAAAAAAAAAAAAA/gAAAAAAAAAAA//////////74AAAAPwAAH/4ADAAAAAAAAAAAAAAAAAAAAAAAAAAHgAAAAAAAAAAA//////////+AAAAAPgAAG/4AAAAAAAAAAAAAAAAAAAAAAAAAAAADgAUAAAAAAAAAf/////////8AgAAAPgAAEPwAAQAAAAAAAAAAAAAAAAAAAAAAAAABgD+AgAAAAAAAP/////////+fAAAAHgAAEPgATAAAAAAAAAAAAAAAAAAAAAAAAAAAwHv/AAAAAAAAH///////////AAAAHAAAEDAAhAAAAAAAAAAAAAAAAAAAAAAAAAAAav//gAAAAAAAD///////////AAAACQAAGCABAYAAAAAAAAAAAAAAAAAAAAAAAAAAE///4AAAAAAAD//////////+AAAAAYAACAAAD4AAAAAAAAAAAAAAAAAAAAAAAAAAAf//8AAAAAAAB//////////+AAAAAYAADAAAA4AAAAAAAAAAAAAAAAAAAAAAAAAAAf//+AAAAAAAAf/x///////8AAAAAAAABgADAQAAAAAAAAAAAAAAAAAAAAAAAAAAAf///8AAAAAAAPuA///////8AAAAAAAAxwAHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAf///+AAAAAAAAAAH//////4AAAAAAAA5wAPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf////AAAAAAAAAAD//////wAAAAAAAAMwAeAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/////AAAAAAAAAAD//////gAAAAAAAAOYB/AAAAAAAAAAAAAAAAAAAAAAAAAAAAA/////gAAAAAAAAAD//////AAAAAAAAAHoP/ASAAAAAAAAAAAAAAAAAAAAAAAAAAB/////AAAAAAAAAAD/////8AAAAAAAAADwP/PiAAAAAAAAAAAAAAAAAAAAAAAAAAD/////wAAAAAAAAAD/////4AAAAAAAAABwP+ACEAAAAAAAAAAAAAAAAAAAAAAAAAD//////AAAAAAAAAD/////4AAAAAAAAAB4H8eAOAAAAAAAAAAAAAAAAAAAAAAAAAD//////gAAAAAAAAD/////gAAAAAAAAAA8D8cAAeAAAAAAAAAAAAAAAAAAAAAAAAD///////AAAAAAAAB/////gAAAAAAAAAAeBcWPjfwAAAAAAAAAAAAAAAAAAAAAAAH///////wAAAAAAAA/////AAAAAAAAAAAeAACAA/+AAAAAAAAAAAAAAAAAAAAAAAH///////8AAAAAAAAf////AAAAAAAAAAAGAASAAH/BAAAAAAAAAAAAAAAAAAAAAAH///////+AAAAAAAAf///+AAAAAAAAAAABgAAABD/mEAAAAAAAAAAAAAAAAAAAAAB///////+AAAAAAAAP////AAAAAAAAAAAB/AAAAD/gBAAAAAAAAAAAAAAAAAAAAAB///////+AAAAAAAAP////AAAAAAAAAAAAH4AAAH5wAAAAAAAAAAAAAAAAAAAAAAA///////+AAAAAAAAP////AAAAAAAAAAAAABAYAA44AAAAAAAAAAAAAAAAAAAAAAA///////8AAAAAAAAP////AAAAAAAAAAAAAAYgAAAcAEAAAAAAAAAAAAAAAAAAAAAf//////4AAAAAAAAH////gAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAf//////wAAAAAAAAH////gAAAAAAAAAAAAAAAEAQAAAAAAAAAAAAAAAAAAAAAAAAP//////gAAAAAAAAP////gCAAAAAAAAAAAAAAfwYAAAAAAAAAAAAAAAAAAAAAAAAH//////gAAAAAAAAf////gCAAAAAAAAAAAAAAfgYAAAAAAAAAAAAAAAAAAAAAAAAH//////AAAAAAAAAf////gHAAAAAAAAAAAAAO/geAAAAAAAAAAAAAAAAAAAAAAAAD//////gAAAAAAAAf////gPAAAAAAAAAAAAAf/geAAAAAAAAAAAAAAAAAAAAAAAAA//////AAAAAAAAA/////B+AAAAAAAAAAAAA//4eAAAAABAAAAAAAAAAAAAAAAAAAP/////AAAAAAAAAf///+B+AAAAAAAAAAAAD//+/AAAAAAAAAAAAAAAAAAAAAAAAAH/////AAAAAAAAAf///4B+AAAAAAAAAAAAD////AAAAAAAAAAAAAAAAAAAAAAAAAH/////AAAAAAAAAP///wB8AAAAAAAAAAAAD////gAAAAAAAAAAAAAAAAAAAAAAAAH////+AAAAAAAAAP///gB8AAAAAAAAAAAAf////wAAAAAAAAAAAAAAAAAAAAAAAAH////8AAAAAAAAAP///gB8AAAAAAAAAAAD/////4AAIAAAAAAAAAAAAAAAAAAAAAH////8AAAAAAAAAH///wD4AAAAAAAAAAAP/////8AAEAAAAAAAAAAAAAAAAAAAAAH////wAAAAAAAAAH///wD4AAAAAAAAAAAf/////+AAAAAAAAAAAAAAAAAAAAAAAAH///+AAAAAAAAAAH///wB4AAAAAAAAAAAf//////AAAAAAAAAAAAAAAAAAAAAAAAH///4AAAAAAAAAAD///ABwAAAAAAAAAAAf//////gAAAAAAAAAAAAAAAAAAAAAAAH///wAAAAAAAAAAD//+AAAAAAAAAAAAAAP//////gAAAAAAAAAAAAAAAAAAAAAAAP///wAAAAAAAAAAD//+AAAAAAAAAAAAAAf//////gAAAAAAAAAAAAAAAAAAAAAAAP///wAAAAAAAAAAB//+AAAAAAAAAAAAAAP//////wAAAAAAAAAAAAAAAAAAAAAAAP///wAAAAAAAAAAB//8AAAAAAAAAAAAAAP//////wAAAAAAAAAAAAAAAAAAAAAAAP///gAAAAAAAAAAA//4AAAAAAAAAAAAAAH//////wAAAAAAAAAAAAAAAAAAAAAAAP///AAAAAAAAAAAAf/4AAAAAAAAAAAAAAH//////gAAAAAAAAAAAAAAAAAAAAAAAP//+AAAAAAAAAAAAf/wAAAAAAAAAAAAAAH//////gAAAAAAAAAAAAAAAAAAAAAAAP//8AAAAAAAAAAAAf/gAAAAAAAAAAAAAAH/wB///gAAAAAAAAAAAAAAAAAAAAAAAP//8AAAAAAAAAAAAf+AAAAAAAAAAAAAAAH/AA///AAAAAAAAAAAAAAAAAAAAAAAAf//4AAAAAAAAAAAAOAAAAAAAAAAAAAAAAHwAAn/+AAAAAAAAAAAAAAAAAAAAAAAAf/+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/+AAABAAAAAAAAAAAAAAAAAAAA//+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/8AAABAAAAAAAAAAAAAAAAAAAA//+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/8AAAAwAAAAAAAAAAAAAAAAAAA//+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9wAAAA8AAAAAAAAAAAAAAAAAAA//gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAAAAAB//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAAAAAB//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAQAAAAAAAAAAAAAAAAAAB/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAHAAAAAAAAAAAAAAAAAAAB/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAOAAAAAAAAAAAAAAAAAAAA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAcAAAAAAAAAAAAAAAAAAAB/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4AAAAAAAAAAAAAAAAAAAD/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAAAAAAAAAAAAAAAAAAAD/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAAAD/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/AAAAAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+AYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAvAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAAAAAAAAAAAAAAAAAAAAPAAAAAAAAYAwAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAAAAAAA/wAAAAGAB///H///+AAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAAAAAA///fwAP///////////gAAAAAAAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAAABwP////wB/////////////8AAAAAAAAAAAAAAAAAAAAAAAd+AAAAAAAAAAAAAAAAH//////wf//////////////wAAAAAAAAAAAAAAAAAAAAAAf/AAAAAAAAAAAB+//////////w////////////////8AAAAAAAAAAAAAAAAAAAAD+/AAAAAAAAA//////////////j/////////////////4AAAAAAAAAAAAAAEAAAAAA/gAAAAAAAD////////////////////////////////wAAAAAAAAAAGcAAD///jx//gAAAAAAAf////////////////////////////////gAAAAAAAAD////QAf/////+AAAAAAAAf///////////////////////////////4AAAAAAAA3/////////////wAAAAAAAD////////////////////////////////gAAAAAAAA/////////////4AAAAAAAP/////////////////////////////////AAAAAAB+f////////////8AAAAAAAH//////////////////////////////////gAAAAAg//////////////gAAAAPgD///////////////////////////////////4AAAAAcB/////////////gAAAA/wD//////////////////////////////////8AAAAAAAAA////////////4AAwH/gAB/////////////////////////////////4AAAAAAADH/////////////8AAAAAD//////////////////////////////////4AAAAAAAB////////////////AB/////////////////////////////////////+AAAAAAAB////////////////9///////////////////////////////////////4AAACAAAf////////////////////////////////////////////////////////wA//+AAAH/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////');
   const landAt = (lon, lat) => {
-    const x = Math.min(MW - 1, Math.floor(((lon + 180) / 360) * MW));
-    const y = Math.min(MH - 1, Math.floor(((90 - lat) / 180) * MH));
+    const x = Math.max(0, Math.min(MW - 1, Math.floor(((lon + 180) / 360) * MW)));
+    const y = Math.max(0, Math.min(MH - 1, Math.floor(((90 - lat) / 180) * MH)));
     const i = y * MW + x;
     return (LAND.charCodeAt(i >> 3) >> (7 - (i & 7))) & 1;
+  };
+  const LAND_STEP_LON = 360 / MW;
+  const LAND_STEP_LAT = 180 / MH;
+  const landEdgeAt = (lon, lat) => {
+    if (!landAt(lon, lat)) return 0;
+    return (
+      !landAt(lon + LAND_STEP_LON, lat) ||
+      !landAt(lon - LAND_STEP_LON, lat) ||
+      !landAt(lon, lat + LAND_STEP_LAT) ||
+      !landAt(lon, lat - LAND_STEP_LAT)
+    ) ? 1 : 0;
   };
   const toV3 = (lat, lon, r) => {
     const p = (90 - lat) * Math.PI / 180, q = (lon + 180) * Math.PI / 180;
@@ -100,38 +174,58 @@
   // (a) land particles — rejection-sampled uniform on the sphere (asin keeps
   // pole density honest), one phase attribute drives GPU breathing: zero
   // per-frame buffer uploads, unlike the old CPU-distorted icosahedron.
-  const gp = new Float32Array(GLOBE_N * 3), gph = new Float32Array(GLOBE_N);
+  const gp = new Float32Array(GLOBE_N * 3), gph = new Float32Array(GLOBE_N), gedge = new Float32Array(GLOBE_N);
+  let globeFilled = 0;
   for (let i = 0, guard = 0; i < GLOBE_N && guard < GLOBE_N * 10; guard++) {
     const lat = Math.asin(Math.random() * 2 - 1) * 180 / Math.PI;
     const lon = Math.random() * 360 - 180;
     if (!landAt(lon, lat)) continue;
     toV3(lat, lon, R).toArray(gp, i * 3);
     gph[i] = Math.random() * Math.PI * 2;
+    gedge[i] = landEdgeAt(lon, lat);
+    globeFilled = i + 1;
     i++;
   }
-  const globeGeo = new THREE.BufferGeometry();
-  globeGeo.setAttribute('position', new THREE.BufferAttribute(gp, 3));
-  globeGeo.setAttribute('phase', new THREE.BufferAttribute(gph, 1));
+  if (globeFilled < GLOBE_N) console.warn('[scene] land particle sample underfilled', { quality: quality.name, globeFilled, expected: GLOBE_N });
+  const globeGeo = makeGeometry('earth-land-particles', gp.subarray(0, globeFilled * 3), 3);
+  if (!globeGeo) return;
+  setFiniteAttribute(globeGeo, 'phase', gph.subarray(0, globeFilled), 1);
+  setFiniteAttribute(globeGeo, 'edge', gedge.subarray(0, globeFilled), 1);
   const globeMat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     uniforms: { uTime: { value: 0 }, uPx: { value: dpr } },
     vertexShader: `
-      attribute float phase; uniform float uTime, uPx; varying float vA;
+      attribute float phase;
+      attribute float edge;
+      uniform float uTime, uPx;
+      varying float vA;
+      varying float vEdge;
+      varying float vFacing;
       void main() {
+        vec3 worldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+        vec3 worldNormal = normalize((modelMatrix * vec4(normalize(position), 0.0)).xyz);
+        vec3 viewDir = normalize(cameraPosition - worldPos);
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         vA = 0.55 + 0.45 * sin(uTime * 2.2 + phase);
-        gl_PointSize = (2.4 + 1.4 * vA) * uPx * (6.0 / -mv.z);
+        vEdge = edge;
+        vFacing = smoothstep(-0.15, 0.65, dot(worldNormal, viewDir));
+        gl_PointSize = (2.4 + 1.4 * vA + edge * 1.2) * uPx * (6.0 / -mv.z);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
       varying float vA;
+      varying float vEdge;
+      varying float vFacing;
       void main() {
         float d = length(gl_PointCoord - 0.5);
         if (d > 0.5) discard;
-        gl_FragColor = vec4(0.224, 0.941, 1.0, vA * (1.0 - d * 2.0) * 0.85);
+        vec3 base = mix(vec3(0.224, 0.941, 1.0), vec3(1.0, 0.62, 0.17), vEdge * 0.35);
+        float facingAlpha = mix(0.18, 1.0, vFacing);
+        float alpha = vA * (1.0 - d * 2.0) * (0.75 + vEdge * 0.25) * facingAlpha;
+        gl_FragColor = vec4(base, alpha);
       }`,
   });
-  spin.add(new THREE.Points(globeGeo, globeMat));
+  spin.add(nameObject(new THREE.Points(globeGeo, globeMat), 'earth-land-particles'));
 
   // (b) graticule — one merged LineSegments (LITE: 3 rings, no meridians)
   (function buildGraticule() {
@@ -152,59 +246,109 @@
         segs.push(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
       }
     }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(segs), 3));
-    spin.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({
-      color: CYAN, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending })));
+    const g = makeGeometry('earth-graticule-lines', new Float32Array(segs), 3);
+    if (!g) return;
+    spin.add(nameObject(new THREE.LineSegments(g, new THREE.LineBasicMaterial({
+      color: CYAN, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending })), 'earth-graticule-lines'));
   })();
 
-  // (c) Tokyo node: amber marker + tangent pulse ring + ping ripple ring
-  const TOKYO = toV3(35.6762, 139.6503, R);
+  const PLACES = [
+    {
+      id: 'dallas',
+      label: 'DALLAS',
+      detail: '32.7767N 96.7970W - ORIGIN',
+      lat: 32.7767,
+      lon: -96.7970,
+      color: 0xffd9a0,
+      size: 0.14,
+      primary: false,
+    },
+    {
+      id: 'tokyo',
+      label: 'TOKYO',
+      detail: '35.6762N 139.6503E - CURRENT',
+      lat: 35.6762,
+      lon: 139.6503,
+      color: AMBER,
+      size: 0.22,
+      primary: true,
+    },
+  ];
+  const placeById = id => PLACES.find(place => place.id === id) || PLACES[1];
+  const placeVector = (place, radius) => toV3(place.lat, place.lon, radius);
+
+  // (c) personal place nodes: Dallas origin + Tokyo current focus
+  const TOKYO_PLACE = placeById('tokyo');
+  const DALLAS_PLACE = placeById('dallas');
+  const TOKYO = placeVector(TOKYO_PLACE, R);
   const tokyoA0 = Math.atan2(TOKYO.z, TOKYO.x);   // rest angle in the xz plane
-  const markGeo = new THREE.BufferGeometry();
-  markGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TOKYO.toArray()), 3));
-  spin.add(new THREE.Points(markGeo, new THREE.PointsMaterial({
-    color: AMBER, size: 0.22, transparent: true, opacity: 0.95,
-    blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true })));
-  function tangentRing(inner, outer, op) {
-    const m = new THREE.Mesh(
+  const placeNodesById = {};
+
+  function makePlaceNode(place) {
+    const point = placeVector(place, R);
+    const geo = makeGeometry(place.id + '-place-point', new Float32Array(point.toArray()), 3);
+    if (!geo) return null;
+    const mat = new THREE.PointsMaterial({
+      color: place.color,
+      size: place.size,
+      transparent: true,
+      opacity: place.primary ? 0.95 : 0.48,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      sizeAttenuation: true,
+    });
+    const node = nameObject(new THREE.Points(geo, mat), place.id + '-place-node');
+    node.userData.place = place;
+    node.userData.baseOpacity = mat.opacity;
+    spin.add(node);
+    placeNodesById[place.id] = node;
+    return node;
+  }
+
+  PLACES.forEach(makePlaceNode);
+
+  function tangentRing(inner, outer, op, name) {
+    const m = nameObject(new THREE.Mesh(
       new THREE.RingGeometry(inner, outer, 40),
       new THREE.MeshBasicMaterial({ color: AMBER, transparent: true, opacity: op, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false })
-    );
+    ), name);
     m.position.copy(TOKYO);
     m.lookAt(TOKYO.clone().multiplyScalar(2));
     spin.add(m);
     return m;
   }
-  const tokyoRing = tangentRing(0.16, 0.2, 0.8);
-  const pingRing = tangentRing(0.3, 0.34, 0);     // expands on section change
+  const tokyoRing = tangentRing(0.16, 0.2, 0.8, 'tokyo-focus-ring');
+  const pingRing = tangentRing(0.3, 0.34, 0, 'tokyo-ping-ring');     // expands on section change
 
   // (d) coordinate callout — CanvasTexture sprite, drawn once fonts are ready
   const callout = (function () {
     const cv = document.createElement('canvas');
     cv.width = 512; cv.height = 56;
     const tex = new THREE.CanvasTexture(cv);
-    function draw() {
+    function draw(place) {
+      const target = place || TOKYO_PLACE;
       const cx = cv.getContext('2d');
       cx.clearRect(0, 0, cv.width, cv.height);
-      cx.font = '500 26px "JetBrains Mono", monospace';
+      cx.font = '500 24px "JetBrains Mono", monospace';
       cx.fillStyle = '#ff9e2c';
       cx.shadowColor = 'rgba(255,158,44,0.7)'; cx.shadowBlur = 12;
-      cx.fillText('35.6762°N 139.6503°E — TOKYO', 8, 38);
+      cx.fillText(target.detail, 8, 38);
       tex.needsUpdate = true;
     }
     draw();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: tex, transparent: true, opacity: 0, depthWrite: false }));
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw());
+    const sp = nameObject(new THREE.Sprite(new THREE.SpriteMaterial({
+      map: tex, transparent: true, opacity: 0, depthWrite: false
+    })), 'place-coordinate-callout');
     sp.scale.set(3.6, 0.4, 1);
     sp.position.copy(TOKYO).multiplyScalar(1.22).add(new THREE.Vector3(0, 0.45, 0));
     spin.add(sp);
-    return sp;
+    return { sprite: sp, draw };
   })();
+  const calloutOffset = new THREE.Vector3(0, 0.45, 0);
 
   // (e) Dallas -> Tokyo great-circle arc (SLERP, lifted at mid-flight) + comet
-  const DALLAS = toV3(32.7767, -96.797, R);
+  const DALLAS = placeVector(DALLAS_PLACE, R);
   const ARC_SEG = 128;
   const arcPts = new Float32Array((ARC_SEG + 1) * 3);
   (function buildArc() {
@@ -218,18 +362,30 @@
       v.toArray(arcPts, i * 3);
     }
   })();
-  const arcGeo = new THREE.BufferGeometry();
-  arcGeo.setAttribute('position', new THREE.BufferAttribute(arcPts, 3));
+  const arcGeo = makeGeometry('dallas-to-tokyo-arc', arcPts, 3);
+  if (!arcGeo) return;
   arcGeo.setDrawRange(0, 0);
   let arcN = 0, arcArm = 0;
-  spin.add(new THREE.Line(arcGeo, new THREE.LineBasicMaterial({
-    color: AMBER, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending })));
-  const cometGeo = new THREE.BufferGeometry();
-  cometGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3), 3));
+  spin.add(nameObject(new THREE.Line(arcGeo, new THREE.LineBasicMaterial({
+    color: AMBER, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending })), 'dallas-to-tokyo-arc'));
+  const cometGeo = makeGeometry('journey-comet-point', new Float32Array(3), 3);
+  if (!cometGeo) return;
   const cometMat = new THREE.PointsMaterial({
     color: 0xffd9a0, size: 0.3, transparent: true, opacity: 0,
     blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true });
-  const comet = new THREE.Points(cometGeo, cometMat);
+  const comet = nameObject(new THREE.Points(cometGeo, cometMat), 'journey-comet-point');
+  function setCometAt(head) {
+    const safeHead = Math.max(0, Math.min(ARC_SEG, head));
+    const cp = cometGeo.attributes.position.array, ci = safeHead * 3;
+    const x = arcPts[ci], y = arcPts[ci + 1], z = arcPts[ci + 2];
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
+      console.error('[scene] non-finite comet position', { head, safeHead, ci, x, y, z });
+      return;
+    }
+    cp[0] = x; cp[1] = y; cp[2] = z;
+    cometGeo.attributes.position.needsUpdate = true;
+  }
+  setCometAt(0);
   spin.add(comet);
 
   // (f) atmosphere halo — 1 sprite, 0 render targets; sells "planet" on LITE too
@@ -242,9 +398,10 @@
     grad.addColorStop(0.45, 'rgba(57,240,255,0.12)');
     grad.addColorStop(1, 'rgba(57,240,255,0)');
     cx.fillStyle = grad; cx.fillRect(0, 0, 128, 128);
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    const sp = nameObject(new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(cv), transparent: true, opacity: 0.13,
-      blending: THREE.AdditiveBlending, depthWrite: false }));
+      blending: THREE.AdditiveBlending, depthWrite: false
+    })), 'earth-atmosphere-halo');
     sp.scale.setScalar(7.5);
     coreGroup.add(sp);
     return sp;
@@ -255,28 +412,89 @@
   const ringMat = new THREE.MeshBasicMaterial({
     color: CYAN, transparent: true, opacity: 0.16,
     blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false });
-  const ring = new THREE.Mesh(new THREE.RingGeometry(R * 1.32, R * 1.36, 96), ringMat);
+  const ring = nameObject(new THREE.Mesh(new THREE.RingGeometry(R * 1.32, R * 1.36, 96), ringMat), 'orbital-scan-ring');
   ring.rotation.x = Math.PI / 2.05;
   coreGroup.add(ring);
 
   // section-change ping: scan ring flashes amber + ripple expands from Tokyo
   let ping = 0;
+  let focusedPlaceId = 'tokyo';
+  let focusFlash = 0;
+  function setFocusedPlace(id, intensity) {
+    focusedPlaceId = placeById(id).id;
+    focusFlash = Math.max(focusFlash, intensity || 1);
+    if (callout && callout.draw) callout.draw(placeById(focusedPlaceId));
+  }
+  function replayJourney() {
+    arcN = 0;
+    arcArm = 0;
+    arcGeo.setDrawRange(0, 0);
+    setCometAt(0);
+  }
+  let storyTimer = 0;
+  const sectionStories = {
+    home: { place: 'tokyo', intensity: 1.2, replayArc: true },
+    about: { sequence: ['dallas', 'tokyo'], intensity: 0.95, replayArc: true },
+    work: { place: 'tokyo', intensity: 0.8 },
+    gallery: { place: 'tokyo', intensity: 0.45 },
+    projects: { place: 'dallas', intensity: 0.75 },
+    contact: { place: 'tokyo', intensity: 1.0 },
+  };
   window.__scenePing = () => { ping = 1; };
+  window.__sceneFocus = sectionId => {
+    const story = sectionStories[sectionId] || sectionStories.home;
+    clearTimeout(storyTimer);
+    if (story.replayArc) replayJourney();
+    if (story.sequence) {
+      setFocusedPlace(story.sequence[0], story.intensity);
+      storyTimer = setTimeout(() => setFocusedPlace(story.sequence[1], story.intensity * 0.85), 650);
+      return;
+    }
+    setFocusedPlace(story.place, story.intensity);
+  };
+
+  function getSceneDebug() {
+    return {
+      quality: quality.name,
+      dpr,
+      lite: LITE,
+      reduced,
+      globeParticles: globeFilled,
+      expectedGlobeParticles: GLOBE_N,
+      focusedPlaceId,
+      arcHead: Math.floor(arcN),
+      arcSegments: ARC_SEG,
+    };
+  }
+  function updateDebugText() {
+    if (!debugEl) return;
+    const d = getSceneDebug();
+    debugEl.textContent = [
+      'scene=' + d.quality,
+      'dpr=' + d.dpr,
+      'particles=' + d.globeParticles + '/' + d.expectedGlobeParticles,
+      'focus=' + d.focusedPlaceId,
+      'arc=' + d.arcHead + '/' + d.arcSegments,
+      'lite=' + d.lite,
+      'reduced=' + d.reduced,
+    ].join(' // ');
+  }
+  if (sceneDebug) window.__sceneDebug = getSceneDebug;
 
   // ---- synthwave grid ----
-  const grid = new THREE.GridHelper(160, 70, AMBER, 0x10303a);
+  const grid = nameObject(new THREE.GridHelper(160, 70, AMBER, 0x10303a), 'synthwave-grid');
   grid.material.transparent = true; grid.material.opacity = 0.2; grid.material.blending = THREE.AdditiveBlending;
   grid.position.y = -7; scene.add(grid);
 
   // ---- vertical data streaks ----
-  const streakGeo = new THREE.BufferGeometry();
-  const SN = LITE ? 22 : 40; const sp = new Float32Array(SN * 6);
+  const SN = quality.streaks; const sp = new Float32Array(SN * 6);
   for (let i = 0; i < SN; i++) {
     const x = (Math.random() - 0.5) * 60, z = -Math.random() * 50 - 5, y = (Math.random() - 0.5) * 24, len = 1 + Math.random() * 3;
     sp.set([x, y, z, x, y + len, z], i * 6);
   }
-  streakGeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-  const streaks = new THREE.LineSegments(streakGeo, new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending }));
+  const streakGeo = makeGeometry('vertical-data-streaks', sp, 3);
+  if (!streakGeo) return;
+  const streaks = nameObject(new THREE.LineSegments(streakGeo, new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending })), 'vertical-data-streaks');
   scene.add(streaks);
 
   const mouse = { x: 0, y: 0 };
@@ -326,24 +544,25 @@
     arcGeo.setDrawRange(0, ARC_SEG + 1);
     globeMat.uniforms.uTime.value = 4;
     tokyoRing.material.opacity = 0.7;
-    callout.material.opacity = 0.85;
+    callout.sprite.material.opacity = 0.85;
     render();
+    updateDebugText();
     return;
   }
 
   // boot hook: camera "warp" + (re)launch the Dallas->Tokyo journey
   let warp = 0;
-  window.__sceneWarp = () => { warp = 1; arcN = 0; arcArm = 0; arcGeo.setDrawRange(0, 0); };
+  window.__sceneWarp = () => { warp = 1; replayJourney(); };
 
   /* Delta-time: the old `t += 0.005` per frame ran the whole scene at 2x on
      120Hz displays (ProMotion phones, gaming monitors). Normalised to the same
      speed as 60Hz: 0.005/frame @60fps = 0.3/s. Clamped so a stalled tab can't
      jump time on resume. */
-  let raf, running = true, t = 0, last = performance.now();
+  let raf, running = true, t = 0, last = performance.now(), debugTick = 0;
   function loop(now) {
     if (!running) return;
     raf = requestAnimationFrame(loop);
-    const dt = Math.min((now - last) / 1000, 0.033); last = now;
+    const dt = Math.max(0, Math.min((now - last) / 1000, 0.033)); last = now;
     t += dt * 0.3;
     const scrollN = Math.min(1, Math.max(0, scrollY / maxScroll));
     const f = dt * 60;   // per-frame speeds scale to real elapsed time
@@ -370,19 +589,30 @@
     const pulse = Math.sin(t * 6) * 0.5 + 0.5;
     tokyoRing.scale.setScalar(1 + 0.25 * pulse);
     tokyoRing.material.opacity = 0.45 + 0.45 * pulse;
-    const facing = Math.max(0, Math.sin(tokyoA0 - spin.rotation.y));
-    callout.material.opacity = facing * facing * 0.9;
+    const focusedPlace = placeById(focusedPlaceId);
+    const focusedVector = placeVector(focusedPlace, R);
+    const focusedAngle = Math.atan2(focusedVector.z, focusedVector.x);
+    const focusedFacing = Math.max(0, Math.sin(focusedAngle - spin.rotation.y));
+    callout.sprite.position.copy(focusedVector).multiplyScalar(1.22).add(calloutOffset);
+    callout.sprite.material.opacity = focusedFacing * focusedFacing * (focusedPlace.primary ? 0.9 : 0.55);
+    if (focusFlash > 0.01) focusFlash *= Math.pow(0.9, f);
+    else focusFlash = 0;
+    for (const id in placeNodesById) {
+      const node = placeNodesById[id];
+      const isFocused = id === focusedPlaceId;
+      const base = node.userData.baseOpacity || 0.5;
+      node.material.opacity = base + (isFocused ? focusFlash * 0.35 : 0);
+      node.material.size = node.userData.place.size * (1 + (isFocused ? focusFlash * 0.35 : 0));
+    }
     halo.material.opacity = 0.10 + 0.05 * (Math.sin(t * 1.5) * 0.5 + 0.5);
 
     // Dallas -> Tokyo arc: draws over ~1.5s, comet rides the front, re-arms ~12s
     arcArm += dt;
     if (arcN < ARC_SEG) {
       arcN = Math.min(ARC_SEG, arcN + 1.4 * f);
-      const head = Math.floor(arcN);
+      const head = Math.max(0, Math.min(ARC_SEG, Math.floor(arcN)));
       arcGeo.setDrawRange(0, head + 1);
-      const cp = cometGeo.attributes.position.array, ci = head * 3;
-      cp[0] = arcPts[ci]; cp[1] = arcPts[ci + 1]; cp[2] = arcPts[ci + 2];
-      cometGeo.attributes.position.needsUpdate = true;
+      setCometAt(head);
       cometMat.opacity = arcN >= ARC_SEG ? 0 : 0.9;
     } else if (arcArm > 12) {
       arcN = 0; arcArm = 0; arcGeo.setDrawRange(0, 0);
@@ -401,6 +631,7 @@
     }
 
     if (warp > 0.001) warp *= 0.92; else warp = 0;
+    if (debugEl && ++debugTick % 20 === 0) updateDebugText();
     camera.position.x += (mouse.x * 1.5 - camera.position.x) * 0.04;
     camera.position.y += (-mouse.y * 1.0 + scrollN * 3 - camera.position.y) * 0.04;
     camera.position.z = 10 - scrollN * 4 - warp * 6;
