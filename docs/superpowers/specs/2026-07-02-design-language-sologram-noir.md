@@ -36,6 +36,15 @@ city. Every visual decision on this site should be defensible against this doc.
    codec: terse, monospaced, frequency-and-coordinate flavored. The signal-lock
    beat is our "alert state" — one deliberate spike, then discipline.
 
+2c. **Scan-and-tag grammar** (Cyberpunk 2077, owner reference): the Kiroshi
+   optics language — the world gets *scanned*, and scanned things acquire
+   bracket-tags, floating readouts, and threat/status glyphs; transitions may
+   glitch confidently (one hard tick, not noise soup). Palette stays ours
+   (cyan/amber, not acid yellow); what we take is the interaction grammar:
+   → hovering/focusing anything meaningful (gallery photo, project, district)
+   should read as *scanning* it — bracket-tag snaps on, readout types in,
+   a single glitch tick on acquisition. This is the Wave-3 interaction model.
+
 3. **Light must be motivated.** Every glow has an emitter: Tokyo, the halo
    projector, lightning, city lights, neon. No ambient white, no unmotivated
    bloom.
