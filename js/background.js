@@ -890,6 +890,10 @@
     }
     callout.sprite.material.opacity = 0.85;
     render();
+    /* The static frame renders exactly once, so the sprite redraws queued on
+       fonts.ready (registered earlier) need one re-present or a cold-cache
+       visitor keeps fallback-font glyphs forever. */
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => render());
     updateDebugText();
     return;
   }

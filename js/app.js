@@ -323,6 +323,7 @@
   try { scanOn = localStorage.getItem('daikie-scan') !== '0'; } catch (e) {}
   const crt = document.querySelector('.crt');
   function applyScan() {
+    // css/site.css's scan gate string-matches this exact inline write (`display: none`) — the two must change together
     if (crt) crt.style.display = scanOn ? '' : 'none';
     scanSwitch && scanSwitch.classList.toggle('on', scanOn);
     scanSwitch && scanSwitch.setAttribute('aria-pressed', scanOn ? 'true' : 'false');

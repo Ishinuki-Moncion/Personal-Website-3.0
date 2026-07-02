@@ -115,6 +115,14 @@ check('atmosphere sits below main content',
   /\.scene-atmosphere\s*\{[^}]*z-index:\s*0\b/.test(css),
   '.scene-atmosphere must render beneath main so content is not tinted');
 
+// The scan gate is a cross-file string match: the CSS selector matches the exact
+// inline-style serialization applyScan() writes. Pin both halves so a refactor
+// of either side (classList/cssText) fails loudly instead of silently un-dimming.
+check('scan-off gate string-matches the applyScan inline display write',
+  /body:has\(\.crt\[style\*="display: none"\]\)\s*\.scene-atmosphere/.test(css) &&
+    /crt\.style\.display\s*=\s*scanOn\s*\?\s*''\s*:\s*'none'/.test(app),
+  'css/site.css :has(.crt[style*="display: none"]) gate and js/app.js crt.style.display write must change together');
+
 check('rain opacity is CSS-owned base * JS multiplier',
   /--scene-rain-base/.test(css) && /--scene-rain-mul/.test(css) &&
     /calc\(var\(--scene-rain-base\)\s*\*\s*var\(--scene-rain-mul/.test(css),
