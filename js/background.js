@@ -553,16 +553,42 @@
   // (d) coordinate callout — CanvasTexture sprite, drawn once fonts are ready
   const callout = (function () {
     const cv = document.createElement('canvas');
-    cv.width = 512; cv.height = 56;
+    cv.width = 640; cv.height = 118;
     const tex = new THREE.CanvasTexture(cv);
     function draw(place) {
       const target = place || TOKYO_PLACE;
       const cx = cv.getContext('2d');
       cx.clearRect(0, 0, cv.width, cv.height);
-      cx.font = '500 24px "JetBrains Mono", monospace';
-      cx.fillStyle = '#ff9e2c';
-      cx.shadowColor = 'rgba(255,158,44,0.7)'; cx.shadowBlur = 12;
-      cx.fillText(target.detail, 8, 38);
+      const isTokyo = target.id === 'tokyo';
+      const accent = isTokyo ? '#ff9e2c' : '#ffd9a0';
+      const heading = isTokyo ? '東京 / ' + target.label : target.label;
+      const jst = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' });
+      const status = isTokyo ? ('BASE: JST ' + jst + ' // SIGNAL ONLINE') : 'ORIGIN VECTOR // ROUTE TOKYO';
+      cx.save();
+      cx.strokeStyle = 'rgba(57, 240, 255, 0.42)';
+      cx.lineWidth = 2;
+      cx.beginPath();
+      cx.moveTo(4, 24); cx.lineTo(4, 4); cx.lineTo(42, 4);
+      cx.moveTo(cv.width - 42, 4); cx.lineTo(cv.width - 4, 4); cx.lineTo(cv.width - 4, 24);
+      cx.moveTo(4, cv.height - 24); cx.lineTo(4, cv.height - 4); cx.lineTo(42, cv.height - 4);
+      cx.moveTo(cv.width - 42, cv.height - 4); cx.lineTo(cv.width - 4, cv.height - 4); cx.lineTo(cv.width - 4, cv.height - 24);
+      cx.stroke();
+      cx.font = '500 32px "M PLUS Rounded 1c", "JetBrains Mono", monospace';
+      cx.fillStyle = accent;
+      cx.shadowColor = 'rgba(255,158,44,0.75)';
+      cx.shadowBlur = 14;
+      cx.fillText(heading, 18, 42);
+      cx.shadowBlur = 0;
+      cx.font = '500 15px "JetBrains Mono", monospace';
+      cx.fillStyle = 'rgba(233, 241, 244, 0.82)';
+      cx.fillText(status, 20, 70);
+      cx.fillStyle = 'rgba(57, 240, 255, 0.78)';
+      cx.fillText(target.detail, 20, 94);
+      cx.fillStyle = 'rgba(255, 158, 44, 0.82)';
+      for (let i = 0; i < 9; i++) {
+        cx.fillRect(cv.width - 128 + i * 12, 70, i % 3 === 0 ? 7 : 3, 22);
+      }
+      cx.restore();
       tex.needsUpdate = true;
     }
     draw();
@@ -570,7 +596,7 @@
     const sp = nameObject(new THREE.Sprite(new THREE.SpriteMaterial({
       map: tex, transparent: true, opacity: 0, depthWrite: false
     })), 'place-coordinate-callout');
-    sp.scale.set(3.6, 0.4, 1);
+    sp.scale.set(3.9, 0.72, 1);
     sp.position.copy(TOKYO).multiplyScalar(1.22).add(new THREE.Vector3(0, 0.45, 0));
     spin.add(sp);
     return { sprite: sp, draw };
