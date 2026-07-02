@@ -127,8 +127,9 @@ check('scene exposes a live fps gauge for QA gates',
 
 check('weather layer has lightning, lens droplets, reactive rain, and idle cinematics',
   /sheet-lightning/.test(background) && /updateLightning/.test(background) &&
-    /drawImage\(src/.test(background) && /rainShear/.test(background) && /idleK/.test(background),
-  'sheet lightning, droplet lens sampling, scroll wind shear, and idle dolly must all be wired');
+    /drawImage\(src/.test(background) && /rainShear/.test(background) && /idleK/.test(background) &&
+    /render\(\);\s*\n\s*if \(droplets\) droplets\.update/.test(background),
+  'sheet lightning, shear, idle dolly wired — and droplets MUST sample after render() (lens reads this frame\'s buffer)');
 
 check('glass droplet canvas exists, is styled, and is JS-driven',
   /scene-droplets/.test(background) && /\.scene-droplets\s*\{/.test(css) &&

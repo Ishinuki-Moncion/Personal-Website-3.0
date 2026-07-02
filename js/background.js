@@ -232,7 +232,7 @@
         vA = 0.55 + 0.45 * sin(uTime * 2.2 + phase);
         vEdge = edge;
         vFacing = smoothstep(-0.15, 0.65, dot(worldNormal, viewDir));
-        vNight = smoothstep(0.12, -0.18, dot(normalize(position), uSunDir));
+        vNight = 1.0 - smoothstep(-0.18, 0.12, dot(normalize(position), uSunDir));
         vCity = city;
         gl_PointSize = (2.4 + 1.4 * vA + edge * 1.2 + city * vNight * 1.1) * uPx * (6.0 / -mv.z);
         gl_Position = projectionMatrix * mv;
@@ -899,7 +899,14 @@
     c.sat.position.set(Math.cos(c.satA) * R * 1.6, Math.sin(c.satA) * R * 0.68, Math.sin(c.satA) * R * 1.42);
     c.sat.material.opacity = (Math.sin(c.satA * 34) > 0.55 ? 1 : 0.45) * 0.5;   // beacon blink
     c.nextLink -= dt;
-    if (c.nextLink <= 0) { c.linkT = 1; c.nextLink = 45 + Math.random() * 45; }
+    if (c.nextLink <= 0) {
+      c.tokyoW.copy(TOKYO).multiplyScalar(1.02);
+      spin.localToWorld(c.tokyoW);
+      coreGroup.worldToLocal(c.tokyoW);
+      const los = c.tokyoW.dot(c.sat.position) / (c.tokyoW.length() * c.sat.position.length());
+      if (los > 0.25) { c.linkT = 1; c.nextLink = 45 + Math.random() * 45; }
+      else c.nextLink = 4 + Math.random() * 6;   // Tokyo behind the disc — retry when it faces the sat
+    }
     if (c.linkT > 0) {
       c.linkT = Math.max(0, c.linkT - dt * 0.7);
       c.tokyoW.copy(TOKYO).multiplyScalar(1.02);
@@ -1005,7 +1012,7 @@
       // where their own facing term bottoms out (browser-verified phase gap)
       const gate = Math.max(lf * lf, sp.userData.label.priority === 1 ? 0.45 : 0);
       sp.material.opacity = tokyoFacing * lab * gate * (LITE ? 0.72 : 0.9);
-      if (Math.random() < 0.012) sp.material.opacity *= 0.45;   // sologram interference dropout
+      if (Math.random() < 0.012 * f) sp.material.opacity *= 0.45;   // sologram interference dropout (dt-scaled)
     });
     if (tokyoHalo.packet && tokyoHalo.packetMat) {            // packet is event-gated, never a perpetual orbit
       tokyoHalo.setPacketAt(t * 4.8);
@@ -1017,6 +1024,8 @@
 
   let rainSway = 0, rainShear = 0, lastScrollY2 = 0, rainTintK = 0;
   let idleT = 0, idleK = 0;                                   // idle cinematics state
+  let fpsEMA = 60;   // declared here (not in the loop vars): the reduced branch returns
+                     // before the loop vars run, and getSceneDebug() must never TDZ-crash
   ['pointermove', 'pointerdown', 'wheel', 'keydown', 'touchstart', 'scroll'].forEach(ev =>
     window.addEventListener(ev, () => { idleT = 0; }, { passive: true }));
   const RAIN_CYAN = new THREE.Color(0xbfeaff), RAIN_AMBER = new THREE.Color(0xffd2a0);
@@ -1245,7 +1254,7 @@
      120Hz displays (ProMotion phones, gaming monitors). Normalised to the same
      speed as 60Hz: 0.005/frame @60fps = 0.3/s. Clamped so a stalled tab can't
      jump time on resume. */
-  let raf, running = true, t = 0, last = performance.now(), debugTick = 0, fpsEMA = 60;
+  let raf, running = true, t = 0, last = performance.now(), debugTick = 0;
   function loop(now) {
     if (!running) return;
     raf = requestAnimationFrame(loop);
