@@ -348,6 +348,68 @@
   const tokyoRing = tangentRing(0.16, 0.2, 0.8, 'tokyo-focus-ring');
   const pingRing = tangentRing(0.3, 0.34, 0, 'tokyo-ping-ring');     // expands on section change
 
+  // Reusable CanvasTexture sprite factory — re-renders on document.fonts.ready
+  // (with the last payload) so JP glyphs never bake as tofu. Canvas work runs
+  // only at construction/redraw, never per frame.
+  function makeCanvasSprite(name, width, height, scale, drawFn) {
+    const cv = document.createElement('canvas');
+    cv.width = width;
+    cv.height = height;
+    const tex = new THREE.CanvasTexture(cv);
+    const ctx = cv.getContext('2d');
+    let _payload;
+    function redraw(payload) {
+      _payload = payload;
+      ctx.clearRect(0, 0, width, height);
+      drawFn(ctx, payload, width, height);
+      tex.needsUpdate = true;
+    }
+    redraw();
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => redraw(_payload));
+    }
+    const sprite = nameObject(new THREE.Sprite(new THREE.SpriteMaterial({
+      map: tex,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    })), name);
+    sprite.scale.set(scale[0], scale[1], scale[2] || 1);
+    return { sprite, redraw, texture: tex, canvas: cv };
+  }
+
+  function drawHudLabel(ctx, label, width, height, accent, variant) {
+    const color = accent || '#39f0ff';
+    ctx.save();
+    ctx.clearRect(0, 0, width, height);
+    if (variant === 'primary') {
+      ctx.strokeStyle = 'rgba(57,240,255,0.5)'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(2, 18); ctx.lineTo(2, 2); ctx.lineTo(28, 2);
+      ctx.moveTo(width - 28, 2); ctx.lineTo(width - 2, 2); ctx.lineTo(width - 2, 18);
+      ctx.moveTo(2, height - 18); ctx.lineTo(2, height - 2); ctx.lineTo(28, height - 2);
+      ctx.moveTo(width - 28, height - 2); ctx.lineTo(width - 2, height - 2); ctx.lineTo(width - 2, height - 18);
+      ctx.stroke();
+    }
+    ctx.font = '500 28px "M PLUS Rounded 1c", "JetBrains Mono", monospace';
+    ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 12;
+    ctx.fillText(label.jp || label.en, 16, 34);
+    ctx.shadowBlur = 0;
+    if (variant === 'primary') {
+      ctx.font = '500 13px "JetBrains Mono", monospace';
+      ctx.fillStyle = 'rgba(233,241,244,0.78)';
+      ctx.fillText(label.en || '', 18, 54);
+      ctx.fillStyle = 'rgba(255,158,44,0.78)';
+      ctx.fillRect(width - 58, height - 18, 34, 2);
+      ctx.fillRect(width - 18, height - 18, 8, 2);
+    } else {                                  /* district: one quiet tick */
+      ctx.fillStyle = color; ctx.globalAlpha = 0.7;
+      ctx.fillRect(16, 44, 22, 2);
+    }
+    ctx.restore();
+  }
+
   // (d) coordinate callout — CanvasTexture sprite, drawn once fonts are ready
   const callout = (function () {
     const cv = document.createElement('canvas');
