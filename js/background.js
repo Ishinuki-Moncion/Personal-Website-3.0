@@ -72,18 +72,6 @@
   mount.appendChild(renderer.domElement);
   if (debugEl) debugEl.classList.add('on');
 
-  /* Event-driven rain multiplier — CSS owns the base opacity (and its
-     coarse-pointer / reduced-motion fallbacks); JS only scales it via
-     --scene-rain-mul, and only when the 2-dp quantized value changes. */
-  let _rainMulWritten = -1;
-  function setRainMultiplier(v) {
-    const next = Math.max(0, Math.round((v == null ? 1 : v) * 100) / 100); // 2-dp quantized
-    if (next === _rainMulWritten) return;                                  // no per-frame writes
-    _rainMulWritten = next;
-    document.documentElement.style.setProperty('--scene-rain-mul', String(next));
-  }
-  setRainMultiplier(1);
-
   /* Fail-loud onBeforeCompile helper — a silent no-op replace() would ship an
      unpatched material (e.g. after a three version bump), so warn instead. */
   function patchShader(src, find, insert) {
@@ -408,6 +396,62 @@
     spin.add(m);
     return m;
   }
+  /* Depth rain — camera-space particle layers (near/mid/far) with per-drop
+     speed jitter and a shared gusting wind. Parallax plus speed variation is
+     what makes rain read as weather instead of scrolling lines; brightness
+     rides sceneState.rain and the pulse/lock beats. Hidden under reduced
+     motion (a frozen rain frame reads as a glitch, not weather). */
+  function makeRainStreakTexture(lengthFrac, headAlpha) {
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128;
+    const g = cv.getContext('2d');
+    const x0 = 64 + 8, y0 = 128 - Math.round(128 * lengthFrac);
+    const x1 = 64 - 8, y1 = 122;                     // ~7deg tilt matches the wind drift below
+    const grd = g.createLinearGradient(x0, y0, x1, y1);
+    grd.addColorStop(0, 'rgba(180, 235, 255, 0)');
+    grd.addColorStop(0.55, 'rgba(180, 235, 255, ' + headAlpha * 0.45 + ')');
+    grd.addColorStop(0.9, 'rgba(214, 244, 255, ' + headAlpha + ')');
+    grd.addColorStop(1, 'rgba(214, 244, 255, 0)');
+    g.strokeStyle = grd; g.lineWidth = 5; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    return new THREE.CanvasTexture(cv);
+  }
+  function makeDepthRain() {
+    const aspect = w / h;
+    const defs = LITE
+      ? [{ n: 80, size: 0.26, speed: [4.5, 6.5], op: 0.32, z: [-5, -9], len: 0.7, head: 0.85 },
+         { n: 130, size: 0.16, speed: [2.4, 3.8], op: 0.22, z: [-8, -14], len: 0.45, head: 0.7 }]
+      : [{ n: 70, size: 0.4, speed: [8, 11.5], op: 0.5, z: [-4, -7], len: 0.8, head: 0.9 },
+         { n: 150, size: 0.24, speed: [4.5, 6.8], op: 0.36, z: [-6, -11], len: 0.55, head: 0.8 },
+         { n: 250, size: 0.15, speed: [2.4, 3.9], op: 0.24, z: [-9, -16], len: 0.35, head: 0.65 }];
+    const group = new THREE.Group(); group.name = 'depth-rain';
+    const layers = defs.map((d, li) => {
+      const halfH = Math.tan(31 * Math.PI / 180) * (-d.z[1]) + 1.5;
+      const halfW = halfH * aspect + 1;
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(d.n * 3);
+      const spd = new Float32Array(d.n);
+      for (let i = 0; i < d.n; i++) {
+        pos[i * 3] = (Math.random() * 2 - 1) * halfW;
+        pos[i * 3 + 1] = (Math.random() * 2 - 1) * halfH;
+        pos[i * 3 + 2] = d.z[0] + Math.random() * (d.z[1] - d.z[0]);
+        spd[i] = d.speed[0] + Math.random() * (d.speed[1] - d.speed[0]);
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const pts = nameObject(new THREE.Points(geo, new THREE.PointsMaterial({
+        map: makeRainStreakTexture(d.len, d.head), size: d.size, sizeAttenuation: true,
+        transparent: true, opacity: 0, depthWrite: false,
+        blending: THREE.AdditiveBlending, color: 0xbfeaff,
+      })), 'rain-layer-' + li);
+      pts.userData = { speeds: spd, halfW, halfH, baseOp: d.op };
+      pts.renderOrder = 3;
+      group.add(pts);
+      return pts;
+    });
+    scene.add(camera);           // camera joins the graph so it can parent the rain
+    camera.add(group);
+    return { group, layers };
+  }
+
   const tokyoRing = tangentRing(0.16, 0.2, 0.8, 'tokyo-focus-ring');
   const pingRing = tangentRing(0.3, 0.34, 0, 'tokyo-ping-ring');     // expands on section change
 
@@ -487,6 +531,96 @@
   }
 
   const tokyoHalo = makeTokyoHalo();
+  const depthRain = reduced ? null : makeDepthRain();
+
+  /* Rain-on-glass droplets — 2D canvas beads that condense, swell, and break
+     into wobbling runs down the viewport. The strongest "liquid" cue the scene
+     can give without post-processing. Fades via destination-out so running
+     drops leave a decaying wet wake; idles to zero work when no drops live. */
+  const droplets = (function () {
+    if (reduced) return null;
+    const cv = document.querySelector('.scene-droplets');
+    if (!cv) return null;
+    const ctx = cv.getContext('2d');
+    const cap = LITE ? 12 : 24;
+    let W = 0, H = 0;
+    function resizeDroplets() {
+      const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+      W = cv.clientWidth; H = cv.clientHeight;
+      cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    resizeDroplets();
+    window.addEventListener('resize', resizeDroplets);
+    const drops = [];
+    let spawnIn = 1.4, skip = 0, fadeOut = 0;
+    function spawn() {
+      drops.push({
+        x: 20 + Math.random() * (W - 40), y: 10 + Math.random() * H * 0.75,
+        r: 1.4 + Math.random() * 2.2, grow: 0.12 + Math.random() * 0.5,
+        runAt: 5 + Math.random() * 2.5, vy: 0, wob: Math.random() * 6.28,
+        state: 'sit', age: 0, alpha: 0,
+      });
+    }
+    function drawDrop(d) {
+      const a = d.alpha;
+      const g = ctx.createRadialGradient(d.x, d.y, d.r * 0.15, d.x, d.y, d.r);
+      g.addColorStop(0, 'rgba(200, 235, 255, ' + (0.07 * a).toFixed(3) + ')');
+      g.addColorStop(0.72, 'rgba(120, 180, 200, ' + (0.04 * a).toFixed(3) + ')');
+      g.addColorStop(0.95, 'rgba(0, 8, 12, ' + (0.26 * a).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(0, 8, 12, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = 'rgba(225, 248, 255, ' + (0.35 * a).toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.ellipse(d.x - d.r * 0.34, d.y - d.r * 0.4, d.r * 0.26, d.r * 0.16, -0.6, 0, 6.2832);
+      ctx.fill();
+    }
+    function update(dt) {
+      if ((skip = 1 - skip)) return;                 // ~30fps is plenty for glass
+      dt = Math.min(dt * 2, 0.1);
+      spawnIn -= dt * (0.4 + sceneState.rain);
+      if (spawnIn <= 0 && drops.length < cap) { spawn(); spawnIn = 1 + Math.random() * 2.4; }
+      if (!drops.length) {
+        if (fadeOut > 0) {                           // purge the last wakes, then idle
+          fadeOut -= 1;
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
+          ctx.fillRect(0, 0, W, H);
+          ctx.globalCompositeOperation = 'source-over';
+          if (fadeOut === 0) ctx.clearRect(0, 0, W, H);
+        }
+        return;
+      }
+      fadeOut = 40;
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';         // prior frame decays → running wakes
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
+      for (let i = drops.length - 1; i >= 0; i--) {
+        const d = drops[i];
+        d.age += dt;
+        d.alpha = Math.min(1, d.alpha + dt * 1.5);
+        if (d.state === 'sit') {
+          d.r += d.grow * dt;
+          if (d.r >= d.runAt) d.state = 'run';
+          else if (d.age > 12) {
+            d.r -= dt * 0.7;                         // never ran — evaporate
+            if (d.r <= 1.2) { drops.splice(i, 1); continue; }
+          }
+        } else {
+          d.vy = Math.min(d.vy + dt * 80, 120);
+          d.wob += dt * 4.5;
+          d.y += d.vy * dt;
+          d.x += Math.sin(d.wob) * 0.22;
+          d.r -= dt * 1.1;
+          if (d.r <= 1.6 || d.y > H + 12) { drops.splice(i, 1); continue; }
+        }
+        drawDrop(d);
+      }
+    }
+    return { update };
+  })();
 
   // Reusable CanvasTexture sprite factory — re-renders on document.fonts.ready
   // (with the last payload) so JP glyphs never bake as tofu. Canvas work runs
@@ -709,6 +843,32 @@
       tokyoHalo.packetMat.opacity = tokyoFacing * halo * p * 0.9;
     }
   }
+
+  let rainSway = 0;
+  function updateDepthRain(dt) {
+    if (!depthRain) return;
+    const vis = sceneState.rain;
+    depthRain.group.visible = vis > 0.02;
+    if (!depthRain.group.visible) return;
+    rainSway += dt;
+    const wind = 0.10 + Math.sin(rainSway * 0.6) * 0.05;      // gentle global gusting
+    const beat = 0.85 + sceneState.haloPulse * 0.5 + sceneState.lockT * 0.45;
+    depthRain.layers.forEach(pts => {
+      const p = pts.geometry.attributes.position.array;
+      const ud = pts.userData;
+      for (let i = 0; i < ud.speeds.length; i++) {
+        const s = ud.speeds[i] * dt;
+        p[i * 3 + 1] -= s;
+        p[i * 3] -= s * wind;
+        if (p[i * 3 + 1] < -ud.halfH) {                       // recycle at the top, new column
+          p[i * 3 + 1] += ud.halfH * 2;
+          p[i * 3] = (Math.random() * 2 - 1) * ud.halfW;
+        }
+      }
+      pts.geometry.attributes.position.needsUpdate = true;
+      pts.material.opacity = ud.baseOp * vis * beat;
+    });
+  }
   function replayJourney() {
     arcN = 0;
     arcArm = 0;
@@ -760,7 +920,6 @@
     sceneState.section = id;
     sceneState.story = story;                  // target always updates (interpolation continues)
     if (sameSection || storyCooldown > 0) {     // guard re-arming replay/pulse on scroll jitter
-      setRainMultiplier(story.rain);
       if (!sameSection) {                       // focus still tracks the section; kill any pending
         clearTimeout(storyTimer);               // sequence timer so a dead section can't hijack it
         setFocusedPlace(story.sequence ? story.sequence[1] : story.place, story.intensity * 0.85);
@@ -770,7 +929,6 @@
     storyCooldown = 0.6;
     sceneState.haloPulse = Math.max(sceneState.haloPulse, story.intensity || 1);
     if (id === 'home' || id === 'contact') sceneState.lockT = 1;   // signal-lock beat
-    setRainMultiplier(story.rain);
     clearTimeout(storyTimer);
     if (story.route === 'replay') replayJourney();
     if (story.sequence) {
@@ -924,7 +1082,8 @@
     sceneState.callout += (sceneState.story.callout - sceneState.callout) * Math.min(1, 0.08 * f);
     sceneState.camera  += (sceneState.story.camera  - sceneState.camera)  * Math.min(1, 0.06 * f);
     if (sceneState.haloPulse > 0.01) sceneState.haloPulse *= Math.pow(0.92, f); else sceneState.haloPulse = 0;
-    setRainMultiplier(sceneState.rain);   // writes only when the 2-dp value changes
+    updateDepthRain(dt);
+    if (droplets) droplets.update(dt);
 
     /* Autonomous drift — phones never fire pointermove, so without this the
        LITE scene reads as parked. Slow beat-frequency wobble on every speed. */
