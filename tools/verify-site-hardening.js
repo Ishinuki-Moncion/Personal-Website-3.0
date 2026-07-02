@@ -120,6 +120,11 @@ check('globe carries live terminator, city lights, rim shell, and celestial even
     /shooting-star/.test(background) && /warp = 1; sceneState\.lockT = 1;/.test(background),
   'night-side shader, fresnel rim, satellite/star events, and the reveal-time lock beat must all be wired');
 
+check('weather layer has lightning, lens droplets, reactive rain, and idle cinematics',
+  /sheet-lightning/.test(background) && /updateLightning/.test(background) &&
+    /drawImage\(src/.test(background) && /rainShear/.test(background) && /idleK/.test(background),
+  'sheet lightning, droplet lens sampling, scroll wind shear, and idle dolly must all be wired');
+
 check('glass droplet canvas exists, is styled, and is JS-driven',
   /scene-droplets/.test(background) && /\.scene-droplets\s*\{/.test(css) &&
     /destination-out/.test(background),

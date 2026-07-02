@@ -574,6 +574,7 @@
     if (!cv) return null;
     const ctx = cv.getContext('2d');
     const cap = LITE ? 12 : 24;
+    const REFRACT = !LITE;                             // lens sampling skipped on LITE
     let W = 0, H = 0;
     function resizeDroplets() {
       const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -595,6 +596,18 @@
     }
     function drawDrop(d) {
       const a = d.alpha;
+      if (REFRACT && d.r > 3) {                        // inverted lens sample of the live frame
+        const src = renderer.domElement;
+        const k = src.width / W;
+        const sr = d.r * 3.1;
+        ctx.save();
+        ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 0.92, 0, 6.2832); ctx.clip();
+        ctx.translate(d.x, d.y); ctx.rotate(Math.PI);
+        ctx.globalAlpha = 0.55 * a;
+        ctx.drawImage(src, (d.x - sr) * k, (d.y - sr) * k, sr * 2 * k, sr * 2 * k, -d.r, -d.r, d.r * 2, d.r * 2);
+        ctx.restore();
+        ctx.globalAlpha = 1;
+      }
       const g = ctx.createRadialGradient(d.x, d.y, d.r * 0.15, d.x, d.y, d.r);
       g.addColorStop(0, 'rgba(200, 235, 255, ' + (0.07 * a).toFixed(3) + ')');
       g.addColorStop(0.72, 'rgba(120, 180, 200, ' + (0.04 * a).toFixed(3) + ')');
@@ -911,6 +924,45 @@
     } else if (c.star.material.opacity !== 0) c.star.material.opacity = 0;
   }
 
+  /* Sheet lightning — a rare double-flicker luminance lift behind the globe;
+     the rain flares with it via the beat term. Off under reduced motion. */
+  const lightning = (function () {
+    if (reduced) return null;
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+    const g = cv.getContext('2d');
+    const grd = g.createRadialGradient(32, 32, 2, 32, 32, 32);
+    grd.addColorStop(0, 'rgba(210,235,255,0.85)');
+    grd.addColorStop(0.55, 'rgba(140,190,230,0.25)');
+    grd.addColorStop(1, 'rgba(140,190,230,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+    const sp = nameObject(new THREE.Sprite(new THREE.SpriteMaterial({
+      map: new THREE.CanvasTexture(cv), transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false })), 'sheet-lightning');
+    sp.scale.set(46, 30, 1);
+    sp.position.set(0, 6, -30);
+    camera.add(sp);
+    return { sp, t: 0, next: 16 + Math.random() * 30 };
+  })();
+  function updateLightning(dt) {
+    if (!lightning) return 0;
+    const L = lightning;
+    L.next -= dt;
+    if (L.next <= 0 && L.t <= 0) {
+      L.t = 1;
+      L.next = 30 + Math.random() * 42;
+      L.sp.position.x = (Math.random() * 2 - 1) * 14;         // strikes wander
+    }
+    if (L.t > 0) {
+      L.t = Math.max(0, L.t - dt * 2.4);
+      const k = 1 - L.t;
+      const env = Math.max(0, Math.sin(k * Math.PI * 3)) * (1 - k * 0.7);   // decaying double flicker
+      L.sp.material.opacity = env * 0.24;
+      return env;
+    }
+    if (L.sp.material.opacity !== 0) L.sp.material.opacity = 0;
+    return 0;
+  }
+
   // (g) orbital scan ring — equatorial, does not rotate with the land
   const ringBaseC = new THREE.Color(CYAN), ringAmberC = new THREE.Color(AMBER);
   const ringMat = new THREE.MeshBasicMaterial({
@@ -941,7 +993,7 @@
       r.material.opacity = (0.10 + tokyoFacing * 0.9) * halo * (base + pulse * 0.10 + lock * 0.25);
     });
     if (tokyoHalo.ticks) tokyoHalo.ticks.material.opacity = tokyoFacing * halo * (0.20 + pulse * 0.18);
-    if (tokyoHalo.glow) tokyoHalo.glow.material.opacity = (0.10 + tokyoFacing * 0.5) * halo * (0.4 + pulse * 0.8 + lock * 1.0);
+    if (tokyoHalo.glow) tokyoHalo.glow.material.opacity = (0.10 + tokyoFacing * 0.5) * halo * (0.4 + pulse * 0.8 + lock * 1.0 + idleK * 0.35);
     tokyoHalo.labels.forEach(sp => {                          // per-label facing gate: only 1–2 read at once
       const a = (sp.userData.label.angle || 0) * Math.PI / 180;
       const lf = Math.max(0, Math.cos(a - spin.rotation.y + tokyoA0));
@@ -958,15 +1010,23 @@
     }
   }
 
-  let rainSway = 0;
-  function updateDepthRain(dt) {
+  let rainSway = 0, rainShear = 0, lastScrollY2 = 0, rainTintK = 0;
+  let idleT = 0, idleK = 0;                                   // idle cinematics state
+  ['pointermove', 'pointerdown', 'wheel', 'keydown', 'touchstart', 'scroll'].forEach(ev =>
+    window.addEventListener(ev, () => { idleT = 0; }, { passive: true }));
+  const RAIN_CYAN = new THREE.Color(0xbfeaff), RAIN_AMBER = new THREE.Color(0xffd2a0);
+  function updateDepthRain(dt, flash) {
     if (!depthRain) return;
     const vis = sceneState.rain;
     depthRain.group.visible = vis > 0.02;
     if (!depthRain.group.visible) return;
     rainSway += dt;
-    const wind = 0.10 + Math.sin(rainSway * 0.6) * 0.05;      // gentle global gusting
-    const beat = 0.85 + sceneState.haloPulse * 0.5 + sceneState.lockT * 0.45;
+    // gusting + scroll shear: fast scrolling visibly drags the rain sideways
+    const wind = 0.10 + Math.sin(rainSway * 0.6) * 0.05 + Math.max(-0.6, Math.min(0.6, rainShear));
+    const beat = 0.85 + sceneState.haloPulse * 0.5 + sceneState.lockT * 0.45 + (flash || 0) * 1.3;
+    // near layer picks up the section's neon — amber over Dallas/projects
+    rainTintK += ((sceneState.section === 'projects' ? 1 : 0) - rainTintK) * Math.min(1, dt * 1.2);
+    depthRain.layers[0].material.color.copy(RAIN_CYAN).lerp(RAIN_AMBER, rainTintK * 0.85);
     depthRain.layers.forEach(pts => {
       const p = pts.geometry.attributes.position.array;
       const ud = pts.userData;
@@ -1196,8 +1256,11 @@
     sceneState.callout += (sceneState.story.callout - sceneState.callout) * Math.min(1, 0.08 * f);
     sceneState.camera  += (sceneState.story.camera  - sceneState.camera)  * Math.min(1, 0.06 * f);
     if (sceneState.haloPulse > 0.01) sceneState.haloPulse *= Math.pow(0.92, f); else sceneState.haloPulse = 0;
-    updateDepthRain(dt);
-    if (droplets) droplets.update(dt);
+    idleT += dt;
+    idleK += ((idleT > 20 ? 1 : 0) - idleK) * Math.min(1, 0.02 * f);   // idle cinematic ease
+    rainShear += ((scrollY - lastScrollY2) * 0.0025 - rainShear) * Math.min(1, 0.12 * f);
+    lastScrollY2 = scrollY;
+    updateDepthRain(dt, updateLightning(dt));
     updateCelestial(dt);
     sunTimer -= dt;
     if (sunTimer <= 0) { sunTimer = 120; updateSunDir(); }   // terminator drifts in real time
@@ -1271,9 +1334,10 @@
     if (debugEl && ++debugTick % 20 === 0) updateDebugText();
     camera.position.x += (mouse.x * 1.5 - camera.position.x) * 0.04;
     camera.position.y += (-mouse.y * 1.0 + scrollN * 3 + sceneState.camera - camera.position.y) * 0.04;
-    camera.position.z = 10 - scrollN * 4 - warp * 6;
+    camera.position.z = 10 - scrollN * 4 - warp * 6 - idleK * 1.6;   // idle cinematic dolly-in
     camera.lookAt(0, scrollN * 1.5, 0);
     render();
+    if (droplets) droplets.update(dt);   // after render: droplet lenses sample THIS frame's buffer
   }
   raf = requestAnimationFrame(loop);
 
