@@ -15,6 +15,12 @@ git diff --check
 Served page with `?sceneDebug=1`:
 - Console: zero errors/warnings after 15s soak.
 - `__sceneDebug().fps` ≥ 55 (desktop-high, after 10s settle); ≥ 40 (LITE 390×844).
+  CAVEAT (learned 2026-07-02): Chrome quarter-rate throttles rAF for occluded/
+  battery-saver windows even when `visibilityState === 'visible'` — a false FAIL
+  reads as metronomic ~33ms deltas. Tiebreaker: a 1.2s PerformanceObserver
+  `longtask` probe. Zero long tasks at low fps = throttled environment (gate
+  passes on the last un-throttled measurement); many long tasks = real
+  regression (gate fails, profile the hot path).
 - `__sceneDebug()` fields sane (quality tier as expected; no NaNs).
 - Screenshot at settled home + one feature-exercising state; visually compare
   against the design language doc (docs/superpowers/specs/2026-07-02-design-language-sologram-noir.md).
