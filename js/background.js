@@ -203,6 +203,7 @@
   // pole density honest), one phase attribute drives GPU breathing: zero
   // per-frame buffer uploads, unlike the old CPU-distorted icosahedron.
   const gp = new Float32Array(GLOBE_N * 3), gph = new Float32Array(GLOBE_N), gedge = new Float32Array(GLOBE_N);
+  const gcity = new Float32Array(GLOBE_N);   // sparse night-side city lights (motivated amber emitters)
   let globeFilled = 0;
   for (let i = 0, guard = 0; i < GLOBE_N && guard < GLOBE_N * 10; guard++) {
     const lat = Math.asin(Math.random() * 2 - 1) * 180 / Math.PI;
@@ -211,6 +212,7 @@
     toV3(lat, lon, R).toArray(gp, i * 3);
     gph[i] = Math.random() * Math.PI * 2;
     gedge[i] = landEdgeAt(lon, lat);
+    gcity[i] = Math.random() < 0.11 ? 1 : 0;
     globeFilled = i + 1;
     i++;
   }
@@ -219,16 +221,21 @@
   if (!globeGeo) return;
   setFiniteAttribute(globeGeo, 'phase', gph.subarray(0, globeFilled), 1);
   setFiniteAttribute(globeGeo, 'edge', gedge.subarray(0, globeFilled), 1);
+  setFiniteAttribute(globeGeo, 'city', gcity.subarray(0, globeFilled), 1);
   const globeMat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uPx: { value: dpr } },
+    uniforms: { uTime: { value: 0 }, uPx: { value: dpr }, uSunDir: { value: new THREE.Vector3(1, 0, 0) } },
     vertexShader: `
       attribute float phase;
       attribute float edge;
+      attribute float city;
       uniform float uTime, uPx;
+      uniform vec3 uSunDir;
       varying float vA;
       varying float vEdge;
       varying float vFacing;
+      varying float vNight;
+      varying float vCity;
       void main() {
         vec3 worldPos = (modelMatrix * vec4(position, 1.0)).xyz;
         vec3 worldNormal = normalize((modelMatrix * vec4(normalize(position), 0.0)).xyz);
@@ -237,23 +244,46 @@
         vA = 0.55 + 0.45 * sin(uTime * 2.2 + phase);
         vEdge = edge;
         vFacing = smoothstep(-0.15, 0.65, dot(worldNormal, viewDir));
-        gl_PointSize = (2.4 + 1.4 * vA + edge * 1.2) * uPx * (6.0 / -mv.z);
+        vNight = 1.0 - smoothstep(-0.18, 0.12, dot(normalize(position), uSunDir));
+        vCity = city;
+        gl_PointSize = (2.4 + 1.4 * vA + edge * 1.2 + city * vNight * 1.1) * uPx * (6.0 / -mv.z);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
       varying float vA;
       varying float vEdge;
       varying float vFacing;
+      varying float vNight;
+      varying float vCity;
       void main() {
         float d = length(gl_PointCoord - 0.5);
         if (d > 0.5) discard;
         vec3 base = mix(vec3(0.224, 0.941, 1.0), vec3(1.0, 0.62, 0.17), vEdge * 0.35);
+        vec3 col = mix(base * 0.62, base * 1.18, vNight);
+        col = mix(col, vec3(1.0, 0.72, 0.35), vCity * vNight * 0.85);
+        float dusk = vNight * (1.0 - vNight) * 4.0;
+        col += vec3(1.0, 0.5, 0.25) * dusk * 0.16;
         float facingAlpha = mix(0.18, 1.0, vFacing);
         float alpha = vA * (1.0 - d * 2.0) * (0.75 + vEdge * 0.25) * facingAlpha;
-        gl_FragColor = vec4(base, alpha);
+        alpha *= mix(0.9, 1.0 + vCity * 0.6, vNight);
+        gl_FragColor = vec4(col, alpha);
       }`,
   });
   spin.add(nameObject(new THREE.Points(globeGeo, globeMat), 'earth-land-particles'));
+
+  /* Real-time day/night terminator (dossier: light is information; warmth
+     lives in the emitter — night cities glow amber, day side dims). Sun dir
+     lives in the globe's GEOGRAPHIC frame (same toV3 mapping as particles),
+     so night stays over the right countries however the display spins. */
+  let sunTimer = 0;
+  function updateSunDir() {
+    const now = new Date();
+    const doy = (now.getTime() - Date.UTC(now.getUTCFullYear(), 0, 0)) / 864e5;
+    const decl = 23.44 * Math.sin((2 * Math.PI * (doy - 81)) / 365.25);
+    const mins = now.getUTCHours() * 60 + now.getUTCMinutes() + now.getUTCSeconds() / 60;
+    globeMat.uniforms.uSunDir.value.copy(toV3(decl, 180 - mins / 4, 1)).normalize();
+  }
+  updateSunDir();
 
   // (b) graticule — one merged LineSegments (LITE: 3 rings, no meridians)
   (function buildGraticule() {
@@ -663,6 +693,111 @@
     return sp;
   })();
 
+  /* Instrument palette anchors (dossier [DATA]: MGSV iDroid field #0f394c,
+     active #b2f5fd, hue discipline 193-201; alert red reserved for alerts). */
+  const DL = { instrumentField: 0x0f394c, instrumentActive: 0xb2f5fd };
+
+  /* (f2) holo-scan shell — a thin latitude scanline sweeping the planet like a
+     slow radar pass (dossier: Soliton grammar; solograms, not atmosphere —
+     the globe is INSTRUMENTED, never "photographed"; realistic rim rejected). */
+  const holoScan = (function () {
+    const mat = new THREE.MeshBasicMaterial({ color: DL.instrumentActive, transparent: true,
+      opacity: 0.1, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false });
+    const m = nameObject(new THREE.Mesh(new THREE.RingGeometry(R * 0.99, R * 1.012, 96), mat), 'holo-scan-shell');
+    m.rotation.x = Math.PI / 2;
+    coreGroup.add(m);
+    return m;
+  })();
+
+  /* (f3) celestial events — a patrolling satellite whose beacon blinks and
+     occasionally downlinks to Tokyo (line-of-sight gated so the beam never
+     pierces the planet), plus rare shooting stars. Event-gated, per-shot
+     deliberate (dossier: never procedural clutter); off under reduced motion. */
+  function makeStreakTexture(lengthFrac, headAlpha) {
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128;
+    const g = cv.getContext('2d');
+    const x0 = 64 + 8, y0 = 128 - Math.round(128 * lengthFrac);
+    const x1 = 64 - 8, y1 = 122;
+    const grd = g.createLinearGradient(x0, y0, x1, y1);
+    grd.addColorStop(0, 'rgba(180, 235, 255, 0)');
+    grd.addColorStop(0.55, 'rgba(180, 235, 255, ' + headAlpha * 0.45 + ')');
+    grd.addColorStop(0.9, 'rgba(214, 244, 255, ' + headAlpha + ')');
+    grd.addColorStop(1, 'rgba(214, 244, 255, 0)');
+    g.strokeStyle = grd; g.lineCap = 'round';
+    g.globalAlpha = 0.45; g.lineWidth = 9;
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    g.globalAlpha = 1; g.lineWidth = 4;
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    return new THREE.CanvasTexture(cv);
+  }
+  const celestial = (function () {
+    if (reduced) return null;
+    const sat = makeGlowSprite('orbit-satellite', 0.3,
+      [[0, 'rgba(210,245,255,0.95)'], [0.35, 'rgba(57,240,255,0.4)'], [1, 'rgba(57,240,255,0)']]);
+    sat.material.opacity = 0.5;
+    coreGroup.add(sat);
+    const linkGeo = new THREE.BufferGeometry();
+    linkGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+    const linkMat = new THREE.LineBasicMaterial({ color: SCENE_COLORS.cyan, transparent: true,
+      opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+    coreGroup.add(nameObject(new THREE.Line(linkGeo, linkMat), 'satellite-downlink'));
+    const star = nameObject(new THREE.Sprite(new THREE.SpriteMaterial({
+      map: makeStreakTexture(0.9, 0.9), transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false })), 'shooting-star');
+    star.scale.setScalar(3);
+    star.position.set(0, 0, -24);
+    scene.add(camera);           // camera joins the graph so it can parent sky events
+    camera.add(star);
+    return {
+      sat, linkGeo, linkMat, star,
+      satA: Math.random() * 6.28, linkT: 0, starT: 0,
+      nextLink: 20 + Math.random() * 40, nextStar: 12 + Math.random() * 30,
+      starFrom: new THREE.Vector3(), starTo: new THREE.Vector3(), tokyoW: new THREE.Vector3(),
+    };
+  })();
+  function updateCelestial(dt) {
+    if (!celestial) return;
+    const c = celestial;
+    c.satA += dt * 0.16;                                     // ~40s orbit period
+    c.sat.position.set(Math.cos(c.satA) * R * 1.6, Math.sin(c.satA) * R * 0.68, Math.sin(c.satA) * R * 1.42);
+    c.sat.material.opacity = (Math.sin(c.satA * 34) > 0.55 ? 1 : 0.45) * 0.5;   // beacon blink
+    c.nextLink -= dt;
+    if (c.nextLink <= 0) {
+      c.tokyoW.copy(TOKYO).multiplyScalar(1.02);
+      spin.localToWorld(c.tokyoW);
+      coreGroup.worldToLocal(c.tokyoW);
+      const los = c.tokyoW.dot(c.sat.position) / (c.tokyoW.length() * c.sat.position.length());
+      if (los > 0.25) { c.linkT = 1; c.nextLink = 45 + Math.random() * 45; }
+      else c.nextLink = 4 + Math.random() * 6;   // Tokyo behind the disc — retry when it faces the sat
+    }
+    if (c.linkT > 0) {
+      c.linkT = Math.max(0, c.linkT - dt * 0.7);
+      c.tokyoW.copy(TOKYO).multiplyScalar(1.02);
+      spin.localToWorld(c.tokyoW);
+      coreGroup.worldToLocal(c.tokyoW);
+      const lp = c.linkGeo.attributes.position.array;
+      lp[0] = c.sat.position.x; lp[1] = c.sat.position.y; lp[2] = c.sat.position.z;
+      lp[3] = c.tokyoW.x; lp[4] = c.tokyoW.y; lp[5] = c.tokyoW.z;
+      c.linkGeo.attributes.position.needsUpdate = true;
+      c.linkMat.opacity = c.linkT * 0.45;
+    } else if (c.linkMat.opacity !== 0) c.linkMat.opacity = 0;
+    c.nextStar -= dt;
+    if (c.nextStar <= 0 && c.starT <= 0) {
+      c.starT = 1;
+      c.nextStar = 25 + Math.random() * 35;
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      c.starFrom.set(dir * (8 + Math.random() * 6), 7 + Math.random() * 4, -24);
+      c.starTo.set(-dir * (6 + Math.random() * 6), -2 - Math.random() * 4, -24);
+      c.star.material.rotation = Math.atan2(c.starTo.y - c.starFrom.y, c.starTo.x - c.starFrom.x) + Math.PI / 2;
+    }
+    if (c.starT > 0) {
+      c.starT = Math.max(0, c.starT - dt * 1.4);             // ~0.7s crossing
+      const k = 1 - c.starT;
+      c.star.position.lerpVectors(c.starFrom, c.starTo, k);
+      c.star.material.opacity = Math.sin(k * Math.PI) * 0.75;
+    } else if (c.star.material.opacity !== 0) c.star.material.opacity = 0;
+  }
+
   // (g) orbital scan ring — equatorial, does not rotate with the land
   const ringBaseC = new THREE.Color(CYAN), ringAmberC = new THREE.Color(AMBER);
   const ringMat = new THREE.MeshBasicMaterial({
@@ -781,6 +916,7 @@
     setFocusedPlace(story.place, story.intensity);
   };
 
+  let fpsEMA = 60;   // declared before the reduced branch runs — getSceneDebug must never TDZ-crash
   function getSceneDebug() {
     return {
       quality: quality.name,
@@ -795,6 +931,7 @@
       labels: Number(sceneState.labels.toFixed(3)),
       callout: Number(sceneState.callout.toFixed(3)),
       lockT: Number(sceneState.lockT.toFixed(3)),
+      fps: Math.round(fpsEMA),
       focusedPlaceId,
       arcHead: Math.floor(arcN),
       arcSegments: ARC_SEG,
@@ -812,6 +949,7 @@
       'rain=' + d.rain,
       'focus=' + d.focusedPlaceId,
       'arc=' + d.arcHead + '/' + d.arcSegments,
+      'fps=' + d.fps,
       'lite=' + d.lite,
       'reduced=' + d.reduced,
     ].join(' // ');
@@ -900,7 +1038,7 @@
 
   // boot hook: camera "warp" + (re)launch the Dallas->Tokyo journey
   let warp = 0;
-  window.__sceneWarp = () => { warp = 1; replayJourney(); };
+  window.__sceneWarp = () => { warp = 1; sceneState.lockT = 1; replayJourney(); };   // beat lands at reveal
 
   /* Delta-time: the old `t += 0.005` per frame ran the whole scene at 2x on
      120Hz displays (ProMotion phones, gaming monitors). Normalised to the same
@@ -911,6 +1049,7 @@
     if (!running) return;
     raf = requestAnimationFrame(loop);
     const dt = Math.max(0, Math.min((now - last) / 1000, 0.033)); last = now;
+    if (dt > 0) fpsEMA += (Math.min(1 / dt, 120) - fpsEMA) * 0.04;   // QA gate reads this
     t += dt * 0.3;
     const scrollN = Math.min(1, Math.max(0, scrollY / maxScroll));
     const f = dt * 60;   // per-frame speeds scale to real elapsed time
@@ -925,6 +1064,14 @@
     sceneState.camera  += (sceneState.story.camera  - sceneState.camera)  * Math.min(1, 0.06 * f);
     if (sceneState.haloPulse > 0.01) sceneState.haloPulse *= Math.pow(0.92, f); else sceneState.haloPulse = 0;
     setRainMultiplier(sceneState.rain);   // writes only when the 2-dp value changes
+    updateCelestial(dt);
+    const scanY = Math.sin(t * 0.55) * R * 0.9;                       // holo shell sweeps the sphere
+    const scanS = Math.max(0.06, Math.sqrt(Math.max(0, 1 - (scanY / R) * (scanY / R))));
+    holoScan.position.y = scanY;
+    holoScan.scale.set(scanS, scanS, 1);
+    holoScan.material.opacity = 0.09 + 0.03 * Math.sin(t * 9.7);      // projector shimmer, instrument-quiet
+    sunTimer -= dt;
+    if (sunTimer <= 0) { sunTimer = 120; updateSunDir(); }            // terminator drifts in real time
 
     /* Autonomous drift — phones never fire pointermove, so without this the
        LITE scene reads as parked. Slow beat-frequency wobble on every speed. */

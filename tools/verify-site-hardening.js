@@ -147,6 +147,17 @@ check('callout heading is bilingual only for Tokyo (no DALLAS / DALLAS)',
     /timeZone:\s*'Asia\/Tokyo'/.test(background),
   'callout must not print DALLAS / DALLAS and must show live JST');
 
+check('globe carries live terminator, city lights, holo-scan shell, and celestial events',
+  /uSunDir/.test(background) && /'city', gcity/.test(background) &&
+    /holo-scan-shell/.test(background) && /orbit-satellite/.test(background) &&
+    /shooting-star/.test(background) && /warp = 1; sceneState\.lockT = 1;/.test(background) &&
+    !/earth-atmosphere-rim/.test(background),
+  'night-side shader, sologram scan shell (NOT the rejected realistic rim), events, and reveal beat must be wired');
+
+check('scene exposes a live fps gauge for QA gates',
+  /fpsEMA/.test(background) && /fps: Math\.round\(fpsEMA\)/.test(background),
+  '__sceneDebug().fps must report the rolling frame rate');
+
 check(
   'page copy explains the Dallas to Tokyo geography',
   /class="geo-trail"/.test(index) &&
