@@ -64,11 +64,10 @@ check(
 check(
   'scene atmosphere overlay is declared and reduced-motion safe',
   /class="scene-atmosphere"[^>]*aria-hidden="true"/.test(index) &&
-    /class="scene-rain"/.test(index) &&
     /class="scene-glass"/.test(index) &&
-    /--scene-rain-base/.test(css) &&
-    /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.scene-rain::before,\s*\.scene-rain::after\s*\{\s*animation:\s*none;/.test(css),
-  'index.html should declare decorative rain/glass layers and CSS should disable animated rain for reduced motion'
+    /class="scene-droplets"/.test(index) &&
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*--scene-glass-base/.test(css),
+  'index.html should declare the decorative glass/droplet layers and CSS should keep the reduced-motion glass fallback'
 );
 
 check(
@@ -101,29 +100,21 @@ check(
   'window.__sceneDebug should include active section and atmosphere state when sceneDebug=1'
 );
 
-// Note: the plan's negative regex here was `!/animation:\s*sceneRainFall[\s\S]*background-position/`,
-// but its unbounded [\s\S]* spans the whole stylesheet and trips on unrelated static
-// `background-position: center` media styles hundreds of lines later. Scope the assert to the
-// rain keyframes blocks themselves: each must animate translateY and never background-position.
-check('rain animates via transform translateY (not a frozen background-position no-op)',
-  /@keyframes sceneRainFall\b[\s\S]*translateY\(/.test(css) &&
-    (css.match(/@keyframes sceneRainFall\d?\s*\{(?:[^{}]|\{[^{}]*\})*\}/g) || [])
-      .every(block => /translateY\(/.test(block) && !/background-position/.test(block)),
-  'css/site.css rain must fall via transform translateY on a 180deg-structured gradient');
-
 check('atmosphere sits below main content',
   /\.scene-atmosphere\s*\{[^}]*z-index:\s*0\b/.test(css),
   '.scene-atmosphere must render beneath main so content is not tinted');
 
-check('rain opacity is CSS-owned base * JS multiplier',
-  /--scene-rain-base/.test(css) && /--scene-rain-mul/.test(css) &&
-    /calc\(var\(--scene-rain-base\)\s*\*\s*var\(--scene-rain-mul/.test(css),
-  'CSS must own base rain opacity; JS only sets the multiplier');
+check('depth rain renders as camera-space parallax particle layers',
+  /makeDepthRain/.test(background) && /depth-rain/.test(background) &&
+    /rain-layer-/.test(background) && /camera\.add\(group\)/.test(background) &&
+    /reduced \? null : makeDepthRain\(\)/.test(background),
+  'rain must be the WebGL particle system (GITS particulation), reduced-motion disabled — never CSS line-rain');
 
-check('rain multiplier is written only on change (no per-frame :root writes)',
-  /_rainMulWritten/.test(background) && /setRainMultiplier/.test(background) &&
-    !/setAtmosphereVars/.test(background),
-  'background.js must gate --scene-rain-mul writes and must not restore per-frame setAtmosphereVars');
+check('weather layer has lightning, lens droplets, reactive rain, and idle cinematics',
+  /sheet-lightning/.test(background) && /updateLightning/.test(background) &&
+    /drawImage\(src/.test(background) && /rainShear/.test(background) && /idleK/.test(background) &&
+    /render\(\);\s*\n\s*if \(droplets\) droplets\.update/.test(background),
+  'lightning, shear, idle dolly wired — and droplets MUST sample after render() (lens reads this frame\'s buffer)');
 
 check('canvas sprites redraw after fonts load (no tofu labels)',
   /makeCanvasSprite/.test(background) && /document\.fonts\.ready\.then/.test(background),
