@@ -20,10 +20,9 @@
   --bloom-cyan: 0 0 30px rgba(57, 240, 255, 0.35), 0 0 80px rgba(57, 240, 255, 0.14);
   --bloom-amber: 0 0 26px rgba(255, 158, 44, 0.45);
 
-  --scene-rain-opacity: 0.28;
-  --scene-glass-opacity: 0.18;
-  --scene-rain-speed: 16s;
-  --scene-rain-slant: -8deg;
+  --scene-rain-base: 0.17;
+  --scene-glass-base: 0.16;
+  --scene-rain-mul: 1;      /* JS (Task 2) sets this per section; CSS owns the base */
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
@@ -98,64 +97,79 @@ body[data-booting] { overflow: hidden; }
 .scene-atmosphere {
   position: fixed;
   inset: 0;
-  z-index: 86;
+  z-index: 0;
   pointer-events: none;
   overflow: hidden;
   opacity: 1;
 }
-.scene-rain,
+.scene-rain {
+  position: absolute;
+  inset: -20% -10%;
+  overflow: hidden;
+  opacity: calc(var(--scene-rain-base) * var(--scene-rain-mul, 1));
+  mix-blend-mode: screen;
+}
+.scene-rain::before,
+.scene-rain::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: -120%; height: 260%;
+  background-repeat: repeat;
+  will-change: transform;
+}
+.scene-rain::before {           /* cyan near-field streaks */
+  background-image: repeating-linear-gradient(180deg,
+    rgba(57, 240, 255, 0) 0, rgba(57, 240, 255, 0) 42px,
+    rgba(57, 240, 255, 0.55) 58px, rgba(57, 240, 255, 0) 96px);
+  background-size: 3px 96px;     /* thin columns; dash cycle = 96px */
+  transform: rotate(-8deg) translateY(0);
+  animation: sceneRainFall 2.2s linear infinite;
+  filter: blur(0.6px);
+}
+.scene-rain::after {            /* sparser amber far-field streaks */
+  background-image: repeating-linear-gradient(180deg,
+    rgba(255, 158, 44, 0) 0, rgba(255, 158, 44, 0) 120px,
+    rgba(255, 158, 44, 0.35) 150px, rgba(255, 158, 44, 0) 210px);
+  background-size: 5px 210px;
+  transform: rotate(-8deg) translateY(0);
+  animation: sceneRainFall2 3.6s linear infinite;
+  filter: blur(0.9px);
+}
 .scene-glass {
   position: absolute;
   inset: -12%;
-}
-.scene-rain {
-  opacity: var(--scene-rain-opacity);
-  transform: rotate(var(--scene-rain-slant));
-  background-image:
-    repeating-linear-gradient(
-      90deg,
-      transparent 0,
-      transparent 46px,
-      rgba(57, 240, 255, 0.16) 47px,
-      transparent 49px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent 0,
-      transparent 83px,
-      rgba(255, 158, 44, 0.10) 84px,
-      transparent 86px
-    );
-  background-size: 160px 100%, 260px 100%;
-  animation: sceneRainFall var(--scene-rain-speed) linear infinite;
-  mix-blend-mode: screen;
-}
-.scene-glass {
-  opacity: var(--scene-glass-opacity);
+  opacity: var(--scene-glass-base);
   background:
     linear-gradient(105deg, transparent 0 42%, rgba(233, 241, 244, 0.07) 46%, transparent 52%),
     radial-gradient(circle at 74% 34%, rgba(57, 240, 255, 0.12), transparent 30%),
     radial-gradient(circle at 18% 76%, rgba(255, 158, 44, 0.10), transparent 28%);
-  filter: blur(0.2px);
 }
-@keyframes sceneRainFall {
-  from { background-position: 0 -120px, 0 -220px; }
-  to { background-position: 0 620px, 0 720px; }
+@keyframes sceneRainFall {   /* one dash cycle (96px) → seamless loop; visible because gradient varies along Y */
+  from { transform: rotate(-8deg) translateY(0); }
+  to   { transform: rotate(-8deg) translateY(96px); }
+}
+@keyframes sceneRainFall2 {
+  from { transform: rotate(-8deg) translateY(0); }
+  to   { transform: rotate(-8deg) translateY(210px); }
 }
 @media (hover: none), (pointer: coarse) {
   :root {
-    --scene-rain-opacity: 0.14;
-    --scene-glass-opacity: 0.10;
-    --scene-rain-speed: 22s;
+    --scene-rain-base: 0.11;
+    --scene-glass-base: 0.10;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --scene-rain-opacity: 0;
-    --scene-glass-opacity: 0.12;
+    --scene-rain-base: 0;
+    --scene-glass-base: 0.12;
   }
-  .scene-rain { animation: none; }
+  .scene-rain::before,
+  .scene-rain::after { animation: none; }
 }
+/* when the user turns Scanlines/CRT off, drop the neo-noir atmosphere too.
+   applyScan() in js/app.js hides .crt via an inline `display: none` (no root
+   class/attr/variable exists), so mirror that inline style here. */
+body:has(.crt[style*="display: none"]) .scene-atmosphere { opacity: 0; }
 
 /* CRT / grain / vignette overlay */
 .crt {
