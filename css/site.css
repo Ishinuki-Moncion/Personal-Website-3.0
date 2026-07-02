@@ -20,7 +20,9 @@
   --bloom-cyan: 0 0 30px rgba(57, 240, 255, 0.35), 0 0 80px rgba(57, 240, 255, 0.14);
   --bloom-amber: 0 0 26px rgba(255, 158, 44, 0.45);
 
+  --scene-rain-base: 0.17;
   --scene-glass-base: 0.16;
+  --scene-rain-mul: 1;      /* JS (Task 2) sets this per section; CSS owns the base */
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
@@ -100,11 +102,47 @@ body[data-booting] { overflow: hidden; }
   overflow: hidden;
   opacity: 1;
 }
-.scene-droplets {               /* rain-on-glass beads (2D canvas, JS-drawn) */
+.scene-rain {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: -20% -10%;
+  overflow: hidden;
+  opacity: calc(var(--scene-rain-base) * var(--scene-rain-mul, 1));
+  mix-blend-mode: screen;
+}
+.scene-rain::before,
+.scene-rain::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: -120%; height: 260%;
+  background-repeat: repeat;
+  will-change: transform;
+}
+.scene-rain::before {           /* cyan near-field streaks */
+  background-image: repeating-linear-gradient(180deg,
+    rgba(57, 240, 255, 0) 0, rgba(57, 240, 255, 0) 42px,
+    rgba(57, 240, 255, 0.85) 58px, rgba(57, 240, 255, 0) 96px);
+  background-size: 3px 96px;     /* dash cycle = 96px; X structure comes from the mask below */
+  /* a 180deg gradient is constant across X (tiles fuse into full-width bands);
+     the column mask carves it into sparse streaks. Without mask support this
+     falls back to near-invisible bands at base opacity — never a test pattern. */
+  -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 2px, transparent 2px 19px);
+          mask-image: repeating-linear-gradient(90deg, #000 0 2px, transparent 2px 19px);
+  transform: rotate(-8deg) translateY(0);
+  animation: sceneRainFall 2.2s linear infinite;
+  filter: blur(0.6px);
+}
+.scene-rain::after {            /* sparser amber far-field streaks */
+  background-image: repeating-linear-gradient(180deg,
+    rgba(255, 158, 44, 0) 0, rgba(255, 158, 44, 0) 120px,
+    rgba(255, 158, 44, 0.6) 150px, rgba(255, 158, 44, 0) 210px);
+  background-size: 5px 210px;
+  /* coprime 31px pitch + 9px phase offset vs the cyan 19px grid so the two
+     layers interfere irregularly instead of cross-hatching the CRT */
+  -webkit-mask-image: repeating-linear-gradient(90deg, transparent 0 9px, #000 9px 12px, transparent 12px 31px);
+          mask-image: repeating-linear-gradient(90deg, transparent 0 9px, #000 9px 12px, transparent 12px 31px);
+  transform: rotate(-8deg) translateY(0);
+  animation: sceneRainFall2 3.6s linear infinite;
+  filter: blur(0.9px);
 }
 .scene-glass {
   position: absolute;
@@ -115,15 +153,27 @@ body[data-booting] { overflow: hidden; }
     radial-gradient(circle at 74% 34%, rgba(57, 240, 255, 0.12), transparent 30%),
     radial-gradient(circle at 18% 76%, rgba(255, 158, 44, 0.10), transparent 28%);
 }
+@keyframes sceneRainFall {   /* one dash cycle (96px) → seamless loop; visible because gradient varies along Y */
+  from { transform: rotate(-8deg) translateY(0); }
+  to   { transform: rotate(-8deg) translateY(96px); }
+}
+@keyframes sceneRainFall2 {
+  from { transform: rotate(-8deg) translateY(0); }
+  to   { transform: rotate(-8deg) translateY(210px); }
+}
 @media (hover: none), (pointer: coarse) {
   :root {
+    --scene-rain-base: 0.11;
     --scene-glass-base: 0.10;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   :root {
+    --scene-rain-base: 0;
     --scene-glass-base: 0.12;
   }
+  .scene-rain::before,
+  .scene-rain::after { animation: none; }
 }
 /* viewport HUD corner brackets */
 .frame-hud { position: fixed; inset: 0; z-index: 88; pointer-events: none; }

@@ -72,6 +72,18 @@
   mount.appendChild(renderer.domElement);
   if (debugEl) debugEl.classList.add('on');
 
+  /* Event-driven rain multiplier — CSS owns the base opacity (and its
+     coarse-pointer / reduced-motion fallbacks); JS only scales it via
+     --scene-rain-mul, and only when the 2-dp quantized value changes. */
+  let _rainMulWritten = -1;
+  function setRainMultiplier(v) {
+    const next = Math.max(0, Math.round((v == null ? 1 : v) * 100) / 100); // 2-dp quantized
+    if (next === _rainMulWritten) return;                                  // no per-frame writes
+    _rainMulWritten = next;
+    document.documentElement.style.setProperty('--scene-rain-mul', String(next));
+  }
+  setRainMultiplier(1);
+
   /* Fail-loud onBeforeCompile helper — a silent no-op replace() would ship an
      unpatched material (e.g. after a three version bump), so warn instead. */
   function patchShader(src, find, insert) {
@@ -191,7 +203,6 @@
   // pole density honest), one phase attribute drives GPU breathing: zero
   // per-frame buffer uploads, unlike the old CPU-distorted icosahedron.
   const gp = new Float32Array(GLOBE_N * 3), gph = new Float32Array(GLOBE_N), gedge = new Float32Array(GLOBE_N);
-  const gcity = new Float32Array(GLOBE_N);   // sparse night-side city lights
   let globeFilled = 0;
   for (let i = 0, guard = 0; i < GLOBE_N && guard < GLOBE_N * 10; guard++) {
     const lat = Math.asin(Math.random() * 2 - 1) * 180 / Math.PI;
@@ -200,7 +211,6 @@
     toV3(lat, lon, R).toArray(gp, i * 3);
     gph[i] = Math.random() * Math.PI * 2;
     gedge[i] = landEdgeAt(lon, lat);
-    gcity[i] = Math.random() < 0.11 ? 1 : 0;
     globeFilled = i + 1;
     i++;
   }
@@ -209,21 +219,16 @@
   if (!globeGeo) return;
   setFiniteAttribute(globeGeo, 'phase', gph.subarray(0, globeFilled), 1);
   setFiniteAttribute(globeGeo, 'edge', gedge.subarray(0, globeFilled), 1);
-  setFiniteAttribute(globeGeo, 'city', gcity.subarray(0, globeFilled), 1);
   const globeMat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uPx: { value: dpr }, uSunDir: { value: new THREE.Vector3(1, 0, 0) } },
+    uniforms: { uTime: { value: 0 }, uPx: { value: dpr } },
     vertexShader: `
       attribute float phase;
       attribute float edge;
-      attribute float city;
       uniform float uTime, uPx;
-      uniform vec3 uSunDir;
       varying float vA;
       varying float vEdge;
       varying float vFacing;
-      varying float vNight;
-      varying float vCity;
       void main() {
         vec3 worldPos = (modelMatrix * vec4(position, 1.0)).xyz;
         vec3 worldNormal = normalize((modelMatrix * vec4(normalize(position), 0.0)).xyz);
@@ -232,47 +237,23 @@
         vA = 0.55 + 0.45 * sin(uTime * 2.2 + phase);
         vEdge = edge;
         vFacing = smoothstep(-0.15, 0.65, dot(worldNormal, viewDir));
-        vNight = 1.0 - smoothstep(-0.18, 0.12, dot(normalize(position), uSunDir));
-        vCity = city;
-        gl_PointSize = (2.4 + 1.4 * vA + edge * 1.2 + city * vNight * 1.1) * uPx * (6.0 / -mv.z);
+        gl_PointSize = (2.4 + 1.4 * vA + edge * 1.2) * uPx * (6.0 / -mv.z);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
       varying float vA;
       varying float vEdge;
       varying float vFacing;
-      varying float vNight;
-      varying float vCity;
       void main() {
         float d = length(gl_PointCoord - 0.5);
         if (d > 0.5) discard;
         vec3 base = mix(vec3(0.224, 0.941, 1.0), vec3(1.0, 0.62, 0.17), vEdge * 0.35);
-        vec3 col = mix(base * 0.62, base * 1.18, vNight);
-        col = mix(col, vec3(1.0, 0.72, 0.35), vCity * vNight * 0.85);
-        float dusk = vNight * (1.0 - vNight) * 4.0;
-        col += vec3(1.0, 0.5, 0.25) * dusk * 0.16;
         float facingAlpha = mix(0.18, 1.0, vFacing);
         float alpha = vA * (1.0 - d * 2.0) * (0.75 + vEdge * 0.25) * facingAlpha;
-        alpha *= mix(0.9, 1.0 + vCity * 0.6, vNight);
-        gl_FragColor = vec4(col, alpha);
+        gl_FragColor = vec4(base, alpha);
       }`,
   });
   spin.add(nameObject(new THREE.Points(globeGeo, globeMat), 'earth-land-particles'));
-
-  /* Real-time day/night terminator. The sun direction lives in the globe's
-     GEOGRAPHIC frame (same toV3 mapping as the particles), so night stays over
-     the right countries no matter how the display spins. Subsolar point from
-     UTC: declination by day-of-year, longitude 180° − minutes/4. */
-  let sunTimer = 0;
-  function updateSunDir() {
-    const now = new Date();
-    const doy = (now.getTime() - Date.UTC(now.getUTCFullYear(), 0, 0)) / 864e5;
-    const decl = 23.44 * Math.sin((2 * Math.PI * (doy - 81)) / 365.25);
-    const mins = now.getUTCHours() * 60 + now.getUTCMinutes() + now.getUTCSeconds() / 60;
-    const lon = 180 - mins / 4;
-    globeMat.uniforms.uSunDir.value.copy(toV3(decl, lon, 1)).normalize();
-  }
-  updateSunDir();
 
   // (b) graticule — one merged LineSegments (LITE: 3 rings, no meridians)
   (function buildGraticule() {
@@ -427,65 +408,6 @@
     spin.add(m);
     return m;
   }
-  /* Depth rain — camera-space particle layers (near/mid/far) with per-drop
-     speed jitter and a shared gusting wind. Parallax plus speed variation is
-     what makes rain read as weather instead of scrolling lines; brightness
-     rides sceneState.rain and the pulse/lock beats. Hidden under reduced
-     motion (a frozen rain frame reads as a glitch, not weather). */
-  function makeRainStreakTexture(lengthFrac, headAlpha) {
-    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128;
-    const g = cv.getContext('2d');
-    const x0 = 64 + 8, y0 = 128 - Math.round(128 * lengthFrac);
-    const x1 = 64 - 8, y1 = 122;                     // ~7deg tilt matches the wind drift below
-    const grd = g.createLinearGradient(x0, y0, x1, y1);
-    grd.addColorStop(0, 'rgba(180, 235, 255, 0)');
-    grd.addColorStop(0.55, 'rgba(180, 235, 255, ' + headAlpha * 0.45 + ')');
-    grd.addColorStop(0.9, 'rgba(214, 244, 255, ' + headAlpha + ')');
-    grd.addColorStop(1, 'rgba(214, 244, 255, 0)');
-    g.strokeStyle = grd; g.lineCap = 'round';
-    g.globalAlpha = 0.45; g.lineWidth = 9;             // soft aura pass
-    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
-    g.globalAlpha = 1; g.lineWidth = 4;                // bright wet core
-    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
-    return new THREE.CanvasTexture(cv);
-  }
-  function makeDepthRain() {
-    const aspect = w / h;
-    const defs = LITE
-      ? [{ n: 80, size: 0.26, speed: [4.5, 6.5], op: 0.32, z: [-5, -9], len: 0.7, head: 0.85 },
-         { n: 130, size: 0.16, speed: [2.4, 3.8], op: 0.22, z: [-8, -14], len: 0.45, head: 0.7 }]
-      : [{ n: 70, size: 0.4, speed: [8, 14], op: 0.5, z: [-4, -7], len: 0.8, head: 0.9 },
-         { n: 150, size: 0.24, speed: [4.2, 7.5], op: 0.36, z: [-6, -11], len: 0.55, head: 0.8 },
-         { n: 250, size: 0.15, speed: [2.2, 4.2], op: 0.24, z: [-9, -16], len: 0.35, head: 0.65 }];
-    const group = new THREE.Group(); group.name = 'depth-rain';
-    const layers = defs.map((d, li) => {
-      const halfH = Math.tan(31 * Math.PI / 180) * (-d.z[1]) + 1.5;
-      const halfW = halfH * aspect + 1;
-      const geo = new THREE.BufferGeometry();
-      const pos = new Float32Array(d.n * 3);
-      const spd = new Float32Array(d.n);
-      for (let i = 0; i < d.n; i++) {
-        pos[i * 3] = (Math.random() * 2 - 1) * halfW;
-        pos[i * 3 + 1] = (Math.random() * 2 - 1) * halfH;
-        pos[i * 3 + 2] = d.z[0] + Math.random() * (d.z[1] - d.z[0]);
-        spd[i] = d.speed[0] + Math.random() * (d.speed[1] - d.speed[0]);
-      }
-      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      const pts = nameObject(new THREE.Points(geo, new THREE.PointsMaterial({
-        map: makeRainStreakTexture(d.len, d.head), size: d.size, sizeAttenuation: true,
-        transparent: true, opacity: 0, depthWrite: false,
-        blending: THREE.AdditiveBlending, color: 0xbfeaff,
-      })), 'rain-layer-' + li);
-      pts.userData = { speeds: spd, halfW, halfH, baseOp: d.op };
-      pts.renderOrder = 3;
-      group.add(pts);
-      return pts;
-    });
-    scene.add(camera);           // camera joins the graph so it can parent the rain
-    camera.add(group);
-    return { group, layers };
-  }
-
   const tokyoRing = tangentRing(0.16, 0.2, 0.8, 'tokyo-focus-ring');
   const pingRing = tangentRing(0.3, 0.34, 0, 'tokyo-ping-ring');     // expands on section change
 
@@ -565,113 +487,6 @@
   }
 
   const tokyoHalo = makeTokyoHalo();
-  const depthRain = reduced ? null : makeDepthRain();
-
-  /* Rain-on-glass droplets — 2D canvas beads that condense, swell, and break
-     into wobbling runs down the viewport. The strongest "liquid" cue the scene
-     can give without post-processing. Fades via destination-out so running
-     drops leave a decaying wet wake; idles to zero work when no drops live. */
-  const droplets = (function () {
-    if (reduced) return null;
-    const cv = document.querySelector('.scene-droplets');
-    if (!cv) return null;
-    const ctx = cv.getContext('2d');
-    const cap = LITE ? 12 : 24;
-    const REFRACT = !LITE;                             // lens sampling skipped on LITE
-    let W = 0, H = 0;
-    function resizeDroplets() {
-      const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
-      W = cv.clientWidth; H = cv.clientHeight;
-      cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
-      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    }
-    resizeDroplets();
-    window.addEventListener('resize', resizeDroplets);
-    const drops = [];
-    let spawnIn = 1.4, skip = 0, fadeOut = 0;
-    function spawn() {
-      drops.push({
-        x: 20 + Math.random() * (W - 40), y: 10 + Math.random() * H * 0.75,
-        r: 1.4 + Math.random() * 2.2, grow: 0.12 + Math.random() * 0.5,
-        runAt: 5 + Math.random() * 2.5, vy: 0, wob: Math.random() * 6.28,
-        state: 'sit', age: 0, alpha: 0,
-      });
-    }
-    function drawDrop(d) {
-      const a = d.alpha;
-      const stretch = d.state === 'run' ? Math.min(0.45, d.vy * 0.004) : 0;   // runs smear
-      ctx.save();
-      ctx.translate(d.x, d.y); ctx.scale(1, 1 + stretch); ctx.translate(-d.x, -d.y);
-      if (REFRACT && d.r > 3) {                        // inverted lens sample of the live frame
-        const src = renderer.domElement;
-        const k = src.width / W;
-        const sr = d.r * 2.5;
-        ctx.save();
-        ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 0.92, 0, 6.2832); ctx.clip();
-        ctx.translate(d.x, d.y); ctx.rotate(Math.PI);
-        ctx.globalAlpha = 0.65 * a;
-        ctx.drawImage(src, (d.x - sr) * k, (d.y - sr) * k, sr * 2 * k, sr * 2 * k, -d.r, -d.r, d.r * 2, d.r * 2);
-        ctx.restore();
-        ctx.globalAlpha = 1;
-      }
-      const g = ctx.createRadialGradient(d.x, d.y, d.r * 0.15, d.x, d.y, d.r);
-      g.addColorStop(0, 'rgba(200, 235, 255, ' + (0.07 * a).toFixed(3) + ')');
-      g.addColorStop(0.72, 'rgba(120, 180, 200, ' + (0.04 * a).toFixed(3) + ')');
-      g.addColorStop(0.95, 'rgba(0, 8, 12, ' + (0.26 * a).toFixed(3) + ')');
-      g.addColorStop(1, 'rgba(0, 8, 12, 0)');
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, 6.2832); ctx.fill();
-      ctx.fillStyle = 'rgba(235, 250, 255, ' + (0.55 * a).toFixed(3) + ')';
-      ctx.beginPath();
-      ctx.ellipse(d.x - d.r * 0.34, d.y - d.r * 0.42, d.r * 0.2, d.r * 0.12, -0.6, 0, 6.2832);
-      ctx.fill();
-      ctx.restore();
-    }
-    function update(dt) {
-      if ((skip = 1 - skip)) return;                 // ~30fps is plenty for glass
-      dt = Math.min(dt * 2, 0.1);
-      spawnIn -= dt * (0.4 + sceneState.rain);
-      if (spawnIn <= 0 && drops.length < cap) { spawn(); spawnIn = 1 + Math.random() * 2.4; }
-      if (!drops.length) {
-        if (fadeOut > 0) {                           // purge the last wakes, then idle
-          fadeOut -= 1;
-          ctx.globalCompositeOperation = 'destination-out';
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
-          ctx.fillRect(0, 0, W, H);
-          ctx.globalCompositeOperation = 'source-over';
-          if (fadeOut === 0) ctx.clearRect(0, 0, W, H);
-        }
-        return;
-      }
-      fadeOut = 40;
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';         // prior frame decays → running wakes
-      ctx.fillRect(0, 0, W, H);
-      ctx.globalCompositeOperation = 'source-over';
-      for (let i = drops.length - 1; i >= 0; i--) {
-        const d = drops[i];
-        d.age += dt;
-        d.alpha = Math.min(1, d.alpha + dt * 1.5);
-        if (d.state === 'sit') {
-          d.r += d.grow * dt;
-          if (d.r >= d.runAt) d.state = 'run';
-          else if (d.age > 12) {
-            d.r -= dt * 0.7;                         // never ran — evaporate
-            if (d.r <= 1.2) { drops.splice(i, 1); continue; }
-          }
-        } else {
-          d.vy = Math.min(d.vy + dt * 80, 120);
-          d.wob += dt * 4.5;
-          d.y += d.vy * dt;
-          d.x += Math.sin(d.wob) * 0.22;
-          d.r -= dt * 1.1;
-          if (d.r <= 1.6 || d.y > H + 12) { drops.splice(i, 1); continue; }
-        }
-        drawDrop(d);
-      }
-    }
-    return { update };
-  })();
 
   // Reusable CanvasTexture sprite factory — re-renders on document.fonts.ready
   // (with the last payload) so JP glyphs never bake as tofu. Canvas work runs
@@ -718,13 +533,8 @@
       ctx.stroke();
     }
     ctx.font = '500 28px "M PLUS Rounded 1c", "JetBrains Mono", monospace';
-    const glyph = label.jp || label.en;
-    ctx.globalCompositeOperation = 'lighter';        // sologram fringe — Joi rule: argue for less
-    ctx.fillStyle = 'rgba(255,80,180,0.24)'; ctx.fillText(glyph, 15, 34);
-    ctx.fillStyle = 'rgba(80,220,255,0.24)'; ctx.fillText(glyph, 17, 34);
-    ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 12;
-    ctx.fillText(glyph, 16, 34);
+    ctx.fillText(label.jp || label.en, 16, 34);
     ctx.shadowBlur = 0;
     if (variant === 'primary') {
       ctx.font = '500 13px "JetBrains Mono", monospace';
@@ -853,127 +663,6 @@
     return sp;
   })();
 
-  /* (f2) holo-scan shell — a thin latitude scanline sweeping the planet like a
-     slow radar pass. Projected light, not atmosphere: the design language is
-     solograms (BR2049/GITS), so the globe is instrumented, never "photographed". */
-  const holoScan = (function () {
-    const mat = new THREE.MeshBasicMaterial({ color: 0x39f0ff, transparent: true, opacity: 0.12,
-      blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false });
-    const m = nameObject(new THREE.Mesh(new THREE.RingGeometry(R * 0.99, R * 1.012, 96), mat), 'holo-scan-shell');
-    m.rotation.x = Math.PI / 2;
-    coreGroup.add(m);
-    return m;
-  })();
-
-  /* (f3) celestial events — a patrolling satellite with a blinking beacon that
-     occasionally downlinks to Tokyo, and rare shooting stars crossing the far
-     background. Event-gated, never perpetual clutter; off under reduced motion. */
-  const celestial = (function () {
-    if (reduced) return null;
-    const sat = makeGlowSprite('orbit-satellite', 0.3,
-      [[0, 'rgba(210,245,255,0.95)'], [0.35, 'rgba(57,240,255,0.4)'], [1, 'rgba(57,240,255,0)']]);
-    sat.material.opacity = 0.5;
-    coreGroup.add(sat);
-    const linkGeo = new THREE.BufferGeometry();
-    linkGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
-    const linkMat = new THREE.LineBasicMaterial({ color: SCENE_COLORS.cyan, transparent: true,
-      opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
-    coreGroup.add(nameObject(new THREE.Line(linkGeo, linkMat), 'satellite-downlink'));
-    const star = nameObject(new THREE.Sprite(new THREE.SpriteMaterial({
-      map: makeRainStreakTexture(0.9, 0.9), transparent: true, opacity: 0,
-      blending: THREE.AdditiveBlending, depthWrite: false })), 'shooting-star');
-    star.scale.setScalar(3);
-    star.position.set(0, 0, -24);
-    camera.add(star);
-    return {
-      sat, linkGeo, linkMat, star,
-      satA: Math.random() * 6.28, linkT: 0, starT: 0,
-      nextLink: 20 + Math.random() * 40, nextStar: 12 + Math.random() * 30,
-      starFrom: new THREE.Vector3(), starTo: new THREE.Vector3(), tokyoW: new THREE.Vector3(),
-    };
-  })();
-  function updateCelestial(dt) {
-    if (!celestial) return;
-    const c = celestial;
-    c.satA += dt * 0.16;                                     // ~40s orbit period
-    c.sat.position.set(Math.cos(c.satA) * R * 1.6, Math.sin(c.satA) * R * 0.68, Math.sin(c.satA) * R * 1.42);
-    c.sat.material.opacity = (Math.sin(c.satA * 34) > 0.55 ? 1 : 0.45) * 0.5;   // beacon blink
-    c.nextLink -= dt;
-    if (c.nextLink <= 0) {
-      c.tokyoW.copy(TOKYO).multiplyScalar(1.02);
-      spin.localToWorld(c.tokyoW);
-      coreGroup.worldToLocal(c.tokyoW);
-      const los = c.tokyoW.dot(c.sat.position) / (c.tokyoW.length() * c.sat.position.length());
-      if (los > 0.25) { c.linkT = 1; c.nextLink = 45 + Math.random() * 45; }
-      else c.nextLink = 4 + Math.random() * 6;   // Tokyo behind the disc — retry when it faces the sat
-    }
-    if (c.linkT > 0) {
-      c.linkT = Math.max(0, c.linkT - dt * 0.7);
-      c.tokyoW.copy(TOKYO).multiplyScalar(1.02);
-      spin.localToWorld(c.tokyoW);
-      coreGroup.worldToLocal(c.tokyoW);
-      const lp = c.linkGeo.attributes.position.array;
-      lp[0] = c.sat.position.x; lp[1] = c.sat.position.y; lp[2] = c.sat.position.z;
-      lp[3] = c.tokyoW.x; lp[4] = c.tokyoW.y; lp[5] = c.tokyoW.z;
-      c.linkGeo.attributes.position.needsUpdate = true;
-      c.linkMat.opacity = c.linkT * 0.45;
-    } else if (c.linkMat.opacity !== 0) c.linkMat.opacity = 0;
-    c.nextStar -= dt;
-    if (c.nextStar <= 0 && c.starT <= 0) {
-      c.starT = 1;
-      c.nextStar = 25 + Math.random() * 35;
-      const dir = Math.random() < 0.5 ? 1 : -1;
-      c.starFrom.set(dir * (8 + Math.random() * 6), 7 + Math.random() * 4, -24);
-      c.starTo.set(-dir * (6 + Math.random() * 6), -2 - Math.random() * 4, -24);
-      c.star.material.rotation = Math.atan2(c.starTo.y - c.starFrom.y, c.starTo.x - c.starFrom.x) + Math.PI / 2;
-    }
-    if (c.starT > 0) {
-      c.starT = Math.max(0, c.starT - dt * 1.4);             // ~0.7s crossing
-      const k = 1 - c.starT;
-      c.star.position.lerpVectors(c.starFrom, c.starTo, k);
-      c.star.material.opacity = Math.sin(k * Math.PI) * 0.75;
-    } else if (c.star.material.opacity !== 0) c.star.material.opacity = 0;
-  }
-
-  /* Sheet lightning — a rare double-flicker luminance lift behind the globe;
-     the rain flares with it via the beat term. Off under reduced motion. */
-  const lightning = (function () {
-    if (reduced) return null;
-    const cv = document.createElement('canvas'); cv.width = cv.height = 64;
-    const g = cv.getContext('2d');
-    const grd = g.createRadialGradient(32, 32, 2, 32, 32, 32);
-    grd.addColorStop(0, 'rgba(210,235,255,0.85)');
-    grd.addColorStop(0.55, 'rgba(140,190,230,0.25)');
-    grd.addColorStop(1, 'rgba(140,190,230,0)');
-    g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
-    const sp = nameObject(new THREE.Sprite(new THREE.SpriteMaterial({
-      map: new THREE.CanvasTexture(cv), transparent: true, opacity: 0,
-      blending: THREE.AdditiveBlending, depthWrite: false })), 'sheet-lightning');
-    sp.scale.set(46, 30, 1);
-    sp.position.set(0, 6, -30);
-    camera.add(sp);
-    return { sp, t: 0, next: 16 + Math.random() * 30 };
-  })();
-  function updateLightning(dt) {
-    if (!lightning) return 0;
-    const L = lightning;
-    L.next -= dt;
-    if (L.next <= 0 && L.t <= 0) {
-      L.t = 1;
-      L.next = 30 + Math.random() * 42;
-      L.sp.position.x = (Math.random() * 2 - 1) * 14;         // strikes wander
-    }
-    if (L.t > 0) {
-      L.t = Math.max(0, L.t - dt * 2.4);
-      const k = 1 - L.t;
-      const env = Math.max(0, Math.sin(k * Math.PI * 3)) * (1 - k * 0.7);   // decaying double flicker
-      L.sp.material.opacity = env * 0.24;
-      return env;
-    }
-    if (L.sp.material.opacity !== 0) L.sp.material.opacity = 0;
-    return 0;
-  }
-
   // (g) orbital scan ring — equatorial, does not rotate with the land
   const ringBaseC = new THREE.Color(CYAN), ringAmberC = new THREE.Color(AMBER);
   const ringMat = new THREE.MeshBasicMaterial({
@@ -1004,7 +693,7 @@
       r.material.opacity = (0.10 + tokyoFacing * 0.9) * halo * (base + pulse * 0.10 + lock * 0.25);
     });
     if (tokyoHalo.ticks) tokyoHalo.ticks.material.opacity = tokyoFacing * halo * (0.20 + pulse * 0.18);
-    if (tokyoHalo.glow) tokyoHalo.glow.material.opacity = (0.10 + tokyoFacing * 0.5) * halo * (0.4 + pulse * 0.8 + lock * 1.0 + idleK * 0.35);
+    if (tokyoHalo.glow) tokyoHalo.glow.material.opacity = (0.10 + tokyoFacing * 0.5) * halo * (0.4 + pulse * 0.8 + lock * 1.0);
     tokyoHalo.labels.forEach(sp => {                          // per-label facing gate: only 1–2 read at once
       const a = (sp.userData.label.angle || 0) * Math.PI / 180;
       const lf = Math.max(0, Math.cos(a - spin.rotation.y + tokyoA0));
@@ -1012,7 +701,6 @@
       // where their own facing term bottoms out (browser-verified phase gap)
       const gate = Math.max(lf * lf, sp.userData.label.priority === 1 ? 0.45 : 0);
       sp.material.opacity = tokyoFacing * lab * gate * (LITE ? 0.72 : 0.9);
-      if (Math.random() < 0.006 * f) sp.material.opacity *= 0.55;   // interference: rare and quiet (Joi rule)
     });
     if (tokyoHalo.packet && tokyoHalo.packetMat) {            // packet is event-gated, never a perpetual orbit
       tokyoHalo.setPacketAt(t * 4.8);
@@ -1020,42 +708,6 @@
       tokyoHalo.packet.visible = p > 0.03;
       tokyoHalo.packetMat.opacity = tokyoFacing * halo * p * 0.9;
     }
-  }
-
-  let rainSway = 0, rainShear = 0, lastScrollY2 = 0, rainTintK = 0;
-  let idleT = 0, idleK = 0;                                   // idle cinematics state
-  let fpsEMA = 60;   // declared here (not in the loop vars): the reduced branch returns
-                     // before the loop vars run, and getSceneDebug() must never TDZ-crash
-  ['pointermove', 'pointerdown', 'wheel', 'keydown', 'touchstart', 'scroll'].forEach(ev =>
-    window.addEventListener(ev, () => { idleT = 0; }, { passive: true }));
-  const RAIN_CYAN = new THREE.Color(0xbfeaff), RAIN_AMBER = new THREE.Color(0xffd2a0);
-  function updateDepthRain(dt, flash) {
-    if (!depthRain) return;
-    const vis = sceneState.rain;
-    depthRain.group.visible = vis > 0.02;
-    if (!depthRain.group.visible) return;
-    rainSway += dt;
-    // gusting + scroll shear: fast scrolling visibly drags the rain sideways
-    const wind = 0.10 + Math.sin(rainSway * 0.6) * 0.05 + Math.max(-0.6, Math.min(0.6, rainShear));
-    const beat = 0.85 + sceneState.haloPulse * 0.5 + sceneState.lockT * 0.45 + (flash || 0) * 1.3;
-    // near layer picks up the section's neon — amber over Dallas/projects
-    rainTintK += ((sceneState.section === 'projects' ? 1 : 0) - rainTintK) * Math.min(1, dt * 1.2);
-    depthRain.layers[0].material.color.copy(RAIN_CYAN).lerp(RAIN_AMBER, rainTintK * 0.85);
-    depthRain.layers.forEach(pts => {
-      const p = pts.geometry.attributes.position.array;
-      const ud = pts.userData;
-      for (let i = 0; i < ud.speeds.length; i++) {
-        const s = ud.speeds[i] * dt;
-        p[i * 3 + 1] -= s;
-        p[i * 3] -= s * wind;
-        if (p[i * 3 + 1] < -ud.halfH) {                       // recycle at the top, new column
-          p[i * 3 + 1] += ud.halfH * 2;
-          p[i * 3] = (Math.random() * 2 - 1) * ud.halfW;
-        }
-      }
-      pts.geometry.attributes.position.needsUpdate = true;
-      pts.material.opacity = ud.baseOp * vis * beat;
-    });
   }
   function replayJourney() {
     arcN = 0;
@@ -1108,6 +760,7 @@
     sceneState.section = id;
     sceneState.story = story;                  // target always updates (interpolation continues)
     if (sameSection || storyCooldown > 0) {     // guard re-arming replay/pulse on scroll jitter
+      setRainMultiplier(story.rain);
       if (!sameSection) {                       // focus still tracks the section; kill any pending
         clearTimeout(storyTimer);               // sequence timer so a dead section can't hijack it
         setFocusedPlace(story.sequence ? story.sequence[1] : story.place, story.intensity * 0.85);
@@ -1117,6 +770,7 @@
     storyCooldown = 0.6;
     sceneState.haloPulse = Math.max(sceneState.haloPulse, story.intensity || 1);
     if (id === 'home' || id === 'contact') sceneState.lockT = 1;   // signal-lock beat
+    setRainMultiplier(story.rain);
     clearTimeout(storyTimer);
     if (story.route === 'replay') replayJourney();
     if (story.sequence) {
@@ -1141,7 +795,6 @@
       labels: Number(sceneState.labels.toFixed(3)),
       callout: Number(sceneState.callout.toFixed(3)),
       lockT: Number(sceneState.lockT.toFixed(3)),
-      fps: Math.round(fpsEMA),
       focusedPlaceId,
       arcHead: Math.floor(arcN),
       arcSegments: ARC_SEG,
@@ -1159,7 +812,6 @@
       'rain=' + d.rain,
       'focus=' + d.focusedPlaceId,
       'arc=' + d.arcHead + '/' + d.arcSegments,
-      'fps=' + d.fps,
       'lite=' + d.lite,
       'reduced=' + d.reduced,
     ].join(' // ');
@@ -1248,7 +900,7 @@
 
   // boot hook: camera "warp" + (re)launch the Dallas->Tokyo journey
   let warp = 0;
-  window.__sceneWarp = () => { warp = 1; sceneState.lockT = 1; replayJourney(); };   // beat lands at reveal
+  window.__sceneWarp = () => { warp = 1; replayJourney(); };
 
   /* Delta-time: the old `t += 0.005` per frame ran the whole scene at 2x on
      120Hz displays (ProMotion phones, gaming monitors). Normalised to the same
@@ -1259,7 +911,6 @@
     if (!running) return;
     raf = requestAnimationFrame(loop);
     const dt = Math.max(0, Math.min((now - last) / 1000, 0.033)); last = now;
-    if (dt > 0) fpsEMA += (Math.min(1 / dt, 120) - fpsEMA) * 0.04;   // QA gate reads this
     t += dt * 0.3;
     const scrollN = Math.min(1, Math.max(0, scrollY / maxScroll));
     const f = dt * 60;   // per-frame speeds scale to real elapsed time
@@ -1273,19 +924,7 @@
     sceneState.callout += (sceneState.story.callout - sceneState.callout) * Math.min(1, 0.08 * f);
     sceneState.camera  += (sceneState.story.camera  - sceneState.camera)  * Math.min(1, 0.06 * f);
     if (sceneState.haloPulse > 0.01) sceneState.haloPulse *= Math.pow(0.92, f); else sceneState.haloPulse = 0;
-    idleT += dt;
-    idleK += ((idleT > 20 ? 1 : 0) - idleK) * Math.min(1, 0.02 * f);   // idle cinematic ease
-    rainShear += ((scrollY - lastScrollY2) * 0.0025 - rainShear) * Math.min(1, 0.12 * f);
-    lastScrollY2 = scrollY;
-    updateDepthRain(dt, updateLightning(dt));
-    updateCelestial(dt);
-    const scanY = Math.sin(t * 0.55) * R * 0.9;                       // holo shell sweeps the sphere
-    const scanS = Math.max(0.06, Math.sqrt(Math.max(0, 1 - (scanY / R) * (scanY / R))));
-    holoScan.position.y = scanY;
-    holoScan.scale.set(scanS, scanS, 1);
-    holoScan.material.opacity = 0.09 + 0.03 * Math.sin(t * 9.7);      // projector shimmer, instrument-quiet
-    sunTimer -= dt;
-    if (sunTimer <= 0) { sunTimer = 120; updateSunDir(); }   // terminator drifts in real time
+    setRainMultiplier(sceneState.rain);   // writes only when the 2-dp value changes
 
     /* Autonomous drift — phones never fire pointermove, so without this the
        LITE scene reads as parked. Slow beat-frequency wobble on every speed. */
@@ -1356,10 +995,9 @@
     if (debugEl && ++debugTick % 20 === 0) updateDebugText();
     camera.position.x += (mouse.x * 1.5 - camera.position.x) * 0.04;
     camera.position.y += (-mouse.y * 1.0 + scrollN * 3 + sceneState.camera - camera.position.y) * 0.04;
-    camera.position.z = 10 - scrollN * 4 - warp * 6 - idleK * 1.6;   // idle cinematic dolly-in
+    camera.position.z = 10 - scrollN * 4 - warp * 6;
     camera.lookAt(0, scrollN * 1.5, 0);
     render();
-    if (droplets) droplets.update(dt);   // after render: droplet lenses sample THIS frame's buffer
   }
   raf = requestAnimationFrame(loop);
 
