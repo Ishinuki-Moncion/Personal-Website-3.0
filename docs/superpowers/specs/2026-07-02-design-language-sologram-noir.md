@@ -1,9 +1,9 @@
-# Design Language — "Sologram Noir"
+# Design Language — "Sologram Noir" (v2)
 
-The aesthetic north star for daikieOS, synthesized from the owner's references
-(Blade Runner / "Sony cinematic futuristic") and researched source material:
-Territory Studio's BR2049 screen-graphics language and GITS 2017's "sologram"
-city. Every visual decision on this site should be defensible against this doc.
+The aesthetic north star for daikieOS. v2 is grounded in the deep-research
+dossier at `docs/superpowers/research/2026-07-02-reference-dossier.md`
+(confidence-tiered, sourced) — every visual decision on this site should be
+defensible against this doc, and this doc against the dossier.
 
 ## The world in one line
 
@@ -57,9 +57,28 @@ city. Every visual decision on this site should be defensible against this doc.
    deep cyan #1c6f7a · amber #ff9e2c · soft amber #ffd9a0 · magenta/pink only
    inside holographic fringing · alert red and terminal green as micro-accents.
 
-6. **Imperfection = life.** Interference dropouts, projector shimmer, wander,
-   gusts. Perfectly steady elements read as PNG, not projection. (Bounded:
-   dropouts are single-frame and rare; never strobe, never loop visibly.)
+6. **Imperfection = life, but restraint = expensive** (v2 correction, VERIFIED
+   research). Deakins on Joi: "I was always arguing for less" — pixelation
+   tests were rejected as "too fussy"; the canon's most convincing hologram
+   artifacts are *subtle transparency against highlights + matched lighting*.
+   And in BR2049's grammar, heavy warping/ghosting/degradation encodes AGE and
+   LOW STATUS — our Tokyo instruments are high-status and must artifact
+   *rarely and quietly*. Bounded: fringe ghosts ≤ ~0.25 alpha at ≤1px-scale
+   offsets; dropouts single-frame, ≲0.4/s per element; never strobe.
+
+7. **The future's artifact is particulation** (v2, GITS solograms): holograms
+   are particle systems of light in Z-space. Build-ins, acquisitions, and
+   scan-tags should ASSEMBLE FROM PARTICLES (our globe already speaks this
+   language) rather than glitch into existence.
+
+8. **Holograms light their world** (v2, Pink Joi): holo elements are motivated
+   emitters — glow-cast onto nearby scene elements is canon-correct.
+
+9. **Tactical palette anchors** (v2, MGS data): instrument-panel family
+   #0f394c field / #b2f5fd active, hue discipline 193–201; alert red
+   (#BD2B25 family) is semantically loaded — hostile/alert ONLY. HUD
+   numeral/tag face: Rajdhani (free Google Font, CP2077's shipped UI face);
+   data lines stay monospace; JP glyphs first-class.
 
 ## Standing tests for any new visual
 

@@ -719,9 +719,9 @@
     }
     ctx.font = '500 28px "M PLUS Rounded 1c", "JetBrains Mono", monospace';
     const glyph = label.jp || label.en;
-    ctx.globalCompositeOperation = 'lighter';        // sologram RGB fringe (ghosted projection)
-    ctx.fillStyle = 'rgba(255,80,180,0.45)'; ctx.fillText(glyph, 14.6, 34);
-    ctx.fillStyle = 'rgba(80,220,255,0.45)'; ctx.fillText(glyph, 17.4, 34);
+    ctx.globalCompositeOperation = 'lighter';        // sologram fringe — Joi rule: argue for less
+    ctx.fillStyle = 'rgba(255,80,180,0.24)'; ctx.fillText(glyph, 15, 34);
+    ctx.fillStyle = 'rgba(80,220,255,0.24)'; ctx.fillText(glyph, 17, 34);
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 12;
     ctx.fillText(glyph, 16, 34);
@@ -1012,7 +1012,7 @@
       // where their own facing term bottoms out (browser-verified phase gap)
       const gate = Math.max(lf * lf, sp.userData.label.priority === 1 ? 0.45 : 0);
       sp.material.opacity = tokyoFacing * lab * gate * (LITE ? 0.72 : 0.9);
-      if (Math.random() < 0.012 * f) sp.material.opacity *= 0.45;   // sologram interference dropout (dt-scaled)
+      if (Math.random() < 0.006 * f) sp.material.opacity *= 0.55;   // interference: rare and quiet (Joi rule)
     });
     if (tokyoHalo.packet && tokyoHalo.packetMat) {            // packet is event-gated, never a perpetual orbit
       tokyoHalo.setPacketAt(t * 4.8);
@@ -1283,7 +1283,7 @@
     const scanS = Math.max(0.06, Math.sqrt(Math.max(0, 1 - (scanY / R) * (scanY / R))));
     holoScan.position.y = scanY;
     holoScan.scale.set(scanS, scanS, 1);
-    holoScan.material.opacity = 0.09 + 0.05 * Math.sin(t * 9.7);      // projector shimmer
+    holoScan.material.opacity = 0.09 + 0.03 * Math.sin(t * 9.7);      // projector shimmer, instrument-quiet
     sunTimer -= dt;
     if (sunTimer <= 0) { sunTimer = 120; updateSunDir(); }   // terminator drifts in real time
 
