@@ -22,6 +22,9 @@
       globeParticles: 2600,
       fieldCounts: [360, 180, 120],
       streaks: 12,
+      haloLabels: 1,
+      haloTicks: 8,
+      haloRings: 1,
     };
     if (LITE) return {
       name: 'lite',
@@ -29,6 +32,9 @@
       globeParticles: 2600,
       fieldCounts: [1100, 520, 360],
       streaks: 22,
+      haloLabels: 2,
+      haloTicks: 12,
+      haloRings: 1,
     };
     return {
       name: 'high',
@@ -36,9 +42,19 @@
       globeParticles: 7000,
       fieldCounts: [2600, 1200, 900],
       streaks: 40,
+      haloLabels: 5,
+      haloTicks: 24,
+      haloRings: 2,
     };
   }
   const quality = getQualityProfile();
+  const SCENE_COLORS = {
+    cyan: CYAN,
+    amber: AMBER,
+    softAmber: 0xffd9a0,
+    alert: 0xff3b5c,
+    terminal: 0x8dffb3,
+  };
   const dpr = quality.dpr;
   let w = innerWidth, h = innerHeight;
   // globe detail scales with device class
@@ -55,6 +71,18 @@
   renderer.setSize(w, h);
   mount.appendChild(renderer.domElement);
   if (debugEl) debugEl.classList.add('on');
+
+  /* Event-driven rain multiplier — CSS owns the base opacity (and its
+     coarse-pointer / reduced-motion fallbacks); JS only scales it via
+     --scene-rain-mul, and only when the 2-dp quantized value changes. */
+  let _rainMulWritten = -1;
+  function setRainMultiplier(v) {
+    const next = Math.max(0, Math.round((v == null ? 1 : v) * 100) / 100); // 2-dp quantized
+    if (next === _rainMulWritten) return;                                  // no per-frame writes
+    _rainMulWritten = next;
+    document.documentElement.style.setProperty('--scene-rain-mul', String(next));
+  }
+  setRainMultiplier(1);
 
   /* Fail-loud onBeforeCompile helper — a silent no-op replace() would ship an
      unpatched material (e.g. after a three version bump), so warn instead. */
@@ -433,18 +461,57 @@
   }
   let storyTimer = 0;
   const sectionStories = {
-    home: { place: 'tokyo', intensity: 1.2, replayArc: true },
-    about: { sequence: ['dallas', 'tokyo'], intensity: 0.95, replayArc: true },
-    work: { place: 'tokyo', intensity: 0.8 },
-    gallery: { place: 'tokyo', intensity: 0.45 },
-    projects: { place: 'dallas', intensity: 0.75 },
-    contact: { place: 'tokyo', intensity: 1.0 },
+    home: {
+      place: 'tokyo', sequence: null, intensity: 1.2, route: 'replay',
+      halo: 1, rain: 1, labels: 1, callout: 1, camera: 0,
+    },
+    about: {
+      place: 'tokyo', sequence: ['dallas', 'tokyo'], intensity: 0.95, route: 'replay',
+      halo: 0.85, rain: 0.85, labels: 0.85, callout: 1, camera: -0.2,
+    },
+    work: {
+      place: 'tokyo', sequence: null, intensity: 0.85, route: 'hold',
+      halo: 1.15, rain: 0.7, labels: 1, callout: 0.9, camera: 0,
+    },
+    gallery: {
+      place: 'tokyo', sequence: null, intensity: 0.45, route: 'hold',
+      halo: 0.45, rain: 0.35, labels: 0.35, callout: 0.35, camera: 0.15,
+    },
+    projects: {
+      place: 'dallas', sequence: null, intensity: 0.75, route: 'hold',
+      halo: 0.35, rain: 0.55, labels: 0.2, callout: 0.65, camera: -0.1,
+    },
+    contact: {
+      place: 'tokyo', sequence: null, intensity: 1.0, route: 'hold',
+      halo: 1.25, rain: 0.8, labels: 1, callout: 1, camera: 0,
+    },
+  };
+  const sceneState = {
+    section: 'home', story: sectionStories.home,
+    halo: sectionStories.home.halo, rain: sectionStories.home.rain,
+    labels: sectionStories.home.labels, callout: sectionStories.home.callout,
+    camera: sectionStories.home.camera,
+    haloPulse: 0,
+    lockT: 0,          // signal-lock timer (1 → 0), drives Task 4 ring sweep + glow bloom
   };
   window.__scenePing = () => { ping = 1; };
+  let storyCooldown = 0;                       // seconds; mirrors the effects.js ping guard
   window.__sceneFocus = sectionId => {
     const story = sectionStories[sectionId] || sectionStories.home;
+    const id = sectionStories[sectionId] ? sectionId : 'home';
+    const sameSection = id === sceneState.section;
+    sceneState.section = id;
+    sceneState.story = story;                  // target always updates (interpolation continues)
+    if (sameSection || storyCooldown > 0) {     // guard re-arming replay/pulse on scroll jitter
+      setRainMultiplier(story.rain);
+      return;
+    }
+    storyCooldown = 0.6;
+    sceneState.haloPulse = Math.max(sceneState.haloPulse, story.intensity || 1);
+    if (id === 'home' || id === 'contact') sceneState.lockT = 1;   // signal-lock beat
+    setRainMultiplier(story.rain);
     clearTimeout(storyTimer);
-    if (story.replayArc) replayJourney();
+    if (story.route === 'replay') replayJourney();
     if (story.sequence) {
       setFocusedPlace(story.sequence[0], story.intensity);
       storyTimer = setTimeout(() => setFocusedPlace(story.sequence[1], story.intensity * 0.85), 650);
@@ -461,6 +528,12 @@
       reduced,
       globeParticles: globeFilled,
       expectedGlobeParticles: GLOBE_N,
+      activeSection: sceneState.section,
+      halo: Number(sceneState.halo.toFixed(3)),
+      rain: Number(sceneState.rain.toFixed(3)),
+      labels: Number(sceneState.labels.toFixed(3)),
+      callout: Number(sceneState.callout.toFixed(3)),
+      lockT: Number(sceneState.lockT.toFixed(3)),
       focusedPlaceId,
       arcHead: Math.floor(arcN),
       arcSegments: ARC_SEG,
@@ -473,6 +546,9 @@
       'scene=' + d.quality,
       'dpr=' + d.dpr,
       'particles=' + d.globeParticles + '/' + d.expectedGlobeParticles,
+      'section=' + d.activeSection,
+      'halo=' + d.halo,
+      'rain=' + d.rain,
       'focus=' + d.focusedPlaceId,
       'arc=' + d.arcHead + '/' + d.arcSegments,
       'lite=' + d.lite,
@@ -567,6 +643,17 @@
     const scrollN = Math.min(1, Math.max(0, scrollY / maxScroll));
     const f = dt * 60;   // per-frame speeds scale to real elapsed time
 
+    // Section story state — eased toward the active story's targets each frame
+    if (storyCooldown > 0) storyCooldown = Math.max(0, storyCooldown - dt);
+    if (sceneState.lockT > 0) sceneState.lockT = Math.max(0, sceneState.lockT - dt * 0.9);
+    sceneState.halo    += (sceneState.story.halo    - sceneState.halo)    * Math.min(1, 0.08 * f);
+    sceneState.rain    += (sceneState.story.rain    - sceneState.rain)    * Math.min(1, 0.08 * f);
+    sceneState.labels  += (sceneState.story.labels  - sceneState.labels)  * Math.min(1, 0.08 * f);
+    sceneState.callout += (sceneState.story.callout - sceneState.callout) * Math.min(1, 0.08 * f);
+    sceneState.camera  += (sceneState.story.camera  - sceneState.camera)  * Math.min(1, 0.06 * f);
+    if (sceneState.haloPulse > 0.01) sceneState.haloPulse *= Math.pow(0.92, f); else sceneState.haloPulse = 0;
+    setRainMultiplier(sceneState.rain);   // writes only when the 2-dp value changes
+
     /* Autonomous drift — phones never fire pointermove, so without this the
        LITE scene reads as parked. Slow beat-frequency wobble on every speed. */
     const drift = 0.7 + 0.6 * Math.sin(t * 0.31) * Math.sin(t * 0.113 + 1.7);
@@ -594,7 +681,7 @@
     const focusedAngle = Math.atan2(focusedVector.z, focusedVector.x);
     const focusedFacing = Math.max(0, Math.sin(focusedAngle - spin.rotation.y));
     callout.sprite.position.copy(focusedVector).multiplyScalar(1.22).add(calloutOffset);
-    callout.sprite.material.opacity = focusedFacing * focusedFacing * (focusedPlace.primary ? 0.9 : 0.55);
+    callout.sprite.material.opacity = focusedFacing * focusedFacing * sceneState.callout * (focusedPlace.primary ? 0.9 : 0.55);
     if (focusFlash > 0.01) focusFlash *= Math.pow(0.9, f);
     else focusFlash = 0;
     for (const id in placeNodesById) {
@@ -633,7 +720,7 @@
     if (warp > 0.001) warp *= 0.92; else warp = 0;
     if (debugEl && ++debugTick % 20 === 0) updateDebugText();
     camera.position.x += (mouse.x * 1.5 - camera.position.x) * 0.04;
-    camera.position.y += (-mouse.y * 1.0 + scrollN * 3 - camera.position.y) * 0.04;
+    camera.position.y += (-mouse.y * 1.0 + scrollN * 3 + sceneState.camera - camera.position.y) * 0.04;
     camera.position.z = 10 - scrollN * 4 - warp * 6;
     camera.lookAt(0, scrollN * 1.5, 0);
     render();
