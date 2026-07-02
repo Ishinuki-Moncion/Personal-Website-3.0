@@ -697,7 +697,10 @@
     tokyoHalo.labels.forEach(sp => {                          // per-label facing gate: only 1–2 read at once
       const a = (sp.userData.label.angle || 0) * Math.PI / 180;
       const lf = Math.max(0, Math.cos(a - spin.rotation.y + tokyoA0));
-      sp.material.opacity = tokyoFacing * lab * lf * lf * (LITE ? 0.72 : 0.9);
+      // priority-1 labels keep a floor so TOKYO/JST stay legible at Tokyo dead-centre,
+      // where their own facing term bottoms out (browser-verified phase gap)
+      const gate = Math.max(lf * lf, sp.userData.label.priority === 1 ? 0.45 : 0);
+      sp.material.opacity = tokyoFacing * lab * gate * (LITE ? 0.72 : 0.9);
     });
     if (tokyoHalo.packet && tokyoHalo.packetMat) {            // packet is event-gated, never a perpetual orbit
       tokyoHalo.setPacketAt(t * 4.8);
@@ -745,7 +748,8 @@
     labels: sectionStories.home.labels, callout: sectionStories.home.callout,
     camera: sectionStories.home.camera,
     haloPulse: 0,
-    lockT: 0,          // signal-lock timer (1 → 0), drives Task 4 ring sweep + glow bloom
+    lockT: 1,          // signal-lock timer (1 → 0), drives ring sweep + glow bloom; starts armed —
+                       // boot IS the home entry (effects.js never emits an initial section focus)
   };
   window.__scenePing = () => { ping = 1; };
   let storyCooldown = 0;                       // seconds; mirrors the effects.js ping guard
@@ -757,6 +761,10 @@
     sceneState.story = story;                  // target always updates (interpolation continues)
     if (sameSection || storyCooldown > 0) {     // guard re-arming replay/pulse on scroll jitter
       setRainMultiplier(story.rain);
+      if (!sameSection) {                       // focus still tracks the section; kill any pending
+        clearTimeout(storyTimer);               // sequence timer so a dead section can't hijack it
+        setFocusedPlace(story.sequence ? story.sequence[1] : story.place, story.intensity * 0.85);
+      }
       return;
     }
     storyCooldown = 0.6;
