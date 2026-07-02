@@ -317,21 +317,6 @@
   $$('.seg[data-seg="lang"] button').forEach(b => {
     b.addEventListener('click', () => { if (b.dataset.val !== lang) toggleLang(); });
   });
-  // scanlines toggle
-  const scanSwitch = $('.switch[data-switch="scan"]');
-  let scanOn = true;
-  try { scanOn = localStorage.getItem('daikie-scan') !== '0'; } catch (e) {}
-  const crt = document.querySelector('.crt');
-  function applyScan() {
-    // css/site.css's scan gate string-matches this exact inline write (`display: none`) — the two must change together
-    if (crt) crt.style.display = scanOn ? '' : 'none';
-    scanSwitch && scanSwitch.classList.toggle('on', scanOn);
-    scanSwitch && scanSwitch.setAttribute('aria-pressed', scanOn ? 'true' : 'false');
-    try { localStorage.setItem('daikie-scan', scanOn ? '1' : '0'); } catch (e) {}
-  }
-  scanSwitch && scanSwitch.addEventListener('click', () => { scanOn = !scanOn; applyScan(); });
-  applyScan();
-
   // reboot
   $('.deck-reboot') && $('.deck-reboot').addEventListener('click', () => { try { sessionStorage.removeItem('daikie-booted'); } catch (e) {} location.reload(); });
 

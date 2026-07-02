@@ -175,35 +175,6 @@ body[data-booting] { overflow: hidden; }
   .scene-rain::before,
   .scene-rain::after { animation: none; }
 }
-/* when the user turns Scanlines/CRT off, drop the neo-noir atmosphere too.
-   applyScan() in js/app.js hides .crt via an inline `display: none` (no root
-   class/attr/variable exists), so mirror that inline style here. */
-body:has(.crt[style*="display: none"]) .scene-atmosphere { opacity: 0; }
-
-/* CRT / grain / vignette overlay */
-.crt {
-  position: fixed; inset: 0; z-index: 90; pointer-events: none;
-}
-.crt::before { /* scanlines */
-  content: ''; position: absolute; inset: 0;
-  background-image: repeating-linear-gradient(
-    0deg, rgba(0,0,0,0.16) 0px, rgba(0,0,0,0.16) 1px, transparent 1px, transparent 3px);
-  opacity: 0.4;
-}
-.crt::after { /* vignette */
-  content: ''; position: absolute; inset: 0;
-  background: radial-gradient(closest-side, transparent 55%, rgba(0,0,0,0.6));
-}
-.crt-flicker {
-  position: absolute; inset: 0; background: var(--cyan);
-  mix-blend-mode: overlay; opacity: 0;
-  animation: crtFlick 7s steps(1) infinite;
-}
-@keyframes crtFlick {
-  0%, 96%, 100% { opacity: 0; }
-  97% { opacity: 0.045; } 98% { opacity: 0; } 99% { opacity: 0.03; }
-}
-
 /* viewport HUD corner brackets */
 .frame-hud { position: fixed; inset: 0; z-index: 88; pointer-events: none; }
 .frame-hud span {
