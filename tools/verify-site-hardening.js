@@ -114,11 +114,16 @@ check('atmosphere sits below main content',
   /\.scene-atmosphere\s*\{[^}]*z-index:\s*0\b/.test(css),
   '.scene-atmosphere must render beneath main so content is not tinted');
 
-check('globe carries live terminator, city lights, rim shell, and celestial events',
+check('globe carries live terminator, city lights, holo-scan shell, and celestial events',
   /uSunDir/.test(background) && /'city', gcity/.test(background) &&
-    /earth-atmosphere-rim/.test(background) && /orbit-satellite/.test(background) &&
-    /shooting-star/.test(background) && /warp = 1; sceneState\.lockT = 1;/.test(background),
-  'night-side shader, fresnel rim, satellite/star events, and the reveal-time lock beat must all be wired');
+    /holo-scan-shell/.test(background) && /orbit-satellite/.test(background) &&
+    /shooting-star/.test(background) && /warp = 1; sceneState\.lockT = 1;/.test(background) &&
+    !/earth-atmosphere-rim/.test(background),
+  'night-side shader, sologram scan shell (NOT the rejected realistic rim), events, and reveal beat must be wired');
+
+check('scene exposes a live fps gauge for QA gates',
+  /fpsEMA/.test(background) && /fps: Math\.round\(fpsEMA\)/.test(background),
+  '__sceneDebug().fps must report the rolling frame rate');
 
 check('weather layer has lightning, lens droplets, reactive rain, and idle cinematics',
   /sheet-lightning/.test(background) && /updateLightning/.test(background) &&

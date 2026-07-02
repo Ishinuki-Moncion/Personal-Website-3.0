@@ -442,7 +442,10 @@
     grd.addColorStop(0.55, 'rgba(180, 235, 255, ' + headAlpha * 0.45 + ')');
     grd.addColorStop(0.9, 'rgba(214, 244, 255, ' + headAlpha + ')');
     grd.addColorStop(1, 'rgba(214, 244, 255, 0)');
-    g.strokeStyle = grd; g.lineWidth = 5; g.lineCap = 'round';
+    g.strokeStyle = grd; g.lineCap = 'round';
+    g.globalAlpha = 0.45; g.lineWidth = 9;             // soft aura pass
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    g.globalAlpha = 1; g.lineWidth = 4;                // bright wet core
     g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
     return new THREE.CanvasTexture(cv);
   }
@@ -451,9 +454,9 @@
     const defs = LITE
       ? [{ n: 80, size: 0.26, speed: [4.5, 6.5], op: 0.32, z: [-5, -9], len: 0.7, head: 0.85 },
          { n: 130, size: 0.16, speed: [2.4, 3.8], op: 0.22, z: [-8, -14], len: 0.45, head: 0.7 }]
-      : [{ n: 70, size: 0.4, speed: [8, 11.5], op: 0.5, z: [-4, -7], len: 0.8, head: 0.9 },
-         { n: 150, size: 0.24, speed: [4.5, 6.8], op: 0.36, z: [-6, -11], len: 0.55, head: 0.8 },
-         { n: 250, size: 0.15, speed: [2.4, 3.9], op: 0.24, z: [-9, -16], len: 0.35, head: 0.65 }];
+      : [{ n: 70, size: 0.4, speed: [8, 14], op: 0.5, z: [-4, -7], len: 0.8, head: 0.9 },
+         { n: 150, size: 0.24, speed: [4.2, 7.5], op: 0.36, z: [-6, -11], len: 0.55, head: 0.8 },
+         { n: 250, size: 0.15, speed: [2.2, 4.2], op: 0.24, z: [-9, -16], len: 0.35, head: 0.65 }];
     const group = new THREE.Group(); group.name = 'depth-rain';
     const layers = defs.map((d, li) => {
       const halfH = Math.tan(31 * Math.PI / 180) * (-d.z[1]) + 1.5;
@@ -596,14 +599,17 @@
     }
     function drawDrop(d) {
       const a = d.alpha;
+      const stretch = d.state === 'run' ? Math.min(0.45, d.vy * 0.004) : 0;   // runs smear
+      ctx.save();
+      ctx.translate(d.x, d.y); ctx.scale(1, 1 + stretch); ctx.translate(-d.x, -d.y);
       if (REFRACT && d.r > 3) {                        // inverted lens sample of the live frame
         const src = renderer.domElement;
         const k = src.width / W;
-        const sr = d.r * 3.1;
+        const sr = d.r * 2.5;
         ctx.save();
         ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 0.92, 0, 6.2832); ctx.clip();
         ctx.translate(d.x, d.y); ctx.rotate(Math.PI);
-        ctx.globalAlpha = 0.55 * a;
+        ctx.globalAlpha = 0.65 * a;
         ctx.drawImage(src, (d.x - sr) * k, (d.y - sr) * k, sr * 2 * k, sr * 2 * k, -d.r, -d.r, d.r * 2, d.r * 2);
         ctx.restore();
         ctx.globalAlpha = 1;
@@ -615,10 +621,11 @@
       g.addColorStop(1, 'rgba(0, 8, 12, 0)');
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, 6.2832); ctx.fill();
-      ctx.fillStyle = 'rgba(225, 248, 255, ' + (0.35 * a).toFixed(3) + ')';
+      ctx.fillStyle = 'rgba(235, 250, 255, ' + (0.55 * a).toFixed(3) + ')';
       ctx.beginPath();
-      ctx.ellipse(d.x - d.r * 0.34, d.y - d.r * 0.4, d.r * 0.26, d.r * 0.16, -0.6, 0, 6.2832);
+      ctx.ellipse(d.x - d.r * 0.34, d.y - d.r * 0.42, d.r * 0.2, d.r * 0.12, -0.6, 0, 6.2832);
       ctx.fill();
+      ctx.restore();
     }
     function update(dt) {
       if ((skip = 1 - skip)) return;                 // ~30fps is plenty for glass
@@ -711,8 +718,13 @@
       ctx.stroke();
     }
     ctx.font = '500 28px "M PLUS Rounded 1c", "JetBrains Mono", monospace';
+    const glyph = label.jp || label.en;
+    ctx.globalCompositeOperation = 'lighter';        // sologram RGB fringe (ghosted projection)
+    ctx.fillStyle = 'rgba(255,80,180,0.45)'; ctx.fillText(glyph, 14.6, 34);
+    ctx.fillStyle = 'rgba(80,220,255,0.45)'; ctx.fillText(glyph, 17.4, 34);
+    ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 12;
-    ctx.fillText(label.jp || label.en, 16, 34);
+    ctx.fillText(glyph, 16, 34);
     ctx.shadowBlur = 0;
     if (variant === 'primary') {
       ctx.font = '500 13px "JetBrains Mono", monospace';
@@ -841,25 +853,17 @@
     return sp;
   })();
 
-  // (f2) atmosphere rim — backside fresnel shell; the planet's limb catches light
-  coreGroup.add(nameObject(new THREE.Mesh(
-    new THREE.SphereGeometry(R * 1.055, LITE ? 32 : 48, LITE ? 24 : 32),
-    new THREE.ShaderMaterial({
-      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide,
-      uniforms: { uRimC: { value: new THREE.Color(0x39f0ff) } },
-      vertexShader: `
-        varying float vF;
-        void main() {
-          vec3 n = normalize(normalMatrix * normal);
-          vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          vF = pow(1.0 - abs(dot(normalize(-mv.xyz), n)), 3.0);
-          gl_Position = projectionMatrix * mv;
-        }`,
-      fragmentShader: `
-        uniform vec3 uRimC;
-        varying float vF;
-        void main() { gl_FragColor = vec4(uRimC, vF * 0.42); }`,
-    })), 'earth-atmosphere-rim'));
+  /* (f2) holo-scan shell — a thin latitude scanline sweeping the planet like a
+     slow radar pass. Projected light, not atmosphere: the design language is
+     solograms (BR2049/GITS), so the globe is instrumented, never "photographed". */
+  const holoScan = (function () {
+    const mat = new THREE.MeshBasicMaterial({ color: 0x39f0ff, transparent: true, opacity: 0.12,
+      blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false });
+    const m = nameObject(new THREE.Mesh(new THREE.RingGeometry(R * 0.99, R * 1.012, 96), mat), 'holo-scan-shell');
+    m.rotation.x = Math.PI / 2;
+    coreGroup.add(m);
+    return m;
+  })();
 
   /* (f3) celestial events — a patrolling satellite with a blinking beacon that
      occasionally downlinks to Tokyo, and rare shooting stars crossing the far
@@ -1001,6 +1005,7 @@
       // where their own facing term bottoms out (browser-verified phase gap)
       const gate = Math.max(lf * lf, sp.userData.label.priority === 1 ? 0.45 : 0);
       sp.material.opacity = tokyoFacing * lab * gate * (LITE ? 0.72 : 0.9);
+      if (Math.random() < 0.012) sp.material.opacity *= 0.45;   // sologram interference dropout
     });
     if (tokyoHalo.packet && tokyoHalo.packetMat) {            // packet is event-gated, never a perpetual orbit
       tokyoHalo.setPacketAt(t * 4.8);
@@ -1127,6 +1132,7 @@
       labels: Number(sceneState.labels.toFixed(3)),
       callout: Number(sceneState.callout.toFixed(3)),
       lockT: Number(sceneState.lockT.toFixed(3)),
+      fps: Math.round(fpsEMA),
       focusedPlaceId,
       arcHead: Math.floor(arcN),
       arcSegments: ARC_SEG,
@@ -1144,6 +1150,7 @@
       'rain=' + d.rain,
       'focus=' + d.focusedPlaceId,
       'arc=' + d.arcHead + '/' + d.arcSegments,
+      'fps=' + d.fps,
       'lite=' + d.lite,
       'reduced=' + d.reduced,
     ].join(' // ');
@@ -1238,11 +1245,12 @@
      120Hz displays (ProMotion phones, gaming monitors). Normalised to the same
      speed as 60Hz: 0.005/frame @60fps = 0.3/s. Clamped so a stalled tab can't
      jump time on resume. */
-  let raf, running = true, t = 0, last = performance.now(), debugTick = 0;
+  let raf, running = true, t = 0, last = performance.now(), debugTick = 0, fpsEMA = 60;
   function loop(now) {
     if (!running) return;
     raf = requestAnimationFrame(loop);
     const dt = Math.max(0, Math.min((now - last) / 1000, 0.033)); last = now;
+    if (dt > 0) fpsEMA += (Math.min(1 / dt, 120) - fpsEMA) * 0.04;   // QA gate reads this
     t += dt * 0.3;
     const scrollN = Math.min(1, Math.max(0, scrollY / maxScroll));
     const f = dt * 60;   // per-frame speeds scale to real elapsed time
@@ -1262,6 +1270,11 @@
     lastScrollY2 = scrollY;
     updateDepthRain(dt, updateLightning(dt));
     updateCelestial(dt);
+    const scanY = Math.sin(t * 0.55) * R * 0.9;                       // holo shell sweeps the sphere
+    const scanS = Math.max(0.06, Math.sqrt(Math.max(0, 1 - (scanY / R) * (scanY / R))));
+    holoScan.position.y = scanY;
+    holoScan.scale.set(scanS, scanS, 1);
+    holoScan.material.opacity = 0.09 + 0.05 * Math.sin(t * 9.7);      // projector shimmer
     sunTimer -= dt;
     if (sunTimer <= 0) { sunTimer = 120; updateSunDir(); }   // terminator drifts in real time
 
