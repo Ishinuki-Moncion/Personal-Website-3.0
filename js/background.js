@@ -516,6 +516,27 @@
         labels.push(pack.sprite);
       });
 
+    /* Transit loop — a hand-placed Yamanote-style circuit with station dots
+       (dossier: MGS Soliton-schematic grammar; per-shot deliberate placement,
+       never procedural). The pulse packet rides THIS loop, not a circle. */
+    const TRANSIT_LOOP = [
+      [0.62, 0.02], [0.48, 0.34], [0.18, 0.55], [-0.16, 0.60], [-0.44, 0.46],
+      [-0.60, 0.18], [-0.63, -0.14], [-0.48, -0.40], [-0.18, -0.56], [0.14, -0.60],
+      [0.42, -0.48], [0.60, -0.24],
+    ];
+    const transitPos = new Float32Array(TRANSIT_LOOP.length * 3);
+    TRANSIT_LOOP.forEach((p2, i) => { transitPos[i * 3] = p2[0]; transitPos[i * 3 + 1] = p2[1]; transitPos[i * 3 + 2] = 0.05; });
+    const transitGeo = new THREE.BufferGeometry();
+    transitGeo.setAttribute('position', new THREE.BufferAttribute(transitPos, 3));
+    const transit = nameObject(new THREE.LineLoop(transitGeo, new THREE.LineBasicMaterial({
+      color: 0xb2f5fd, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false })), 'tokyo-transit-loop');
+    staticGroup.add(transit);
+    const stations = nameObject(new THREE.Points(transitGeo, new THREE.PointsMaterial({
+      color: SCENE_COLORS.softAmber, size: 0.05, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true })), 'tokyo-transit-stations');
+    staticGroup.add(stations);
+
     const packetGeo = makeGeometry('tokyo-halo-pulse-packet', new Float32Array([0, 0, 0.1]), 3);
     const packetMat = new THREE.PointsMaterial({
       color: SCENE_COLORS.softAmber,
@@ -527,22 +548,25 @@
       sizeAttenuation: true,
     });
     const packet = packetGeo ? nameObject(new THREE.Points(packetGeo, packetMat), 'tokyo-halo-pulse-packet') : null;
-    if (packet) spinGroup.add(packet);
+    if (packet) staticGroup.add(packet);          // rides the geographic loop, so it must not spin
 
-    function setPacketAt(angle) {
+    function setPacketAt(k) {                     // k = laps along the transit loop (fractional)
       if (!packet || !packetGeo) return;
+      const n = TRANSIT_LOOP.length;
+      const f = (((k % 1) + 1) % 1) * n;
+      const i = Math.floor(f) % n, t2 = f - Math.floor(f);
+      const a = TRANSIT_LOOP[i], b = TRANSIT_LOOP[(i + 1) % n];
       const pos = packetGeo.attributes.position.array;
-      const radius = quality.haloRings > 1 ? 0.82 : 0.58;
-      pos[0] = Math.cos(angle) * radius;
-      pos[1] = Math.sin(angle) * radius;
-      pos[2] = 0.12;
+      pos[0] = a[0] + (b[0] - a[0]) * t2;
+      pos[1] = a[1] + (b[1] - a[1]) * t2;
+      pos[2] = 0.07;
       packetGeo.attributes.position.needsUpdate = true;
     }
 
     group.add(spinGroup);
     group.add(staticGroup);
     spin.add(group);
-    return { group, spinGroup, staticGroup, rings, ticks, glow, labels, packet, packetMat, packetGeo, setPacketAt };
+    return { group, spinGroup, staticGroup, rings, ticks, glow, labels, packet, packetMat, packetGeo, setPacketAt, transit, stations };
   }
 
   const tokyoHalo = makeTokyoHalo();
@@ -975,6 +999,134 @@
     return 0;
   }
 
+  /* Kiroshi scan-and-tag (dossier: CP2077 — scanned things acquire bracket
+     tags with readouts, one confident tick; GITS — tags ASSEMBLE FROM
+     PARTICLES). One tag live at a time; pointer-hover only (skipped on LITE
+     and reduced). Coordinates below are PLACEHOLDERS until the owner supplies
+     real shot locations — swap values in this one map. */
+  const GALLERY_PLACES = {
+    'gallery-01': { lat: 43.06, lon: 141.35, en: 'HOKKAIDO', jp: '北海道' },
+    'gallery-02': { lat: 35.66, lon: 139.70, en: 'SHIBUYA', jp: '渋谷' },
+    'gallery-03': { lat: 35.31, lon: 139.55, en: 'KAMAKURA', jp: '鎌倉' },
+    'gallery-04': { lat: 34.69, lon: 135.50, en: 'OSAKA', jp: '大阪' },
+    'gallery-05': { lat: 35.01, lon: 135.77, en: 'KYOTO', jp: '京都' },
+    'gallery-07': { lat: 36.55, lon: 138.32, en: 'NAGANO', jp: '長野' },
+    'gallery-08': { lat: 35.36, lon: 138.73, en: 'FUJI', jp: '富士' },
+    'gallery-09': { lat: 32.75, lon: -96.80, en: 'DALLAS', jp: 'ダラス' },
+    'gallery-10': { lat: 35.71, lon: 139.80, en: 'ASAKUSA', jp: '浅草' },
+    'gallery-11': { lat: 26.21, lon: 127.68, en: 'OKINAWA', jp: '沖縄' },
+    'gallery-13': { lat: 33.59, lon: 130.40, en: 'FUKUOKA', jp: '福岡' },
+    'gallery-16': { lat: 38.26, lon: 140.87, en: 'SENDAI', jp: '仙台' },
+  };
+  const scanTag = (function () {
+    if (reduced) return null;
+    const group = new THREE.Group(); group.name = 'scan-tag';
+    const marker = makeGlowSprite('scan-tag-marker', 0.5,
+      [[0, 'rgba(178,245,253,0.9)'], [0.4, 'rgba(57,240,255,0.3)'], [1, 'rgba(57,240,255,0)']]);
+    group.add(marker);
+    let tagLabel = { en: '', jp: '' };
+    const tag = makeCanvasSprite('scan-tag-label', 256, 72, [1.5, 0.42, 1], (ctx, p, w2, h2) => {
+      const L = p || tagLabel;
+      ctx.strokeStyle = 'rgba(178,245,253,0.8)'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(2, 16); ctx.lineTo(2, 2); ctx.lineTo(22, 2);
+      ctx.moveTo(w2 - 22, 2); ctx.lineTo(w2 - 2, 2); ctx.lineTo(w2 - 2, 16);
+      ctx.moveTo(2, h2 - 16); ctx.lineTo(2, h2 - 2); ctx.lineTo(22, h2 - 2);
+      ctx.moveTo(w2 - 22, h2 - 2); ctx.lineTo(w2 - 2, h2 - 2); ctx.lineTo(w2 - 2, h2 - 16);
+      ctx.stroke();
+      ctx.font = '600 26px Rajdhani, "JetBrains Mono", monospace';
+      ctx.fillStyle = '#b2f5fd';
+      ctx.fillText(L.en || '', 16, 32);
+      ctx.font = '500 20px "M PLUS Rounded 1c", sans-serif';
+      ctx.fillStyle = 'rgba(255,158,44,0.85)';
+      ctx.fillText(L.jp || '', 16, 58);
+    });
+    tag.sprite.position.set(0, 0.7, 0.1);
+    group.add(tag.sprite);
+    const N = 26;
+    const asmGeo = new THREE.BufferGeometry();
+    const asmPos = new Float32Array(N * 3);
+    asmGeo.setAttribute('position', new THREE.BufferAttribute(asmPos, 3));
+    const asmMat = new THREE.PointsMaterial({ color: 0xb2f5fd, size: 0.06, transparent: true,
+      opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true });
+    group.add(nameObject(new THREE.Points(asmGeo, asmMat), 'scan-tag-assembly'));
+    const seeds = new Float32Array(N * 3);
+    const arcG = new THREE.BufferGeometry();
+    arcG.setAttribute('position', new THREE.BufferAttribute(new Float32Array(40 * 3), 3));
+    const arcM = new THREE.LineBasicMaterial({ color: SCENE_COLORS.cyan, transparent: true,
+      opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+    spin.add(nameObject(new THREE.Line(arcG, arcM), 'scan-tag-arc'));
+    group.visible = false;
+    spin.add(group);
+    return { group, marker, tag, setLabel: v => { tagLabel = v; }, asmGeo, asmPos, asmMat, seeds, N, arcG, arcM };
+  })();
+  let scanT = 0, scanActive = false;
+  const _scanWorld = new THREE.Vector3();
+  window.__scanPlace = (lat, lon, en, jp) => {
+    if (!scanTag) return;
+    const p = toV3(lat, lon, R * 1.04);
+    scanTag.group.position.copy(p);
+    _scanWorld.copy(p).multiplyScalar(2);
+    spin.localToWorld(_scanWorld);
+    scanTag.group.lookAt(_scanWorld);
+    scanTag.setLabel({ en, jp });
+    scanTag.tag.redraw({ en, jp });
+    for (let i = 0; i < scanTag.N; i++) {
+      scanTag.seeds[i * 3] = (Math.random() * 2 - 1) * 1.6;
+      scanTag.seeds[i * 3 + 1] = (Math.random() * 2 - 1) * 1.6;
+      scanTag.seeds[i * 3 + 2] = Math.random() * 1.2;
+    }
+    const a = TOKYO.clone().normalize(), b = p.clone().normalize();
+    const arr = scanTag.arcG.attributes.position.array;
+    for (let i = 0; i < 40; i++) {
+      const k = i / 39;
+      const v = a.clone().lerp(b, k).normalize().multiplyScalar(R * (1.02 + Math.sin(k * Math.PI) * 0.18));
+      arr[i * 3] = v.x; arr[i * 3 + 1] = v.y; arr[i * 3 + 2] = v.z;
+    }
+    scanTag.arcG.attributes.position.needsUpdate = true;
+    scanT = 0; scanActive = true;
+    scanTag.group.visible = true;
+    sceneState.haloPulse = Math.max(sceneState.haloPulse, 0.5);   // one confident tick
+  };
+  window.__scanClear = () => { scanActive = false; };
+  function updateScanTag(dt) {
+    if (!scanTag) return;
+    if (scanActive) scanT = Math.min(1, scanT + dt * 2.6);        // ~0.4s assembly
+    else scanT = Math.max(0, scanT - dt * 3.2);
+    if (scanT <= 0.001) {
+      if (scanTag.group.visible) { scanTag.group.visible = false; scanTag.arcM.opacity = 0; }
+      return;
+    }
+    const k = scanT, ease = k * k * (3 - 2 * k);
+    for (let i = 0; i < scanTag.N; i++) {                          // particles converge on the tag
+      const tx = ((i % 13) / 12 - 0.5) * 2.6, ty = 0.7 + (i > 12 ? -0.16 : 0.16);
+      scanTag.asmPos[i * 3] = scanTag.seeds[i * 3] + (tx - scanTag.seeds[i * 3]) * ease;
+      scanTag.asmPos[i * 3 + 1] = scanTag.seeds[i * 3 + 1] + (ty - scanTag.seeds[i * 3 + 1]) * ease;
+      scanTag.asmPos[i * 3 + 2] = scanTag.seeds[i * 3 + 2] * (1 - ease) + 0.1 * ease;
+    }
+    scanTag.asmGeo.attributes.position.needsUpdate = true;
+    scanTag.asmMat.opacity = Math.sin(Math.min(1, k * 1.4) * Math.PI) * 0.8;
+    scanTag.marker.material.opacity = ease * 0.75;
+    scanTag.tag.sprite.material.opacity = Math.max(0, ease - 0.35) * 1.4;      // tag snaps in after particles
+    scanTag.arcM.opacity = ease * 0.4;
+  }
+  if (!reduced && !LITE && scanTag) {                              // wire gallery + projects (pointer only)
+    document.querySelectorAll('.gallery-grid .shot').forEach(el => {
+      const key = ((el.dataset.src || '').match(/gallery-\d+/) || [])[0];
+      const place = GALLERY_PLACES[key];
+      if (!place) return;
+      el.addEventListener('pointerenter', () => window.__scanPlace(place.lat, place.lon, place.en, place.jp));
+      el.addEventListener('pointerleave', window.__scanClear);
+    });
+    document.querySelectorAll('.projects .proj-grid').forEach(el => {
+      const name = ((el.querySelector('h3, .proj-name') || {}).textContent || 'PROJECT').trim();
+      const year = ((el.querySelector('.proj-year') || {}).textContent || '').trim().slice(0, 4);
+      el.addEventListener('pointerenter', () => window.__scanPlace(35.6762, 139.6503,
+        ('SIG: ' + name).toUpperCase().slice(0, 17), year ? 'PRJ//' + year : 'PRJ'));
+      el.addEventListener('pointerleave', window.__scanClear);
+    });
+  }
+
   let rainSway = 0, rainShear = 0, lastScrollY2 = 0, rainTintK = 0;
   let idleT = 0, idleK = 0;                                   // idle cinematics state
   ['pointermove', 'pointerdown', 'wheel', 'keydown', 'touchstart', 'scroll'].forEach(ev =>
@@ -1037,6 +1189,8 @@
       r.material.opacity = (0.10 + tokyoFacing * 0.9) * halo * (base + pulse * 0.10 + lock * 0.25);
     });
     if (tokyoHalo.ticks) tokyoHalo.ticks.material.opacity = tokyoFacing * halo * (0.20 + pulse * 0.18);
+    if (tokyoHalo.transit) tokyoHalo.transit.material.opacity = tokyoFacing * halo * (0.14 + lock * 0.2);
+    if (tokyoHalo.stations) tokyoHalo.stations.material.opacity = tokyoFacing * halo * (0.3 + pulse * 0.3);
     if (tokyoHalo.glow) tokyoHalo.glow.material.opacity = (0.10 + tokyoFacing * 0.5) * halo * (0.4 + pulse * 0.8 + lock * 1.0 + idleK * 0.35);
     tokyoHalo.labels.forEach(sp => {                          // per-label facing gate: only 1–2 read at once
       const a = (sp.userData.label.angle || 0) * Math.PI / 180;
@@ -1047,7 +1201,7 @@
       sp.material.opacity = tokyoFacing * lab * gate * (LITE ? 0.72 : 0.9);
     });
     if (tokyoHalo.packet && tokyoHalo.packetMat) {            // packet is event-gated, never a perpetual orbit
-      tokyoHalo.setPacketAt(t * 4.8);
+      tokyoHalo.setPacketAt(t * 0.22);            // ~15s per lap of the transit loop
       const p = Math.max(pulse, lock);
       tokyoHalo.packet.visible = p > 0.03;
       tokyoHalo.packetMat.opacity = tokyoFacing * halo * p * 0.9;
@@ -1232,6 +1386,8 @@
       if (tokyoHalo.glow) tokyoHalo.glow.material.opacity = 0.4;
       tokyoHalo.labels.forEach(sp => { sp.material.opacity = 0.5; });
       if (tokyoHalo.packetMat) tokyoHalo.packetMat.opacity = 0;
+      if (tokyoHalo.transit) tokyoHalo.transit.material.opacity = 0.12;
+      if (tokyoHalo.stations) tokyoHalo.stations.material.opacity = 0.25;
     }
     callout.sprite.material.opacity = 0.85;
     render();
@@ -1275,6 +1431,7 @@
     rainShear += ((scrollY - lastScrollY2) * 0.0025 - rainShear) * Math.min(1, 0.12 * f);
     lastScrollY2 = scrollY;
     updateDepthRain(dt, updateLightning(dt));
+    updateScanTag(dt);
     updateCelestial(dt);
     const scanY = Math.sin(t * 0.55) * R * 0.9;                       // holo shell sweeps the sphere
     const scanS = Math.max(0.06, Math.sqrt(Math.max(0, 1 - (scanY / R) * (scanY / R))));
