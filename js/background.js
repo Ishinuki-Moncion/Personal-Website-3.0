@@ -305,6 +305,14 @@
   const placeById = id => PLACES.find(place => place.id === id) || PLACES[1];
   const placeVector = (place, radius) => toV3(place.lat, place.lon, radius);
 
+  const TOKYO_HALO_LABELS = [
+    { id: 'tokyo', jp: '東京', en: 'TOKYO', angle: 0, priority: 1, kind: 'place' },
+    { id: 'jst', jp: '日本時間', en: 'JST', angle: 52, priority: 1, kind: 'status' },
+    { id: 'shibuya', jp: '渋谷', en: 'SHIBUYA', angle: 112, priority: 2, kind: 'district' },
+    { id: 'shinjuku', jp: '新宿', en: 'SHINJUKU', angle: 202, priority: 2, kind: 'district' },
+    { id: 'akihabara', jp: '秋葉原', en: 'AKIHABARA', angle: 292, priority: 3, kind: 'district' },
+  ];
+
   // (c) personal place nodes: Dallas origin + Tokyo current focus
   const TOKYO_PLACE = placeById('tokyo');
   const DALLAS_PLACE = placeById('dallas');
@@ -335,6 +343,61 @@
 
   PLACES.forEach(makePlaceNode);
 
+  function makeCircleLine(name, radius, segments, color, opacity) {
+    const pts = new Float32Array(segments * 3);
+    for (let i = 0; i < segments; i++) {
+      const a = (i / segments) * Math.PI * 2;
+      pts[i * 3] = Math.cos(a) * radius;
+      pts[i * 3 + 1] = Math.sin(a) * radius;
+      pts[i * 3 + 2] = 0;
+    }
+    const geo = makeGeometry(name, pts, 3);
+    if (!geo) return null;
+    const mat = new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    return nameObject(new THREE.LineLoop(geo, mat), name);
+  }
+
+  function makeRadialTicks(name, count, inner, outer, color, opacity) {
+    const pts = new Float32Array(count * 6);
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      pts.set([c * inner, s * inner, 0, c * outer, s * outer, 0], i * 6);
+    }
+    const geo = makeGeometry(name, pts, 3);
+    if (!geo) return null;
+    const mat = new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    return nameObject(new THREE.LineSegments(geo, mat), name);
+  }
+
+  function makeGlowSprite(name, size, colorStops) {
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128;
+    const g = cv.getContext('2d');
+    const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    (colorStops || [[0,'rgba(255,180,90,0.9)'],[0.4,'rgba(255,158,44,0.35)'],[1,'rgba(255,158,44,0)']])
+      .forEach(function (s) { grd.addColorStop(s[0], s[1]); });
+    g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
+    const tex = new THREE.CanvasTexture(cv);
+    const sp = nameObject(new THREE.Sprite(new THREE.SpriteMaterial({
+      map: tex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending,
+    })), name);
+    sp.scale.set(size, size, 1);
+    return sp;
+  }
+
   function tangentRing(inner, outer, op, name) {
     const m = nameObject(new THREE.Mesh(
       new THREE.RingGeometry(inner, outer, 40),
@@ -347,6 +410,83 @@
   }
   const tokyoRing = tangentRing(0.16, 0.2, 0.8, 'tokyo-focus-ring');
   const pingRing = tangentRing(0.3, 0.34, 0, 'tokyo-ping-ring');     // expands on section change
+
+  // Tokyo holographic halo — spinGroup (rings/ticks/packet) rotates; staticGroup
+  // (glow + labels) never does, so district labels stay put instead of orbiting.
+  function makeTokyoHalo() {
+    const group = new THREE.Group();
+    group.name = 'tokyo-holographic-halo';
+    group.position.copy(TOKYO).multiplyScalar(1.08);
+    group.lookAt(TOKYO.clone().multiplyScalar(2));
+    group.scale.setScalar(LITE ? 0.82 : 1);
+    const spinGroup = new THREE.Group();
+    const staticGroup = new THREE.Group();
+
+    const rings = [];
+    const ringMat = new THREE.MeshBasicMaterial({ color: SCENE_COLORS.cyan, transparent: true,
+      opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    const primaryRing = nameObject(new THREE.Mesh(new THREE.RingGeometry(0.56, 0.60, 96), ringMat), 'tokyo-halo-primary-ring');
+    spinGroup.add(primaryRing); rings.push(primaryRing);
+    if (quality.haloRings > 1) {
+      const secondary = makeCircleLine('tokyo-halo-secondary-ring', 0.82, 128, SCENE_COLORS.amber, 0.18);
+      if (secondary) { spinGroup.add(secondary); rings.push(secondary); }
+    }
+
+    const ticks = makeRadialTicks('tokyo-halo-station-ticks', quality.haloTicks, 0.54, 0.62, SCENE_COLORS.softAmber, 0.42);
+    if (ticks) spinGroup.add(ticks);
+
+    const glow = makeGlowSprite('tokyo-halo-glow', LITE ? 0.9 : 1.15);
+    glow.position.set(0, 0, -0.02);
+    staticGroup.add(glow);
+
+    const labels = [];
+    TOKYO_HALO_LABELS
+      .filter(l => l.priority <= (quality.name === 'high' ? 3 : 1))
+      .slice(0, quality.haloLabels)
+      .forEach(label => {
+        const pack = makeCanvasSprite('tokyo-halo-label-' + label.id, 256, 72, [1.25, 0.35, 1],
+          (ctx, p, w, h) => drawHudLabel(ctx, p || label, w, h,
+            label.kind === 'status' ? '#ff9e2c' : '#39f0ff',
+            label.priority === 1 ? 'primary' : 'district'));
+        const a = label.angle * Math.PI / 180;
+        const radius = label.priority === 1 ? 0.94 : 1.08;
+        pack.sprite.position.set(Math.cos(a) * radius, Math.sin(a) * radius, 0.08);
+        pack.sprite.userData.label = label;
+        pack.sprite.material.opacity = 0;
+        staticGroup.add(pack.sprite);
+        labels.push(pack.sprite);
+      });
+
+    const packetGeo = makeGeometry('tokyo-halo-pulse-packet', new Float32Array([0, 0, 0.1]), 3);
+    const packetMat = new THREE.PointsMaterial({
+      color: SCENE_COLORS.softAmber,
+      size: LITE ? 0.11 : 0.14,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      sizeAttenuation: true,
+    });
+    const packet = packetGeo ? nameObject(new THREE.Points(packetGeo, packetMat), 'tokyo-halo-pulse-packet') : null;
+    if (packet) spinGroup.add(packet);
+
+    function setPacketAt(angle) {
+      if (!packet || !packetGeo) return;
+      const pos = packetGeo.attributes.position.array;
+      const radius = quality.haloRings > 1 ? 0.82 : 0.58;
+      pos[0] = Math.cos(angle) * radius;
+      pos[1] = Math.sin(angle) * radius;
+      pos[2] = 0.12;
+      packetGeo.attributes.position.needsUpdate = true;
+    }
+
+    group.add(spinGroup);
+    group.add(staticGroup);
+    spin.add(group);
+    return { group, spinGroup, staticGroup, rings, ticks, glow, labels, packet, packetMat, packetGeo, setPacketAt };
+  }
+
+  const tokyoHalo = makeTokyoHalo();
 
   // Reusable CanvasTexture sprite factory — re-renders on document.fonts.ready
   // (with the last payload) so JP glyphs never bake as tofu. Canvas work runs
@@ -515,6 +655,31 @@
     focusFlash = Math.max(focusFlash, intensity || 1);
     if (callout && callout.draw) callout.draw(placeById(focusedPlaceId));
   }
+  function updateTokyoHalo(f, focusedFacing, tokyoFacing) {
+    if (!tokyoHalo) return;
+    const halo = sceneState.halo, lab = sceneState.labels;
+    const pulse = sceneState.haloPulse, lock = sceneState.lockT;
+    // spin ONLY rings/ticks/packet; a faster sweep during the signal-lock
+    tokyoHalo.spinGroup.rotation.z += 0.0016 * f * (LITE ? 0.5 : 1) + lock * 0.02 * f;
+    tokyoHalo.group.visible = halo > 0.02;
+    tokyoHalo.rings.forEach((r, i) => {                       // ring keeps a small floor so the hub reads as "there"
+      const base = i === 0 ? 0.24 : 0.12;
+      r.material.opacity = (0.10 + tokyoFacing * 0.9) * halo * (base + pulse * 0.10 + lock * 0.25);
+    });
+    if (tokyoHalo.ticks) tokyoHalo.ticks.material.opacity = tokyoFacing * halo * (0.20 + pulse * 0.18);
+    if (tokyoHalo.glow) tokyoHalo.glow.material.opacity = (0.10 + tokyoFacing * 0.5) * halo * (0.4 + pulse * 0.8 + lock * 1.0);
+    tokyoHalo.labels.forEach(sp => {                          // per-label facing gate: only 1–2 read at once
+      const a = (sp.userData.label.angle || 0) * Math.PI / 180;
+      const lf = Math.max(0, Math.cos(a - spin.rotation.y + tokyoA0));
+      sp.material.opacity = tokyoFacing * lab * lf * lf * (LITE ? 0.72 : 0.9);
+    });
+    if (tokyoHalo.packet && tokyoHalo.packetMat) {            // packet is event-gated, never a perpetual orbit
+      tokyoHalo.setPacketAt(t * 4.8);
+      const p = Math.max(pulse, lock);
+      tokyoHalo.packet.visible = p > 0.03;
+      tokyoHalo.packetMat.opacity = tokyoFacing * halo * p * 0.9;
+    }
+  }
   function replayJourney() {
     arcN = 0;
     arcArm = 0;
@@ -682,6 +847,13 @@
     arcGeo.setDrawRange(0, ARC_SEG + 1);
     globeMat.uniforms.uTime.value = 4;
     tokyoRing.material.opacity = 0.7;
+    if (tokyoHalo) {
+      tokyoHalo.rings.forEach((r, i) => { r.material.opacity = i === 0 ? 0.3 : 0.12; });
+      if (tokyoHalo.ticks) tokyoHalo.ticks.material.opacity = 0.18;
+      if (tokyoHalo.glow) tokyoHalo.glow.material.opacity = 0.4;
+      tokyoHalo.labels.forEach(sp => { sp.material.opacity = 0.5; });
+      if (tokyoHalo.packetMat) tokyoHalo.packetMat.opacity = 0;
+    }
     callout.sprite.material.opacity = 0.85;
     render();
     updateDebugText();
@@ -742,6 +914,8 @@
     const focusedVector = placeVector(focusedPlace, R);
     const focusedAngle = Math.atan2(focusedVector.z, focusedVector.x);
     const focusedFacing = Math.max(0, Math.sin(focusedAngle - spin.rotation.y));
+    const tokyoFacing = Math.max(0, Math.sin(tokyoA0 - spin.rotation.y));
+    updateTokyoHalo(f, focusedFacing, tokyoFacing);
     callout.sprite.position.copy(focusedVector).multiplyScalar(1.22).add(calloutOffset);
     callout.sprite.material.opacity = focusedFacing * focusedFacing * sceneState.callout * (focusedPlace.primary ? 0.9 : 0.55);
     if (focusFlash > 0.01) focusFlash *= Math.pow(0.9, f);
