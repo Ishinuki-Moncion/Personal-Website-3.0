@@ -132,10 +132,12 @@ function main() {
   // 1. ESM core build — single source of truth with the retiring global.
   const buildSrc = path.join(path.resolve(threeRoot), 'build', 'three.module.min.js');
   if (!fs.existsSync(buildSrc)) fail('not found: ' + buildSrc + ' (arg1 must be an unpacked three package root)');
-  const buildTxt = fs.readFileSync(buildSrc, 'utf8');
-  if (!/REVISION\s*=\s*["']158["']/.test(buildTxt)) {
-    fail('three build is not r158 (REVISION="158" not found) — pin mismatch, refusing to vendor.');
-  }
+  // Pin-verify via the package's own package.json (robust: the minifier renames
+  // the REVISION const, so grepping the minified build for REVISION="158" fails).
+  const pkgPath = path.join(path.resolve(threeRoot), 'package.json');
+  if (!fs.existsSync(pkgPath)) fail('no package.json at ' + path.resolve(threeRoot) + ' (arg1 must be an unpacked three package root)');
+  const pkgVer = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version;
+  if (pkgVer !== '0.158.0') fail('three package is ' + pkgVer + ', expected 0.158.0 — pin mismatch, refusing to vendor.');
   copyFile(buildSrc, path.join(THREE_DIR, 'three.module.min.js'));
 
   // 2. minimal jsm graph.
@@ -170,7 +172,7 @@ main();
 - [ ] **Run the vendor tool.** Run `node tools/vendor-three-esm.cjs /tmp/sp1/three /tmp/sp1/esms/dist/es-module-shims.js`. Expected: `+ js/vendor/three-0.158.0/three.module.min.js`, ten `+ js/vendor/three-0.158.0/examples/jsm/...` lines, `+ js/vendor/es-module-shims-1.10.0.min.js`, then `closure check OK: 10 addon files present, N relative imports all resolve.` (N ≈ 10) and the final `vendored ...` line.
 - [ ] **Confirm the tree on disk.** Run `find js/vendor/three-0.158.0 -type f | sort`. Expected exactly 11 files: `three.module.min.js` + 7 `postprocessing/*.js` + 3 `shaders/*.js`.
 - [ ] **Re-run the standalone closure check** (independently re-runnable, no re-copy). Run `node tools/vendor-three-esm.cjs --check`. Expected: `closure check OK: 10 addon files present, N relative imports all resolve.`
-- [ ] **Syntax-check every vendored module.** Run `for f in js/vendor/three-0.158.0/three.module.min.js js/vendor/three-0.158.0/examples/jsm/**/*.js; do node --check "$f" || echo "FAIL $f"; done`. Expected: no `FAIL` lines.
+- [ ] **Validate the vendored ESM modules.** (They are ES modules; `node --check` on a `.js` file defaults to CommonJS and false-fails on `export`. The real load-test is T3 gate #1; here just confirm each is non-empty + ESM-shaped.) Run `for f in $(find js/vendor/three-0.158.0 -name '*.js'); do sz=$(wc -c < "$f"|tr -d ' '); grep -qE "\b(import|export)\b" "$f" && s=esm || s=NON-ESM; echo "$sz $s ${f##*/three-0.158.0/}"; done`. Expected: all 11 non-empty and `esm`.
 - [ ] **Capture the CLASSIC reference baseline** (index.html is still unedited, so this is today's build). Serve and screenshot for the gate #1 side-by-side in T3:
   ```sh
   python3 -m http.server 8000 >/tmp/sp1-http.log 2>&1 &
