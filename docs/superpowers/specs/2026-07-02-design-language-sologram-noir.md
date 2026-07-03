@@ -1,3 +1,5 @@
+> **Superseded by `2026-07-03-design-language-v3.md` (2026-07-03).** Kept for history per the research-library rule (corrections noted, never deleted).
+
 # Design Language — "Sologram Noir" (v2)
 
 The aesthetic north star for daikieOS. v2 is grounded in the deep-research
