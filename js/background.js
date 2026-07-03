@@ -1530,6 +1530,77 @@
       dotHitPlace: localDir ? +localDir.dot(it.dir).toFixed(3) : null };
   };
 
+  // DOM HUD overlay (crisp text + a11y). Snaps to the acquired place's projected screen pos.
+  const hud = (function () {
+    const style = document.createElement('style');
+    style.textContent =
+      '#globe-hud{position:fixed;inset:0;pointer-events:none;z-index:6;opacity:0;transition:opacity .12s}' +
+      '#globe-hud.on{opacity:1}' +
+      '#globe-hud .ret{position:absolute;transform:translate(-50%,-50%);width:34px;height:34px}' +
+      '#globe-hud .ret::before,#globe-hud .ret::after{content:"";position:absolute;background:rgba(57,240,255,.85)}' +
+      '#globe-hud .ret::before{left:50%;top:0;width:1px;height:100%;transform:translateX(-50%)}' +
+      '#globe-hud .ret::after{top:50%;left:0;height:1px;width:100%;transform:translateY(-50%)}' +
+      '#globe-hud .box{position:absolute;width:34px;height:34px;transform:translate(-50%,-50%);' +
+      'box-shadow:inset 0 0 0 1px rgba(57,240,255,.5);border-radius:2px}' +
+      '#globe-hud .lead{position:absolute;height:1px;background:linear-gradient(90deg,rgba(57,240,255,.6),rgba(57,240,255,0));transform-origin:0 50%}' +
+      '#globe-hud .lbl{position:absolute;transform:translateY(-50%);font:600 11px/1.35 "JetBrains Mono",monospace;' +
+      'color:rgba(57,240,255,.92);letter-spacing:.08em;white-space:nowrap;text-shadow:0 0 8px rgba(57,240,255,.35)}' +
+      '#globe-hud .lbl b{color:#ffd9a0;font-weight:600}' +
+      '.gallery-grid .shot:focus-visible,.projects .proj-grid:focus-visible{outline:2px solid rgba(57,240,255,.8);outline-offset:3px}' +
+      '#globe-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}';
+    document.head.appendChild(style);
+    const root = document.createElement('div'); root.id = 'globe-hud';
+    root.innerHTML = '<div class="ret"></div><div class="box"></div><div class="lead"></div><div class="lbl"></div>';
+    document.body.appendChild(root);
+    const live = document.createElement('div'); live.id = 'globe-live';
+    live.setAttribute('aria-live', 'polite'); document.body.appendChild(live);
+    return { root, ret: root.querySelector('.ret'), box: root.querySelector('.box'),
+      lead: root.querySelector('.lead'), lbl: root.querySelector('.lbl'), live };
+  })();
+  const _proj = new THREE.Vector3();
+  function fmtCoord(lat, lon) {
+    return Math.abs(lat).toFixed(1) + (lat >= 0 ? 'N' : 'S') + ' ' + Math.abs(lon).toFixed(1) + (lon >= 0 ? 'E' : 'W');
+  }
+
+  let hoverPlace = null, hoverId = null, hoverPending = null, hoverPendT = 0;
+  let dwellT = 0, lastDwellId = null, scannedId = null;
+  function interrogate(dt) {
+    const r = ptr.inside ? pickPlace() : null;
+    const pendId = r && r.place ? r.place.id : null;
+    if (pendId !== (hoverPending && hoverPending.place ? hoverPending.place.id : null)) { hoverPending = r; hoverPendT = 0; }
+    else hoverPendT += dt;
+    const settledId = hoverPending && hoverPending.place ? hoverPending.place.id : null;
+    if (settledId !== hoverId && hoverPendT >= 0.09) {   // debounce place-change
+      hoverPlace = hoverPending; hoverId = settledId;
+      if (hoverPlace) hud.live.textContent = (hoverPlace.place.kind === 'photo' ? 'Gallery — ' : '') + hoverPlace.place.label;
+    }
+    if (!hoverPlace) {
+      hud.root.classList.remove('on');
+      if (scannedId) { window.__scanClear && window.__scanClear(); scannedId = null; }
+      dwellT = 0; lastDwellId = null; return;
+    }
+    // snap the reticle to the acquired place's projected screen position
+    _proj.copy(hoverPlace.place.dir).multiplyScalar(R); spin.localToWorld(_proj);
+    camera.updateMatrixWorld(); _proj.project(camera);
+    if (_proj.z > 1) { hud.root.classList.remove('on'); return; }   // clipped
+    const sx = (_proj.x * 0.5 + 0.5) * innerWidth, sy = (-_proj.y * 0.5 + 0.5) * innerHeight;
+    hud.root.classList.add('on');
+    hud.ret.style.left = hud.box.style.left = sx + 'px'; hud.ret.style.top = hud.box.style.top = sy + 'px';
+    const lead = 46;
+    hud.lead.style.left = (sx + 12) + 'px'; hud.lead.style.top = (sy - 12) + 'px';
+    hud.lead.style.width = lead + 'px'; hud.lead.style.transform = 'rotate(-30deg)';
+    hud.lbl.style.left = (sx + 20 + lead * 0.9) + 'px'; hud.lbl.style.top = (sy - 28) + 'px';
+    const p = hoverPlace.place;
+    hud.lbl.innerHTML = '<b>' + p.label + '</b>' + (p.jp ? ' ' + p.jp : '') + '<br>' + fmtCoord(hoverPlace.lat, hoverPlace.lon);
+    // dwell -> focus scan-tag (the one animated step)
+    if (hoverPlace.place.id === lastDwellId) dwellT += dt;
+    else { dwellT = 0; lastDwellId = hoverPlace.place.id; if (scannedId && scannedId !== hoverPlace.place.id) { window.__scanClear && window.__scanClear(); scannedId = null; } }
+    if (dwellT >= 0.40 && scannedId !== hoverPlace.place.id && window.__scanPlace) {
+      window.__scanPlace(p.lat, p.lon, p.label, p.jp || ''); scannedId = p.id;
+    }
+  }
+  window.__interrogate = interrogate;   // SP3 dev (strip in T5)
+
   /* Debounced resize — raw handler reallocated the GL backbuffer dozens of
      times/sec during window drags, and iOS fires resize on URL-bar collapse
      mid-scroll, so small height-only deltas on touch are ignored entirely. */
@@ -1830,6 +1901,7 @@
     camera.lookAt(0, scrollN * 1.5, 0);
     render();
     if (droplets) droplets.update(dt);   // after render: droplet lenses sample THIS frame's buffer
+    if (!coarse) interrogate(dt);          // SP3: pointer interrogation (touch uses tap-select)
   }
   raf = requestAnimationFrame(loop);
 
