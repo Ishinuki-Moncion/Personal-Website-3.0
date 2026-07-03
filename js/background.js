@@ -1341,6 +1341,117 @@
      mid-scroll, so small height-only deltas on touch are ignored entirely. */
   let maxScroll = Math.max(1, document.body.scrollHeight - innerHeight);
   let resizeTm;
+
+  /* ------------------------------------------------------------------ *
+   *  SP1 BLOOM SPIKE — dev flag ?bloom=1, high tier only (design §2).  *
+   *  Two-composer selective DARK-MATERIAL-SWAP (NOT camera.layers, R8),*
+   *  alpha-preserving via a NoBlending mixPass (R2). Fully decoupled:   *
+   *  composers stay null unless enabled; render() falls back to the     *
+   *  direct path everywhere else (R7). Inert by default.                *
+   * ------------------------------------------------------------------ */
+  const bloomParams  = new URLSearchParams(location.search);
+  const BLOOM_SPIKE  = bloomParams.get('bloom') === '1';
+  const bloomEmptySel = bloomParams.get('emptySel') === '1';   // gate #3 A/B: tag nothing
+  const bloomEnabled = BLOOM_SPIKE && quality.name === 'high' && !reduced &&
+                       !!(window.POST && window.POST.EffectComposer);
+  let bloomComposer = null, finalComposer = null, renderBloomThenFinal = null;
+
+  if (bloomEnabled) {
+    const POST = window.POST;
+    const BLOOM_STRENGTH = 0.9, BLOOM_RADIUS = 0.5, BLOOM_THRESHOLD = 0.6;   // spike-tunable (gate #4)
+
+    // (a) Tag emitters — userData.bloom keeps their real material through the dark pass.
+    //     Source intensities already sit in [0,1]; bloom is a blow-out multiplier (R14).
+    if (!bloomEmptySel) {
+      [fieldCyan, fieldAmber, tokyoRing, pingRing, comet].forEach(o => { o.userData.bloom = true; });
+      tokyoHalo.glow.userData.bloom = true;                       // glow Sprite (makeGlowSprite, 497)
+      tokyoHalo.rings.forEach(r => { r.userData.bloom = true; }); // ring meshes/line (487-491)
+      // Inline-added objects (no variable handle) — tag by their nameObject() name:
+      //   globe Points  background.js:260  'earth-land-particles'
+      //   arc   Line    background.js:816  'dallas-to-tokyo-arc'
+      const bloomByName = new Set(['earth-land-particles', 'dallas-to-tokyo-arc']);
+      scene.traverse(o => { if (bloomByName.has(o.name)) o.userData.bloom = true; });
+    }
+    // Explicitly EXCLUDED (design §2c "instrument only the focus"): fieldDeep starfield,
+    // depth-rain, holo-scan-shell, satellite, transit/stations/packet, halo text labels.
+
+    // (b) bloomComposer — renders ONLY tagged emitters (rest swapped to black), off-screen.
+    bloomComposer = new POST.EffectComposer(renderer);   // no type arg -> RGBA8 target (mobile-safe)
+    bloomComposer.renderToScreen = false;
+    bloomComposer.addPass(new POST.RenderPass(scene, camera));
+    bloomComposer.addPass(new POST.UnrealBloomPass(
+      new THREE.Vector2(w, h), BLOOM_STRENGTH, BLOOM_RADIUS, BLOOM_THRESHOLD));
+
+    // (c) mixPass — ADD glow rgb, KEEP base alpha, NoBlending overwrite (design §2b — THE fix).
+    const mixPass = new POST.ShaderPass(
+      new THREE.ShaderMaterial({
+        uniforms: {
+          baseTexture:  { value: null },
+          bloomTexture: { value: bloomComposer.renderTarget2.texture },
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D baseTexture;
+          uniform sampler2D bloomTexture;
+          varying vec2 vUv;
+          void main() {
+            vec4 base  = texture2D( baseTexture,  vUv );
+            vec4 bloom = texture2D( bloomTexture, vUv );
+            gl_FragColor = vec4( base.rgb + bloom.rgb, base.a );
+          }
+        `,
+      }),
+      'baseTexture'
+    );
+    mixPass.needsSwap = true;
+    mixPass.material.blending = THREE.NoBlending;   // NOT transparent=true — overwrite the stale target
+
+    // (d) finalComposer — full REAL scene + ADD glow + restore on-screen sRGB (R6).
+    finalComposer = new POST.EffectComposer(renderer);
+    finalComposer.addPass(new POST.RenderPass(scene, camera));
+    finalComposer.addPass(mixPass);
+    finalComposer.addPass(new POST.OutputPass());   // REQUIRED: composer strips on-screen sRGB otherwise
+
+    // (e) Dark-material-swap (official pattern; depthWrite:false preserves the scene's
+    //     real no-occlusion property since every emitter is additive/depthWrite:false).
+    const darkMat    = new THREE.MeshBasicMaterial({ color: 0x000000, depthWrite: false });
+    const darkSprite = new THREE.SpriteMaterial({ color: 0x000000, depthWrite: false });
+    const matCache = new Map();
+    const darken = o => {
+      if (o.userData.bloom) return;
+      if (o.isSprite) { matCache.set(o, o.material); o.material = darkSprite; }
+      else if (o.isMesh || o.isPoints || o.isLine) { matCache.set(o, o.material); o.material = darkMat; }
+    };
+    const restore = o => { const m = matCache.get(o); if (m) { o.material = m; matCache.delete(o); } };
+
+    renderBloomThenFinal = () => {
+      scene.traverse(darken);
+      bloomComposer.render();      // bright emitters only -> bloom texture
+      scene.traverse(restore);
+      finalComposer.render();      // real scene + ADD bloom.rgb, keep base.a -> screen
+    };
+
+    // (f) Gate #2 probe — one synchronous frame + readPixels BEFORE the browser composites
+    //     (reliable without preserveDrawingBuffer). corner alpha must be 0; centre alpha
+    //     proves the read is live (globe drawn). Also readable from an external driver.
+    window.__bloomProbe = () => {
+      renderBloomThenFinal();
+      const gl = renderer.getContext();
+      const rd = (x, y) => { const p = new Uint8Array(4);
+        gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, p); return [...p]; };
+      const out = { corner: rd(1, 1),
+        centre: rd(gl.drawingBufferWidth >> 1, gl.drawingBufferHeight >> 1) };
+      console.log('[bloomProbe] ' + JSON.stringify(out));
+      return out;
+    };
+  }
+
   addEventListener('resize', () => {
     clearTimeout(resizeTm);
     resizeTm = setTimeout(() => {
@@ -1348,6 +1459,7 @@
       w = innerWidth; h = innerHeight;
       camera.aspect = w / h; camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      if (bloomComposer) { bloomComposer.setSize(w, h); finalComposer.setSize(w, h); }
       maxScroll = Math.max(1, document.body.scrollHeight - innerHeight);
     }, 150);
   });
@@ -1370,7 +1482,9 @@
     if (!document.hidden && !running) { running = true; raf = requestAnimationFrame(loop); }
   });
 
-  const render = () => renderer.render(scene, camera);
+  const render = (bloomEnabled && renderBloomThenFinal)
+    ? () => renderBloomThenFinal()               // high-tier + ?bloom=1: dark-swap -> bloom -> final
+    : () => renderer.render(scene, camera);        // reduced / LITE / spike-off: direct path
 
   if (reduced) {
     // Meaningful static frame: Tokyo rotated to face the camera, journey arc
