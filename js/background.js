@@ -1448,6 +1448,24 @@
   });
   addEventListener('pointerleave', () => { ptr.inside = false; });
 
+  // SP3 select: tap (not drag/parallax) -> content. gallery photo -> lightbox; tokyo/dallas -> #about.
+  let _downX = 0, _downY = 0;
+  addEventListener('pointerdown', e => { _downX = e.clientX; _downY = e.clientY; });
+  addEventListener('pointerup', e => {
+    if (Math.hypot(e.clientX - _downX, e.clientY - _downY) > 8) return;   // drag/parallax, not a tap
+    ptr.x = (e.clientX / innerWidth) * 2 - 1; ptr.y = -(e.clientY / innerHeight) * 2 + 1; ptr.inside = true;
+    const r = pickPlace(); if (r && r.place) selectPlace(r.place);
+  });
+  addEventListener('keydown', e => { if (e.key === 'Escape') { if (window.__scanClear) window.__scanClear(); hud.root.classList.remove('on'); } });
+  function selectPlace(p) {
+    if (p.kind === 'photo' && p.domRef) { p.domRef.click(); }               // app.js openLb() (:233)
+    else if (p.kind === 'tokyo' || p.kind === 'dallas') {
+      if (typeof setFocusedPlace === 'function') setFocusedPlace(p.id, 1);
+      const about = document.getElementById('about'); if (about) about.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+  window.__selectAt = (cx, cy) => { ptr.x = (cx / innerWidth) * 2 - 1; ptr.y = -(cy / innerHeight) * 2 + 1; ptr.inside = true; const r = pickPlace(); if (r && r.place) { selectPlace(r.place); return r.place.id; } return null; };   // SP3 dev (strip T5)
+
   const _pk = new THREE.Vector3(), _hit = new THREE.Vector3(), _cw = new THREE.Vector3();
   // vecToLatLon = exact inverse of toV3 (:187)
   function vecToLatLon(v) {
