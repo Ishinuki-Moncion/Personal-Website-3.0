@@ -1213,20 +1213,25 @@
     scanTag.tag.sprite.material.opacity = Math.max(0, ease - 0.35) * 1.4;      // tag snaps in after particles
     scanTag.arcM.opacity = ease * 0.4;
   }
-  if (!reduced && !LITE && scanTag) {                              // wire gallery + projects (pointer only)
+  {   // SP3: focus/blur a11y mirrors ALWAYS (keyboard/AT + aria-live, even under reduced); pointer-hover scan only non-reduced non-LITE
+    const wire = (el, enter, leave) => {
+      if (!reduced && !LITE) { el.addEventListener('pointerenter', enter); el.addEventListener('pointerleave', leave); }
+      el.addEventListener('focus', enter); el.addEventListener('blur', leave);
+    };
     document.querySelectorAll('.gallery-grid .shot').forEach(el => {
       const key = ((el.dataset.src || '').match(/gallery-\d+/) || [])[0];
       const place = GALLERY_PLACES[key];
       if (!place) return;
-      el.addEventListener('pointerenter', () => window.__scanPlace(place.lat, place.lon, place.en, place.jp));
-      el.addEventListener('pointerleave', window.__scanClear);
+      wire(el,
+        () => { if (window.__scanPlace) window.__scanPlace(place.lat, place.lon, place.en, place.jp); if (hud) hud.live.textContent = 'Gallery — ' + place.en; },
+        () => { if (window.__scanClear) window.__scanClear(); });
     });
     document.querySelectorAll('.projects .proj-grid').forEach(el => {
-      const name = ((el.querySelector('h3, .proj-name') || {}).textContent || 'PROJECT').trim();
+      const name = ((el.querySelector('.row-title, h3, .proj-name') || {}).textContent || 'PROJECT').trim();   // FIX: markup is .row-title
       const year = ((el.querySelector('.proj-year') || {}).textContent || '').trim().slice(0, 4);
-      el.addEventListener('pointerenter', () => window.__scanPlace(35.6762, 139.6503,
-        ('SIG: ' + name).toUpperCase().slice(0, 17), year ? 'PRJ//' + year : 'PRJ'));
-      el.addEventListener('pointerleave', window.__scanClear);
+      wire(el,
+        () => { if (window.__scanPlace) window.__scanPlace(35.6762, 139.6503, ('SIG: ' + name).toUpperCase().slice(0, 17), year ? 'PRJ//' + year : 'PRJ'); },
+        () => { if (window.__scanClear) window.__scanClear(); });
     });
   }
 
