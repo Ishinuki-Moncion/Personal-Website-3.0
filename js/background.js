@@ -322,8 +322,25 @@
     }
     const g = makeGeometry('earth-graticule-lines', new Float32Array(segs), 3);
     if (!g) return;
-    spin.add(nameObject(new THREE.LineSegments(g, new THREE.LineBasicMaterial({
-      color: CYAN, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending })), 'earth-graticule-lines'));
+    // Elevated: fade lines toward the poles (soften the meridian pinch) + fade in on boot.
+    const gratMat = GLOBE_ELEV
+      ? new THREE.ShaderMaterial({
+          transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+          uniforms: { uReveal: globeMat.uniforms.uReveal },
+          vertexShader: `
+            uniform float uReveal;
+            varying float vFade;
+            void main() {
+              float pole = abs(normalize(position).y);
+              vFade = (1.0 - smoothstep(0.7, 1.0, pole)) * uReveal;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }`,
+          fragmentShader: `
+            varying float vFade;
+            void main() { gl_FragColor = vec4(vec3(0.224, 0.941, 1.0), 0.07 * vFade); }`,
+        })
+      : new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending });
+    spin.add(nameObject(new THREE.LineSegments(g, gratMat), 'earth-graticule-lines'));
   })();
 
   const PLACES = [
@@ -931,8 +948,25 @@
      slow radar pass (dossier: Soliton grammar; solograms, not atmosphere —
      the globe is INSTRUMENTED, never "photographed"; realistic rim rejected). */
   const holoScan = (function () {
-    const mat = new THREE.MeshBasicMaterial({ color: DL.instrumentActive, transparent: true,
-      opacity: 0.1, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false });
+    // Elevated: dissolve the ring's crisp inner/outer edge into a radial additive falloff
+    // (band center R*1.001, half-width R*0.011) so the sweeping band melts into scatter.
+    const mat = GLOBE_ELEV
+      ? new THREE.ShaderMaterial({
+          transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+          uniforms: { uOpacity: { value: 0.1 } },
+          vertexShader: `
+            varying float vR;
+            void main() { vR = length(position.xy); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+          fragmentShader: `
+            uniform float uOpacity;
+            varying float vR;
+            void main() {
+              float a = pow(1.0 - clamp(abs(vR - ${(R * 1.001).toFixed(4)}) / ${(R * 0.011).toFixed(4)}, 0.0, 1.0), 3.0);
+              gl_FragColor = vec4(vec3(0.698, 0.961, 0.992), a * uOpacity);
+            }`,
+        })
+      : new THREE.MeshBasicMaterial({ color: DL.instrumentActive, transparent: true,
+          opacity: 0.1, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false });
     const m = nameObject(new THREE.Mesh(new THREE.RingGeometry(R * 0.99, R * 1.012, 96), mat), 'holo-scan-shell');
     m.rotation.x = Math.PI / 2;
     coreGroup.add(m);
@@ -1620,7 +1654,9 @@
     const scanS = Math.max(0.06, Math.sqrt(Math.max(0, 1 - (scanY / R) * (scanY / R))));
     holoScan.position.y = scanY;
     holoScan.scale.set(scanS, scanS, 1);
-    holoScan.material.opacity = 0.09 + 0.03 * Math.sin(t * 9.7);      // projector shimmer, instrument-quiet
+    // projector shimmer, instrument-quiet; elevated drives a uniform + fades in with the boot reveal
+    if (GLOBE_ELEV) holoScan.material.uniforms.uOpacity.value = (0.09 + 0.03 * Math.sin(t * 9.7)) * globeMat.uniforms.uReveal.value;
+    else holoScan.material.opacity = 0.09 + 0.03 * Math.sin(t * 9.7);
     sunTimer -= dt;
     if (sunTimer <= 0) { sunTimer = 120; updateSunDir(); }            // terminator drifts in real time
 
