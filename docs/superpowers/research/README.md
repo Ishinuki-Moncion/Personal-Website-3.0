@@ -23,6 +23,13 @@ in here; anything built should trace to an entry.
   Synthesized into `../specs/2026-07-03-design-language-v3.md`, seven
   `../specs/2026-07-03-<surface>-elevation-brief.md` (principle → code lever), and
   `../specs/2026-07-03-north-star.md` (owner sign-off anchor).
+- **`2026-07-03-threejs-capability-ceiling.md`** — the *technical* feasibility base
+  for the **Plan C** build (bloom / shaders / interactivity in vanilla Three.js,
+  UMD-global r158, no build). Five parallel research streams, tier-tagged and
+  link-sourced. Key finding: shaders + interactivity are **pure-no-build**;
+  official bloom is jsm-only *and* breaks the transparent canvas, so **bloom is a
+  strategy fork** — hand-rolled additive (Path 1, recommended) vs import-map
+  official post (Path 2). Grounds the forthcoming Plan-C design doc.
 
 ## How to add research
 
