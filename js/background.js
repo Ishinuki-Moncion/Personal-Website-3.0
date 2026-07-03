@@ -1625,12 +1625,18 @@
      speed as 60Hz: 0.005/frame @60fps = 0.3/s. Clamped so a stalled tab can't
      jump time on resume. */
   let raf, running = true, t = 0, last = performance.now(), debugTick = 0;
+  let revealT = 0;   // SP2 boot reveal: real-time accumulator (pauses with the loop when hidden)
   function loop(now) {
     if (!running) return;
     raf = requestAnimationFrame(loop);
     const dt = Math.max(0, Math.min((now - last) / 1000, 0.033)); last = now;
     if (dt > 0) fpsEMA += (Math.min(1 / dt, 120) - fpsEMA) * 0.04;   // QA gate reads this
     t += dt * 0.3;
+    if (GLOBE_ELEV) {   // boot-up scan-reveal: ease-out cubic over ~1.8s, then inert at 1
+      revealT += dt;
+      const rr = Math.min(1, revealT / 1.8);
+      globeMat.uniforms.uReveal.value = 1.0 - Math.pow(1.0 - rr, 3.0);
+    }
     const scrollN = Math.min(1, Math.max(0, scrollY / maxScroll));
     const f = dt * 60;   // per-frame speeds scale to real elapsed time
 
