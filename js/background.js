@@ -14,6 +14,8 @@
   const small = window.matchMedia('(max-width: 760px)').matches;
   const LITE = coarse || small;            // phones / tablets: lighter scene
   const sceneDebug = new URLSearchParams(location.search).get('sceneDebug') === '1';
+  // SP2 globe shader elevation — ON by default; ?globe=classic restores the pre-SP2 look (A/B + rollback).
+  const GLOBE_ELEV = new URLSearchParams(location.search).get('globe') !== 'classic';
   const debugEl = sceneDebug ? document.querySelector('.scene-debug') : null;
   function getQualityProfile() {
     if (reduced) return {
@@ -212,7 +214,11 @@
   setFiniteAttribute(globeGeo, 'city', gcity.subarray(0, globeFilled), 1);
   const globeMat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uPx: { value: dpr }, uSunDir: { value: new THREE.Vector3(1, 0, 0) } },
+    uniforms: {
+      uTime: { value: 0 }, uPx: { value: dpr }, uSunDir: { value: new THREE.Vector3(1, 0, 0) },
+      uReveal: { value: 1 },              // 0→1 boot reveal; 1 = fully shown (reduced-motion default)
+      uElev: { value: GLOBE_ELEV ? 1 : 0 },  // 1 = v3 elevation, 0 = classic; land shader mixes on this
+    },
     vertexShader: `
       attribute float phase;
       attribute float edge;
