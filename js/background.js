@@ -225,11 +225,14 @@
       attribute float city;
       uniform float uTime, uPx;
       uniform vec3 uSunDir;
+      uniform float uReveal, uElev;
       varying float vA;
       varying float vEdge;
       varying float vFacing;
       varying float vNight;
       varying float vCity;
+      varying float vReveal;
+      varying float vBand;
       void main() {
         vec3 worldPos = (modelMatrix * vec4(position, 1.0)).xyz;
         vec3 worldNormal = normalize((modelMatrix * vec4(normalize(position), 0.0)).xyz);
@@ -238,17 +241,28 @@
         vA = 0.55 + 0.45 * sin(uTime * 2.2 + phase);
         vEdge = edge;
         vFacing = smoothstep(-0.15, 0.65, dot(worldNormal, viewDir));
-        vNight = 1.0 - smoothstep(-0.18, 0.12, dot(normalize(position), uSunDir));
+        // Terminator: uElev widens+softens the day/night band (classic edges at uElev=0).
+        float sun = dot(normalize(position), uSunDir);
+        vNight = 1.0 - smoothstep(mix(-0.18, -0.35, uElev), mix(0.12, 0.28, uElev), sun);
         vCity = city;
+        // Boot-up scan-reveal (inert at uReveal=1): pole->pole sweep, per-point curl dither.
+        float yN = normalize(position).y * 0.5 + 0.5;
+        float front = mix(-0.15, 1.15, uReveal);
+        float curl = fract(sin(dot(position, vec3(12.9898, 78.233, 37.719))) * 43758.5453) * 0.06;
+        vReveal = 1.0 - smoothstep(front, front + 0.15, yN + curl);
+        vBand = smoothstep(front - 0.12, front, yN + curl) * (1.0 - smoothstep(front, front + 0.12, yN + curl));
         gl_PointSize = (2.4 + 1.4 * vA + edge * 1.2 + city * vNight * 1.1) * uPx * (6.0 / -mv.z);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
+      uniform float uElev;
       varying float vA;
       varying float vEdge;
       varying float vFacing;
       varying float vNight;
       varying float vCity;
+      varying float vReveal;
+      varying float vBand;
       void main() {
         float d = length(gl_PointCoord - 0.5);
         if (d > 0.5) discard;
@@ -257,9 +271,17 @@
         col = mix(col, vec3(1.0, 0.72, 0.35), vCity * vNight * 0.85);
         float dusk = vNight * (1.0 - vNight) * 4.0;
         col += vec3(1.0, 0.5, 0.25) * dusk * 0.16;
+        // Elevated: cool cyan lift on the DAY limb (day side + near silhouette); gated by uElev.
+        float dayLimb = (1.0 - vNight) * (1.0 - vFacing);
+        col += vec3(0.10, 0.55, 0.75) * dayLimb * 0.18 * uElev;
+        // Elevated: softer point core (pow) vs classic linear falloff.
+        float core = mix(1.0 - d * 2.0, pow(max(1.0 - d * 2.0, 0.0), 3.0), uElev);
         float facingAlpha = mix(0.18, 1.0, vFacing);
-        float alpha = vA * (1.0 - d * 2.0) * (0.75 + vEdge * 0.25) * facingAlpha;
+        float alpha = vA * core * (0.75 + vEdge * 0.25) * facingAlpha;
         alpha *= mix(0.9, 1.0 + vCity * 0.6, vNight);
+        // Boot-up reveal (inert at uReveal=1: vReveal=1, vBand=0): mask + bright leading band.
+        alpha *= vReveal;
+        col += vec3(0.3, 0.95, 1.0) * vBand * 0.6;
         gl_FragColor = vec4(col, alpha);
       }`,
   });
