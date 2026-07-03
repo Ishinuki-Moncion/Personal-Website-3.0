@@ -141,3 +141,34 @@ limb width (%R) · limb `pow` exponent (3–6) · limb alpha `CAP` · limb day-b
 - `2026-07-03-design-language-v3.md` — §1.1–1.7 (cool-shell/warm-signal split, rimless holo, additive-never-occlude), §6 palette tokens, §6.7 "no neutral-white."
 - `2026-07-03-north-star.md` — "living instrument booting up," pinned key-art `refs/globe/004`, ~88 % deep-shadow law.
 - `../research/2026-07-03-threejs-capability-ceiling.md` — §2 shaders pure-no-build [VERIFIED]; Fresnel `pow(1-dot(N,V),3-6)` biased by `uSunDir`; additive blow-out survival kit; §0/§1/§5 transparent-canvas warnings.
+
+---
+
+## §14 — Build results (2026-07-03, SP2 COMPLETE)
+
+Executed inline (executing-plans), 6 tasks + 1 tune, committed on `v3-build`:
+`33aa35d` T0 flag+uniforms · `3455679` T1 limb shell · `b00fdb4` T2 land shader · `48a1a8b` T3 dissolve · `97a0d4c` T4 reveal drive · `6d6804b` limb tune · T5 record. (Spec `f74349d`, plan `01a9ed8`.)
+
+**Environment:** desktop, `quality=high`, `dpr=2`, `globeParticles=7000`, `fps` 66–88 across tasks (rAF-capped; zero measurable cost). `?globe=classic` A/B verified reverting to the pre-SP2 look at each step.
+
+**Acceptance gates — all PASS:**
+
+| Gate | What | Result |
+|---|---|---|
+| A | Transparent canvas preserved | PASS — undrawn-corner readback `[0,0,0,0]`; stars/graticule read *through* the globe, no opaque disc. Additive + `depthWrite:false` = safe by construction. |
+| B | Limb terminator-biased, not uniform | PASS — cyan limb bright on the day/terminator arc, dim on the night limb. |
+| C | Terminator softened, warm dusk intact, no cool/warm bleed | PASS — wider day→night band + cool day-limb lift; amber stays night-gated (A/B vs classic). |
+| D | Scan-band + graticule edges dissolve | PASS — holo-scan band melts into scatter (no hard ring); graticule fades toward the poles. |
+| E | Soft point cores | PASS — `pow(1-2d,3)` feathered cores, no hard discs (A/B vs classic linear). |
+| F | Boot reveal plays once → settles; reduced-motion instant | PASS — burst caught the pole-to-pole sweep + settle; reduced-motion re-run (`reduced=true`, `p=2600`) renders the full globe with **no** sweep. |
+| G | Parity / no regression | PASS — `globeParticles`/`dpr`/`quality` unchanged; `fps` ≥ baseline; LITE budget held. |
+| H | Discipline | PASS — grep: no new `WebGLRenderTarget`, no new composer (the `EffectComposer` refs are the pre-existing SP1 bloom dev-flag), no particle-count change. |
+
+**Final tuned knobs (§11):** limb `pow 4.0`; limb night-floor `0.05` (tuned from `0.12`); limb `CAP 0.5`; limb day-bias `smoothstep(-0.25,0.30)`; terminator band `smoothstep(-0.35,0.28)` at `uElev=1`; day-limb cool lift `0.18`; dusk warm `0.16` (unchanged); dissolve `pow(...,3)` half-width `R*0.011`; soft-point exponent `3.0`; reveal `1.8s` ease-out-cubic; reveal curl `0.06`; leading-band `0.6`.
+
+**Notes for downstream:**
+- **Dev-only throttling artifact:** background-tab rAF throttling + the `dt` clamp (0.033) stretches the 1.8s reveal to tens of seconds when the tab isn't OS-foreground; a real foreground tab at 60fps completes it in 1.8s. Not a code issue.
+- `?globe=classic` remains the A/B + rollback switch.
+- SP3 (scan-and-tag interactivity) inherits the deferred brief levers: emitter clustering, coordinate callouts, reticle/graticule leaders.
+
+**Decision: SP2 COMPLETE.** The globe is graded to the v3 visual language — a rimless additive cyan hologram over a real Earth-at-night with a terminator-biased cool limb, softened two-tone terminator, dissolved band/graticule edges, soft point cores, and a booting-up scan-reveal. Next = SP3 (interactivity) or SP4 (postprocessing polish), each its own spec→plan→build.
