@@ -933,7 +933,7 @@
           float front = mix(-0.15, 1.15, uReveal);                     // boot sweep; 1.15 = fully lit at rest
           float reveal = 1.0 - smoothstep(front, front + 0.15, yN);
           float band = smoothstep(front - 0.12, front, yN) * (1.0 - smoothstep(front, front + 0.12, yN));
-          float a = min(rim * mix(0.12, 1.0, day) * reveal, 0.5) + band * 0.25 * day;
+          float a = min(rim * mix(0.05, 1.0, day) * reveal, 0.5) + band * 0.25 * day;
           gl_FragColor = vec4(vec3(0.224, 0.941, 1.0), a);             // cyan; additive scales RGB by a
         }`,
     });
