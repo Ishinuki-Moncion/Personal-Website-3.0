@@ -1439,6 +1439,97 @@
   const mouse = { x: 0, y: 0 };
   addEventListener('pointermove', e => { mouse.x = (e.clientX / innerWidth) * 2 - 1; mouse.y = (e.clientY / innerHeight) * 2 - 1; });
 
+  // ---- SP3 globe interrogation: analytic-sphere pick -> nearest place ----
+  const ptr = { x: 0, y: 0, inside: false };   // TRUE flipped-NDC (mouse above is not NDC)
+  addEventListener('pointermove', e => {
+    ptr.x = (e.clientX / innerWidth) * 2 - 1;
+    ptr.y = -(e.clientY / innerHeight) * 2 + 1;
+    ptr.inside = true;
+  });
+  addEventListener('pointerleave', () => { ptr.inside = false; });
+
+  const _pk = new THREE.Vector3(), _hit = new THREE.Vector3(), _cw = new THREE.Vector3();
+  // vecToLatLon = exact inverse of toV3 (:187)
+  function vecToLatLon(v) {
+    const n = _pk.copy(v).normalize();
+    const lat = 90 - Math.acos(Math.max(-1, Math.min(1, n.y))) * 180 / Math.PI;
+    let lon = Math.atan2(n.z, -n.x) * 180 / Math.PI - 180;
+    if (lon < -180) lon += 360; else if (lon > 180) lon -= 360;
+    return { lat, lon };
+  }
+
+  // INTERROGABLE = plumbing over existing data (no authored content)
+  const INTERROGABLE = [];
+  PLACES.forEach(p => INTERROGABLE.push({
+    id: p.id, label: p.label, jp: p.id === 'tokyo' ? '東京' : '', lat: p.lat, lon: p.lon,
+    kind: p.id === 'tokyo' ? 'tokyo' : 'dallas', dir: toV3(p.lat, p.lon, 1),
+  }));
+  for (const key in GALLERY_PLACES) {
+    const g = GALLERY_PLACES[key];
+    const el = document.querySelector('.gallery-grid .shot[data-src*="' + key + '"]');
+    INTERROGABLE.push({ id: key, label: g.en, jp: g.jp, lat: g.lat, lon: g.lon,
+      kind: 'photo', dir: toV3(g.lat, g.lon, 1), domRef: el });
+  }
+
+  const _ray = new THREE.Raycaster();
+  const _sph = new THREE.Sphere();
+  const PICK_COS = Math.cos(8 * Math.PI / 180);   // ~8deg snap radius
+  function pickPlace() {
+    camera.updateMatrixWorld();   // ray origin needs a fresh camera matrix when picking outside the render tick
+    _ray.setFromCamera(ptr, camera);
+    _sph.set(coreGroup.getWorldPosition(_cw), R);
+    if (!_ray.ray.intersectSphere(_sph, _hit)) return null;   // pointer misses the globe
+    spin.worldToLocal(_hit);                                   // through spin, NOT coreGroup
+    const dir = _hit.normalize();
+    let best = null, bestDot = PICK_COS;
+    for (const it of INTERROGABLE) { const d = dir.dot(it.dir); if (d > bestDot) { bestDot = d; best = it; } }
+    const ll = vecToLatLon(dir);
+    return best ? { place: best, lat: ll.lat, lon: ll.lon } : null;
+  }
+  window.__pick = pickPlace;
+  window.__interrogateAt = (cx, cy) => { ptr.x = (cx / innerWidth) * 2 - 1; ptr.y = -(cy / innerHeight) * 2 + 1; ptr.inside = true; return pickPlace(); };
+  window.__pickDebug = (cx, cy) => {   // SP3 dev diagnostic (removed before ship)
+    ptr.x = (cx / innerWidth) * 2 - 1; ptr.y = -(cy / innerHeight) * 2 + 1;
+    camera.updateMatrixWorld();
+    _ray.setFromCamera(ptr, camera);
+    _sph.set(coreGroup.getWorldPosition(_cw), R);
+    if (!_ray.ray.intersectSphere(_sph, _hit)) return { hitSphere: false };
+    spin.worldToLocal(_hit);
+    const dir = _hit.clone().normalize();
+    let bestDot = -2, bestId = null;
+    for (const it of INTERROGABLE) { const d = dir.dot(it.dir); if (d > bestDot) { bestDot = d; bestId = it.id; } }
+    const ll = vecToLatLon(dir);
+    return { hitSphere: true, bestId, bestDot: +bestDot.toFixed(3), lat: +ll.lat.toFixed(1), lon: +ll.lon.toFixed(1) };
+  };
+  window.__diag = () => {   // SP3 dev round-trip: project each place -> pick there (removed before ship)
+    const out = []; const v = new THREE.Vector3(); camera.updateMatrixWorld();
+    for (const it of INTERROGABLE) {
+      v.copy(it.dir).multiplyScalar(R); spin.localToWorld(v); v.project(camera);
+      const sx = (v.x * 0.5 + 0.5) * innerWidth, sy = (-v.y * 0.5 + 0.5) * innerHeight;
+      const d = window.__pickDebug(sx, sy);
+      out.push({ id: it.id, front: v.z < 1, sx: Math.round(sx), sy: Math.round(sy), picked: d.bestId, dot: d.bestDot });
+    }
+    return out;
+  };
+  window.__probe = (id) => {   // SP3 dev: dump the pick vectors for one place (removed before ship)
+    const it = INTERROGABLE.find(p => p.id === id); if (!it) return 'no id';
+    camera.updateMatrixWorld();
+    const f = a => a.toArray().map(n => +n.toFixed(2));
+    const pw = it.dir.clone().multiplyScalar(R); spin.localToWorld(pw);   // place world pos
+    const proj = pw.clone().project(camera);
+    ptr.x = proj.x; ptr.y = proj.y;
+    _ray.setFromCamera(ptr, camera);
+    _sph.set(coreGroup.getWorldPosition(_cw), R);
+    const camPos = _ray.ray.origin.clone();
+    const inside = camPos.distanceTo(_cw) < R;
+    const hitW = _ray.ray.intersectSphere(_sph, _hit.set(0, 0, 0)) ? _hit.clone() : null;
+    const localDir = hitW ? spin.worldToLocal(hitW.clone()).normalize() : null;
+    return { placeWorld: f(pw), sphereCenter: f(_cw), camPos: f(camPos), camInside: inside,
+      hitWorld: hitW ? f(hitW) : null, hitLocalDir: localDir ? localDir.toArray().map(n => +n.toFixed(3)) : null,
+      placeDir: it.dir.toArray().map(n => +n.toFixed(3)), spinRotY: +spin.rotation.y.toFixed(3),
+      dotHitPlace: localDir ? +localDir.dot(it.dir).toFixed(3) : null };
+  };
+
   /* Debounced resize — raw handler reallocated the GL backbuffer dozens of
      times/sec during window drags, and iOS fires resize on URL-bar collapse
      mid-scroll, so small height-only deltas on touch are ignored entirely. */
