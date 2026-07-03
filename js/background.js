@@ -860,6 +860,47 @@
     return sp;
   })();
 
+  /* (f0) SP2 cool limb — replaces the uniform halo sprite with a terminator-biased
+     back-side Fresnel scatter shell (rim brightest toward the sun, dying on the night
+     limb). Parented to `spin` so normalize(position) shares uSunDir's geographic frame.
+     Additive + depthWrite:false → cannot fill undrawn pixels (canvas stays transparent). */
+  if (GLOBE_ELEV) {
+    halo.visible = false;                                  // sprite off; shell is the atmosphere now
+    const segW = LITE ? 24 : 48, segH = LITE ? 16 : 32;
+    const limbMat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide,
+      uniforms: { uSunDir: globeMat.uniforms.uSunDir, uReveal: globeMat.uniforms.uReveal },
+      vertexShader: `
+        varying vec3 vNormalV;
+        varying vec3 vViewDirV;
+        varying vec3 vSphereDir;
+        void main() {
+          vSphereDir = normalize(position);
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vNormalV = normalize(normalMatrix * normal);
+          vViewDirV = normalize(-mv.xyz);
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: `
+        uniform vec3 uSunDir;
+        uniform float uReveal;
+        varying vec3 vNormalV;
+        varying vec3 vViewDirV;
+        varying vec3 vSphereDir;
+        void main() {
+          float rim = pow(1.0 - abs(dot(vNormalV, vViewDirV)), 4.0);   // edge-weighted limb
+          float day = smoothstep(-0.25, 0.30, dot(vSphereDir, uSunDir)); // 1 day/terminator, 0 night
+          float yN = vSphereDir.y * 0.5 + 0.5;
+          float front = mix(-0.15, 1.15, uReveal);                     // boot sweep; 1.15 = fully lit at rest
+          float reveal = 1.0 - smoothstep(front, front + 0.15, yN);
+          float band = smoothstep(front - 0.12, front, yN) * (1.0 - smoothstep(front, front + 0.12, yN));
+          float a = min(rim * mix(0.12, 1.0, day) * reveal, 0.5) + band * 0.25 * day;
+          gl_FragColor = vec4(vec3(0.224, 0.941, 1.0), a);             // cyan; additive scales RGB by a
+        }`,
+    });
+    spin.add(nameObject(new THREE.Mesh(new THREE.SphereGeometry(R * 1.02, segW, segH), limbMat), 'earth-limb-shell'));
+  }
+
   /* Instrument palette anchors (dossier [DATA]: MGSV iDroid field #0f394c,
      active #b2f5fd, hue discipline 193-201; alert red reserved for alerts). */
   const DL = { instrumentField: 0x0f394c, instrumentActive: 0xb2f5fd };
@@ -1600,7 +1641,7 @@
       node.material.opacity = base + (isFocused ? focusFlash * 0.35 : 0);
       node.material.size = node.userData.place.size * (1 + (isFocused ? focusFlash * 0.35 : 0));
     }
-    halo.material.opacity = 0.10 + 0.05 * (Math.sin(t * 1.5) * 0.5 + 0.5);
+    if (!GLOBE_ELEV) halo.material.opacity = 0.10 + 0.05 * (Math.sin(t * 1.5) * 0.5 + 0.5);
 
     // Dallas -> Tokyo arc: draws over ~1.5s, comet rides the front, re-arms ~12s
     arcArm += dt;
