@@ -121,3 +121,34 @@ nearest-place angular threshold (`8°`) · hover debounce (`90 ms`) · dwell (`4
 - `2026-07-03-globe-elevation-brief.md` — the three deferred levers (a/b/c) and their code levers.
 - `2026-07-03-design-language-v3.md` / `2026-07-03-north-star.md` — "observed and instrumented," "animate the focus only," "comes alive only where you look."
 - `2026-07-03-sp2-globe-shader-elevation-design.md` — the shaded globe SP3 must not regress.
+
+---
+
+## §15 — Build results (2026-07-04, SP3 COMPLETE)
+
+Executed inline (executing-plans), committed on `v3-build`:
+`726149e` spec · `acd5075` plan · `3e74c87` T0 pick · `81b646d` T1+T2 reticle+dwell · `433b66a` T3 select · `e64c821` T4 a11y · T5 strip+record.
+
+**Environment:** desktop, `high`/dpr2/7000 particles/fps 60–77. Dev hooks stripped; parity held; no console errors.
+
+**Acceptance gates — all PASS:**
+
+| Gate | Result |
+|---|---|
+| A pick correctness (no spin drift) | PASS — near-hemisphere places resolve at **dot=1.0** (round-trip); far-side correctly unpickable. **Fix:** `pickPlace()` calls `camera.updateMatrixWorld()` — the ray origin was `[0,0,0]` (stale camera matrix) when picking outside the render tick. `spin.worldToLocal` (not coreGroup) confirmed. |
+| B hover reticle | PASS — DOM reticle+box+leader+coordinate snaps to the acquired place ("DALLAS 32.8N 96.7W"), silent snap, hides off-globe. |
+| C dwell focus | PASS — ~0.4s dwell fires `__scanPlace` (verified scanCalled=`[dallas]`). |
+| D select | PASS — gallery tap opens the lightbox (`.lightbox`→`open`, IMG_08); tokyo/dallas → `setFocusedPlace` + scroll `#about`; drag (>8px) no-op; Escape clears. |
+| E accessibility | PASS — synthetic focus on gallery-05 → `__scanPlace(KYOTO)` + aria-live "Gallery — KYOTO"; project title fixed ("Degree Planning Audit Tool"); `:focus-visible` added. |
+| F touch/LITE | PASS (by construction) — `interrogate()` gated `!coarse`; select (`pointerup`) ungated; `coarse=false` in the test env. |
+| G reduced-motion | PASS — reduced re-import: `reduced=true`, a11y aria-live works ("Gallery — KYOTO"), `__scanPlace` no-op (no 3D scan), no pick loop (loop early-returns). |
+| H parity/discipline | PASS — 7000/dpr2/high, fps≥60; grep: no new `WebGLRenderTarget`/composer (the `EffectComposer` refs are the pre-existing SP1 bloom), no particle-count change; SP2 shading intact. |
+
+**Automation gotchas (dev-only, not user-facing):** the un-focused automation tab (a) throttles rAF — drive `window.__interrogate(0.1)` directly, not loop-timing; (b) does not dispatch focus events for programmatic `.focus()` — verify a11y via `dispatchEvent(new FocusEvent('focus'))`.
+
+**Owner debts (deferred, not blockers):**
+1. Verify the 12 photo→city assignments in `GALLERY_PLACES` (coords are real cities; the "shot here" claim is a guess).
+2. To make projects/work/districts globe-selectable: supply per-item coordinates + distinct URLs (content authoring).
+3. Lever (a) emitter clustering deferred to a follow-up micro-spec.
+
+**Decision: SP3 COMPLETE.** The globe is now interrogatable — a calm instrument that comes alive where you point: reticle + live coordinates on hover, scan-tag on dwell, lightbox on tap, fully keyboard/AT accessible, touch + reduced-motion honored. Pure no-build, additive-canvas-safe, SP2 shading intact. Next = SP4 (postprocessing) or SP5 (cross-site grading), each its own spec→plan→build.
