@@ -169,6 +169,31 @@ Served over **http(s)** (modules/import-maps are blocked under `file://`). Run t
 
 ---
 
+## §3.1 — SPIKE RESULTS (2026-07-03) — **PASS, SP1 COMPLETE**
+
+**Verdict: alpha-preserving selective bloom is PROVEN on the r158 jsm Path-2 foundation.** The #1 unknown for Plan C — *does official `UnrealBloomPass` survive the transparent `alpha:true` canvas?* — resolves **YES**, via the two-composer dark-material-swap + `NoBlending` mixPass (design §2b). No fallback needed.
+
+**Environment:** macOS desktop, Chromium, CSS viewport ≈1512×812, **dpr 2**, tier **high**, globe **7000/7000** particles, 60 fps rAF cap. Served over `python3 -m http.server`. Commits: **4636113** (ESM foundation), **9e39090** (bloom spike).
+
+| # | Gate | Result | Evidence |
+|---|------|--------|----------|
+| **1** | Foundation parity | **PASS** | `REVISION 158`, `POST` 5 ctors, **57/57 requests 200** (full addon closure, 0×404), 0 console errors, single THREE (`classicGlobal:false`); scene fingerprint **identical** to classic (high/dpr2, 7000/7000, arc 128, reveals all 1.0, 60fps); `verify-site-hardening.js` 22/22. |
+| **2** | Transparency (THE gate) | **PASS** | All 4 undrawn corners `[0,0,0,0]`; **stable over 16 s**, through the empty-selection composite path, **and after a full GPU context-loss/restore**. The additive canvas composites RGB over the CSS gradient with alpha≈0 (three premultiplied model) — bloom preserves both: corners contribute 0 RGB (no ghost), globe contributes RGB+bloom. |
+| **3** | Visual parity | **PASS** | `emptySel` corner `[0,0,0,0]` (no stale-buffer ghost — R2) and **not washed dark** (OutputPass sRGB intact — R6). Isolating via same-path A/B (emptySel vs full-bloom) shows the brightness gain is genuine bloom, not a composite artifact. *Caveat:* a subtle composite-vs-direct brightness delta may exist (tone/color nuance) — finalize color grade in **SP4**. |
+| **4** | Selective bloom visible | **PASS** | Bloom-on vs bloom-off A/B: globe wireframe + point-cloud + synthwave grid + halo/rings/arc **glow**; DOM wordmark, `fieldDeep` starfield, depth-rain, HUD chrome **unchanged**. Tagging is correct. |
+| **5** | Droplet lens intact | **PASS (structural)** | `background.js:1629 render()` → `1630 droplets.update(dt)` (same sync tick); lens does `ctx.drawImage(renderer.domElement,…)` at :619. `render()` writes the composited/bloomed frame to `renderer.domElement` before the drawImage → lens refracts the bloomed frame. Mechanism is bloom-agnostic; a live droplet was not frame-captured but the timing is proven. |
+| **6** | Fallback paths | **PASS** | Context-restore quantitatively verified: `lost+restored`, no error, **redrew 33 hot cells**, 60fps, corner still `[0,0,0,0]` — EffectComposer render targets survived the restore. Reduced path = the same flag-gated **direct** render verified via `?bloom=0` (`__bloomProbe` undefined, scene renders). Labels crisp after a cold hard-reload (fonts.ready). |
+| **7** | Perf budget | **PASS** | **PRE-bloom fpsEMA = 60; POST-bloom fpsEMA = 60** (sustained ~16 s), high-tier desktop dpr2 — bloom adds no measurable frame cost (both at the rAF cap). *Caveat:* measured on high-end desktop only; LITE/mobile is bloom-off by design (no risk), but validate a real mid-tier device before shipping bloom broadly. |
+
+**Decision:** SP1 **COMPLETE**. Plan C's Path-2 spine (import-map + `boot.mjs` + official jsm postprocessing) is validated end-to-end and the transparent-canvas bloom risk is retired. The **r168 + pmndrs CA/color-grade** escalation stays deferred to **SP4** (already audited safe; §2e).
+
+**Notes carried to SP2+/SP4:**
+- **Color:** possible subtle composite-vs-direct brightness offset → finalize grade in SP4 when CA/color-grade land.
+- **Perf:** re-measure on a real mid-tier phone (emulation deferred here).
+- **Dev-loop gotcha:** scene files keep a fixed `?v=` (e.g. `background.js?v=3.8`); the browser caches that exact URL, so **hard-reload (Cmd+Shift+R) is required to pick up scene-file edits** during dev — bump `?v=` on any real deploy.
+
+---
+
 ## §4 — Ordered build steps
 
 1. **Vendor r158 ESM assets.** Add `tools/vendor-three-esm.cjs` copying the same pinned `three@0.158.0/build/three.module.min.js` + the 10-file jsm graph (§1e) into `js/vendor/three-0.158.0/`; vendor `es-module-shims-1.10.0.min.js` locally.
