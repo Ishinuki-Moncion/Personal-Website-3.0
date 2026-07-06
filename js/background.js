@@ -1751,41 +1751,6 @@
       scene.traverse(restore);
       finalComposer.render();      // real scene + ADD bloom.rgb, keep base.a -> screen
     };
-
-    // (f) SP4 SHIP-GATE probe — extends SP1's corner/centre readPixels to the full
-    //     grade+CA chain. THE new assertion (alphaDiff): toggling caPass must change
-    //     alpha at ZERO pixels — proves CA reads the CENTRE (un-offset) alpha, so no
-    //     colored ghost bleeds into transparent space. Deleted for production (Task 5).
-    window.__postProbe = () => {
-      const gl = renderer.getContext();
-      const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight, cy = H >> 1;
-      const rd = (x, y) => { const p = new Uint8Array(4);
-        gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, p); return [...p]; };
-      const rowA = () => { const p = new Uint8Array(W * 4);
-        gl.readPixels(0, cy, W, 1, gl.RGBA, gl.UNSIGNED_BYTE, p);
-        const a = new Uint8Array(W); for (let i = 0; i < W; i++) a[i] = p[i * 4 + 3]; return a; };
-      // Exaggerate the CA offset so any offset-alpha bug becomes unmissable, then restore.
-      const amt0 = caPass.material.uniforms.uAmount.value;
-      caPass.material.uniforms.uAmount.value = 0.02;
-      caPass.enabled = false; renderBloomThenFinal(); const aOff = rowA();   // alpha row, CA OFF
-      caPass.enabled = true;  renderBloomThenFinal(); const aOn  = rowA();   // alpha row, CA ON
-      caPass.material.uniforms.uAmount.value = amt0;
-      let alphaDiff = 0, diffX = -1;
-      for (let i = 0; i < W; i++) if (aOn[i] !== aOff[i]) { alphaDiff++; if (diffX < 0) diffX = i; }
-      renderBloomThenFinal();   // leave a normally-CA'd frame on screen for the reads below
-      // live-read: the globe is offset (coreGroup x=+3), so a single centre pixel is unreliable.
-      // One full readPixels + a coarse grid count -> drawn>0 proves a live render (not a cleared buffer).
-      const full = new Uint8Array(W * H * 4);
-      gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, full);
-      let drawn = 0; const S = 20;
-      for (let y = 0; y < H; y += S) for (let x = 0; x < W; x += S) if (full[(y * W + x) * 4 + 3] > 0) drawn++;
-      const out = { W, H, corner: rd(1, 1), centre: rd(W >> 1, cy), drawn, alphaDiff, diffX };
-      console.log('[postProbe] ' + JSON.stringify(out));
-      return out;
-    };
-    // SP4 dev tuning handle — Task 4 live-tunes these (all read live each frame);
-    // stripped in Task 5 alongside __postProbe. bloomComposer.passes: [0]=RenderPass, [1]=UnrealBloomPass.
-    window.__post = { bloom: bloomComposer.passes[1], grade: gradePass, ca: caPass };
   }
 
   addEventListener('resize', () => {

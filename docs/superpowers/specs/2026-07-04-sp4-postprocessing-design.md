@@ -107,3 +107,48 @@ The ~88% near-black field is the **CSS gradient behind the transparent canvas** 
 - `2026-07-03-sp1-esm-foundation-bloom-spike-design.md` §3.1 — the proven bloom + `mixPass` alpha contract SP4 productionizes.
 - `2026-07-03-design-language-v3.md` §6 palette tokens + §6.7 "no neutral-white state"; `2026-07-03-north-star.md` "~88% deep shadow."
 - SP2/SP3 specs — the shaded, interactive globe SP4 must not regress.
+
+## §11 — Build results (SP4 COMPLETE)
+
+**Executed** 2026-07-06 on `v3-build` via `superpowers:executing-plans` (plan `docs/superpowers/plans/2026-07-06-sp4-postprocessing.md`, `fbe921f`). Browser-verified in Chrome at 3024×1654 / dpr 2, high tier.
+
+### Ship-gate spike (§6) — PASS
+
+SP1's corner-pixel probe was extended to `window.__postProbe` (dev-only; stripped for production in T5). Its key assertion **`alphaDiff`** toggles `caPass` at an exaggerated 0.02 offset and counts pixels whose alpha changed across the full centre row — a content-independent proof that CA reads the *centre* (un-offset) alpha. The live-read was hardened mid-build from a single centre pixel (fragile: globe is offset `coreGroup x=+3`, so exact-centre is often empty) to a coarse full-frame `drawn`-pixel count.
+
+| Criterion | Result | Evidence |
+|---|---|---|
+| 1 — undrawn corner α ≈ 0 (transparency) | **PASS** | `corner α = 0` in every state; CSS teal field visible behind canvas |
+| 2 — live read (scene drawn) | **PASS** | `drawn = 919–955` grid pixels in every state |
+| 3 — CA centre-alpha discipline (no ghost) | **PASS** | `alphaDiff = 0` across the full 3024px row even at the exaggerated 0.02 offset; no colored halo at the globe silhouette |
+| 4 — stability across states | **PASS** | criteria 1–3 held during the SP2 boot reveal, at steady state, with SP3 pointer active, after a debounced resize (`finalComposer.setSize`), and through a WebGL context loss/restore (a superset of the resize reallocation) |
+
+### Final tuned values (§1, §3)
+
+The vetted research defaults were validated **on-target against the composited buffer** and kept unchanged (the "re-tune" concluded no change was warranted):
+
+- **Bloom** (`background.js`): `BLOOM_STRENGTH 0.9`, `BLOOM_RADIUS 0.5`, `BLOOM_THRESHOLD 0.6`. A live strength sweep (0.7 → 1.4) produced **zero** neutral-white clipping at any value (peak luma is source-emitter-bound ~250, tinted); a 0.9-vs-1.15 visual A/B was a lateral difference, so the SP1-proven 0.9 stands.
+- **Grade** (`gradePass`): `uLift (-0.02, 0.006, 0.020)`, `uGamma (1.00, 1.00, 1.04)`, `uGain (1.05, 1.00, 0.97)`, `uTeal (0.00, 0.020, 0.030)`, `uTealAmt 0.6`, `uSat 1.06`.
+- **CA** (`caPass`): `uAmount 0.0035` (≈1px edge fringe, radial `d²` falloff).
+- **Frame audit** (clean steady state, 4px grid): **0** neutral-white pixels; **cool 95.0%** of lit pixels (cyan leads), **warm 2.9%** (within the §6 1–6% amber target), neutral 2.1%; `fps 60`. Meets design-language §6.7 "no neutral-white state," "amber scarce," "cyan leads."
+
+### Decisions
+
+- **`earth-limb-shell` — left UNtagged** (spec §1 default). In-browser the terminator reads dimensional (lit→dark gradient + land-particle texture), not flat — no gentle limb bloom added.
+- **Chain order:** `RenderPass → mixPass → OutputPass → gradePass → caPass` (caPass writes the canvas); grade + CA in display-referred sRGB after `OutputPass`, verified.
+- **`RGBA8` comment fixed** (`:1623` → HalfFloatType RGBA16F linear); `?bloom=1` spike flag + `emptySel` A/B guard + stale `?bloom=1`/"Inert by default" comments retired.
+- **CSS teal-black floor** (§9): `--void #05060a → #0a1416`, `--void-2 → #0e1a1d`, boot `#030407 → #050e10`, theme-color `→ #0a1416`; all-tier, no separate LITE grade path.
+- **Rain-droplet regression (§5.5):** droplet lenses sample the composited (graded, CA'd) frame coherently — verified by scrolling into rain with the composer now the default high-tier path.
+
+### Commits (`v3-build`)
+
+`fbe921f` plan · `4913726` productionize bloom · `80055a1` color-grade · `747a7e4` chromatic-aberration + `__postProbe` ship-gate · `e7a1c80` teal-black CSS floor · `(this)` strip hooks + `V.bg → 3.9` + acceptance. Task 4 validated the defaults with no code change (evidence above). Deploy cache-bust: `V.bg → 3.9` (JS), `site.css?v → 3.8` (CSS).
+
+### Decision: **SP4 COMPLETE.**
+
+Lush postprocessing shipped — productionized alpha-preserving bloom + hand-rolled r158 grade + CA, on-brand teal-black floor, ship-gate passed, no version bump / no new dependency.
+
+### Carried-forward owner debts
+
+- **SP3:** verify the 12 photo→city labels; author project/district geo to make them selectable.
+- **SP4 / SP5:** the CSS teal-black floor may fold into a broader SP5 grading pass; event-gated CA `uGlitch` pulse choreography + per-section grade-temperature cadence belong to the motion surface (SP4 ships subtle always-on CA + static grade, stubs neither); an optional 2D-strip `DataTexture` LUT remains a documented escalation if a colorist supplies a look.
