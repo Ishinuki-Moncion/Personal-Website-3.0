@@ -1587,16 +1587,14 @@
   let resizeTm;
 
   /* ------------------------------------------------------------------ *
-   *  SP1 BLOOM SPIKE — dev flag ?bloom=1, high tier only (design §2).  *
+   *  POSTPROCESSING — SP1 bloom + SP4 grade/CA, high tier only.        *
    *  Two-composer selective DARK-MATERIAL-SWAP (NOT camera.layers, R8),*
    *  alpha-preserving via a NoBlending mixPass (R2). Fully decoupled:   *
    *  composers stay null unless enabled; render() falls back to the     *
-   *  direct path everywhere else (R7). Inert by default.                *
+   *  direct path on LITE/reduced (R7). ON by default (high tier).       *
    * ------------------------------------------------------------------ */
-  const bloomParams  = new URLSearchParams(location.search);
-  const BLOOM_SPIKE  = bloomParams.get('bloom') === '1';
-  const bloomEmptySel = bloomParams.get('emptySel') === '1';   // gate #3 A/B: tag nothing
-  const bloomEnabled = BLOOM_SPIKE && quality.name === 'high' && !reduced &&
+  // SP4: bloom is ON by default (high tier). The ?bloom=1 spike flag is retired.
+  const bloomEnabled = quality.name === 'high' && !reduced &&
                        !!(window.POST && window.POST.EffectComposer);
   let bloomComposer = null, finalComposer = null, renderBloomThenFinal = null;
 
@@ -1606,21 +1604,19 @@
 
     // (a) Tag emitters — userData.bloom keeps their real material through the dark pass.
     //     Source intensities already sit in [0,1]; bloom is a blow-out multiplier (R14).
-    if (!bloomEmptySel) {
-      [fieldCyan, fieldAmber, tokyoRing, pingRing, comet].forEach(o => { o.userData.bloom = true; });
-      tokyoHalo.glow.userData.bloom = true;                       // glow Sprite (makeGlowSprite, 497)
-      tokyoHalo.rings.forEach(r => { r.userData.bloom = true; }); // ring meshes/line (487-491)
-      // Inline-added objects (no variable handle) — tag by their nameObject() name:
-      //   globe Points  background.js:260  'earth-land-particles'
-      //   arc   Line    background.js:816  'dallas-to-tokyo-arc'
-      const bloomByName = new Set(['earth-land-particles', 'dallas-to-tokyo-arc']);
-      scene.traverse(o => { if (bloomByName.has(o.name)) o.userData.bloom = true; });
-    }
+    [fieldCyan, fieldAmber, tokyoRing, pingRing, comet].forEach(o => { o.userData.bloom = true; });
+    tokyoHalo.glow.userData.bloom = true;                       // glow Sprite (makeGlowSprite, 497)
+    tokyoHalo.rings.forEach(r => { r.userData.bloom = true; }); // ring meshes/line (487-491)
+    // Inline-added objects (no variable handle) — tag by their nameObject() name:
+    //   globe Points  background.js:260  'earth-land-particles'
+    //   arc   Line    background.js:816  'dallas-to-tokyo-arc'
+    const bloomByName = new Set(['earth-land-particles', 'dallas-to-tokyo-arc']);
+    scene.traverse(o => { if (bloomByName.has(o.name)) o.userData.bloom = true; });
     // Explicitly EXCLUDED (design §2c "instrument only the focus"): fieldDeep starfield,
     // depth-rain, holo-scan-shell, satellite, transit/stations/packet, halo text labels.
 
     // (b) bloomComposer — renders ONLY tagged emitters (rest swapped to black), off-screen.
-    bloomComposer = new POST.EffectComposer(renderer);   // no type arg -> RGBA8 target (mobile-safe)
+    bloomComposer = new POST.EffectComposer(renderer);   // no type arg -> HalfFloatType RGBA16F LINEAR target (EffectComposer.js:27)
     bloomComposer.renderToScreen = false;
     bloomComposer.addPass(new POST.RenderPass(scene, camera));
     bloomComposer.addPass(new POST.UnrealBloomPass(
@@ -1727,8 +1723,8 @@
   });
 
   const render = (bloomEnabled && renderBloomThenFinal)
-    ? () => renderBloomThenFinal()               // high-tier + ?bloom=1: dark-swap -> bloom -> final
-    : () => renderer.render(scene, camera);        // reduced / LITE / spike-off: direct path
+    ? () => renderBloomThenFinal()               // high tier: dark-swap -> bloom composite -> final
+    : () => renderer.render(scene, camera);        // reduced / LITE: direct path
 
   if (reduced) {
     // Meaningful static frame: Tokyo rotated to face the camera, journey arc
