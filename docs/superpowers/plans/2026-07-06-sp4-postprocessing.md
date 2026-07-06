@@ -209,7 +209,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:** Modify `js/background.js` — define `caPass` after `gradePass`; append it to `finalComposer` (last); replace `window.__bloomProbe` (`:1687-1696`) with `window.__postProbe`.
 
-**Interfaces — Consumes:** `gradePass`, `caPass`, `renderBloomThenFinal`, `renderer`. **Produces:** `caPass` (uniform `uAmount`, retuned in Task 4); `finalComposer` chain becomes `RenderPass → mixPass → OutputPass → gradePass → caPass` (caPass is the canvas writer); `window.__postProbe()` → `{W,H,corner,centre,alphaDiff,diffX}`; `window.__post` = `{bloom, grade, ca}` dev tuning handle (Task 4 uses it; Task 5 strips it).
+**Interfaces — Consumes:** `gradePass`, `caPass`, `renderBloomThenFinal`, `renderer`. **Produces:** `caPass` (uniform `uAmount`, retuned in Task 4); `finalComposer` chain becomes `RenderPass → mixPass → OutputPass → gradePass → caPass` (caPass is the canvas writer); `window.__postProbe()` → `{W,H,corner,centre,drawn,alphaDiff,diffX}` (`drawn` = coarse-grid count of alpha>0 pixels — a position-independent live-read, since the globe is offset and a single centre pixel is unreliable); `window.__post` = `{bloom, grade, ca}` dev tuning handle (Task 4 uses it; Task 5 strips it).
 
 - [ ] **Step 1: Define `caPass`.** Insert immediately after `gradePass.material.blending = THREE.NoBlending;` (from Task 1):
 
@@ -298,8 +298,14 @@ with:
       caPass.material.uniforms.uAmount.value = amt0;
       let alphaDiff = 0, diffX = -1;
       for (let i = 0; i < W; i++) if (aOn[i] !== aOff[i]) { alphaDiff++; if (diffX < 0) diffX = i; }
-      renderBloomThenFinal();   // leave a normally-CA'd frame on screen for corner/centre reads
-      const out = { W, H, corner: rd(1, 1), centre: rd(W >> 1, cy), alphaDiff, diffX };
+      renderBloomThenFinal();   // leave a normally-CA'd frame on screen for the reads below
+      // live-read: the globe is offset (coreGroup x=+3), so a single centre pixel is unreliable.
+      // One full readPixels + a coarse grid count -> drawn>0 proves a live render (not a cleared buffer).
+      const full = new Uint8Array(W * H * 4);
+      gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, full);
+      let drawn = 0; const S = 20;
+      for (let y = 0; y < H; y += S) for (let x = 0; x < W; x += S) if (full[(y * W + x) * 4 + 3] > 0) drawn++;
+      const out = { W, H, corner: rd(1, 1), centre: rd(W >> 1, cy), drawn, alphaDiff, diffX };
       console.log('[postProbe] ' + JSON.stringify(out));
       return out;
     };
@@ -318,7 +324,7 @@ Expected: `node --check` exit 0; the `grep` finds no `__bloomProbe` → prints `
 
 - [ ] **Step 5: Browser — THE SHIP GATE.** Hard-reload `?sceneDebug=1&cb=sp4t2`. Via `javascript_tool`, `const p = window.__postProbe()`:
   - **Criterion 1 (transparency):** `p.corner[3] === 0` — undrawn corner is transparent. Screenshot confirms the CSS field is *visibly* behind the canvas (NOT a black/teal rectangle).
-  - **Criterion 2 (live read):** `p.centre[3] > 0` — scene drawn, not a cleared buffer.
+  - **Criterion 2 (live read):** `p.drawn > 0` — scene rendered, not a cleared buffer (robust: the globe is offset right, so a single centre pixel is unreliable; `drawn` counts alpha>0 over a coarse full-frame grid). `p.centre` is kept as informational only.
   - **Criterion 3 (centre-alpha discipline — the new CA failure mode):** `p.alphaDiff === 0` — toggling caPass (even at the exaggerated 0.02 offset) changes alpha at **zero** pixels. If `alphaDiff > 0`, CA is reading alpha from an offset tap → **fix the shader, do NOT ship** (same bar SP1 held).
   - Screenshot: a subtle radial R/B fringe that grows toward the corners (sharp at centre); no colored halo/ghost ringing the globe silhouette; no console errors.
 - [ ] **Step 6: Stability sweep.** Still on `?sceneDebug=1&cb=sp4t2`, re-run `window.__postProbe()` and screenshot in each state — criteria 1–3 must hold in all:
@@ -438,7 +444,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Interfaces — Produces:** production `background.js` with no dev probe; `V.bg` bumped so deployed clients pull SP4; spec's acceptance record + owner debts.
 
-- [ ] **Step 1: Final ship-gate confirmation (before deleting the probe).** Server up; hard-reload `?sceneDebug=1&cb=sp4t5`. Run `window.__postProbe()` one last time — record `{corner, centre, alphaDiff}` for the acceptance table (criteria 1–3 PASS). This is the last use of the probe.
+- [ ] **Step 1: Final ship-gate confirmation (before deleting the probe).** Server up; hard-reload `?sceneDebug=1&cb=sp4t5`. Run `window.__postProbe()` one last time — record `{corner, drawn, alphaDiff}` for the acceptance table (criteria 1–3 PASS). This is the last use of the probe.
 - [ ] **Step 2: Delete the dev hooks.** Remove the entire `window.__postProbe = () => {…};` block (the `// (f)` comment through the closing `};`) **and** the two-line `window.__post = {…}` tuning handle that follows it, both added in Task 2. Nothing else references them.
 - [ ] **Step 3: Syntax + scan.** Run:
 

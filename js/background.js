@@ -1696,12 +1696,42 @@
     }));
     gradePass.material.blending = THREE.NoBlending;
 
+    // (c3) caPass — radial chromatic aberration ("worn projected glass" fringe),
+    //      display-space, LAST in the chain. R/B sampled at ±radial offset; G AND
+    //      alpha at the un-offset CENTRE tap => undrawn pixels stay alpha 0 (no ghost).
+    const caPass = new POST.ShaderPass(new THREE.ShaderMaterial({
+      uniforms: {
+        tDiffuse: { value: null },
+        uAmount:  { value: 0.0035 },     // edge fringe, uv units; tune 0.002..0.006
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }
+      `,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform float uAmount;
+        varying vec2 vUv;
+        void main(){
+          vec2  dir = vUv - 0.5;                 // radial from centre; 0 at centre (no normalize -> no NaN)
+          float d   = length(dir);
+          vec2  off = dir * (uAmount * d);       // |off| = uAmount * d^2  -> lens falloff
+          float r = texture2D(tDiffuse, vUv + off).r;
+          vec4  c = texture2D(tDiffuse, vUv).rgba;   // CENTRE tap: green + the alpha we keep
+          float b = texture2D(tDiffuse, vUv - off).b;
+          gl_FragColor = vec4(r, c.g, b, c.a);   // <-- centre alpha => undrawn stays 0
+        }
+      `,
+    }));
+    caPass.material.blending = THREE.NoBlending;   // overwrite stale ping-pong target
+
     // (d) finalComposer — full REAL scene + ADD glow + restore on-screen sRGB (R6).
     finalComposer = new POST.EffectComposer(renderer);
     finalComposer.addPass(new POST.RenderPass(scene, camera));
     finalComposer.addPass(mixPass);
     finalComposer.addPass(new POST.OutputPass());   // REQUIRED: composer strips on-screen sRGB otherwise
     finalComposer.addPass(gradePass);               // SP4: grade tone-mapped sRGB display values, keep .a
+    finalComposer.addPass(caPass);                  // SP4: lens fringe, centre-alpha, LAST -> writes canvas
 
     // (e) Dark-material-swap (official pattern; depthWrite:false preserves the scene's
     //     real no-occlusion property since every emitter is additive/depthWrite:false).
@@ -1722,19 +1752,40 @@
       finalComposer.render();      // real scene + ADD bloom.rgb, keep base.a -> screen
     };
 
-    // (f) Gate #2 probe — one synchronous frame + readPixels BEFORE the browser composites
-    //     (reliable without preserveDrawingBuffer). corner alpha must be 0; centre alpha
-    //     proves the read is live (globe drawn). Also readable from an external driver.
-    window.__bloomProbe = () => {
-      renderBloomThenFinal();
+    // (f) SP4 SHIP-GATE probe — extends SP1's corner/centre readPixels to the full
+    //     grade+CA chain. THE new assertion (alphaDiff): toggling caPass must change
+    //     alpha at ZERO pixels — proves CA reads the CENTRE (un-offset) alpha, so no
+    //     colored ghost bleeds into transparent space. Deleted for production (Task 5).
+    window.__postProbe = () => {
       const gl = renderer.getContext();
+      const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight, cy = H >> 1;
       const rd = (x, y) => { const p = new Uint8Array(4);
         gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, p); return [...p]; };
-      const out = { corner: rd(1, 1),
-        centre: rd(gl.drawingBufferWidth >> 1, gl.drawingBufferHeight >> 1) };
-      console.log('[bloomProbe] ' + JSON.stringify(out));
+      const rowA = () => { const p = new Uint8Array(W * 4);
+        gl.readPixels(0, cy, W, 1, gl.RGBA, gl.UNSIGNED_BYTE, p);
+        const a = new Uint8Array(W); for (let i = 0; i < W; i++) a[i] = p[i * 4 + 3]; return a; };
+      // Exaggerate the CA offset so any offset-alpha bug becomes unmissable, then restore.
+      const amt0 = caPass.material.uniforms.uAmount.value;
+      caPass.material.uniforms.uAmount.value = 0.02;
+      caPass.enabled = false; renderBloomThenFinal(); const aOff = rowA();   // alpha row, CA OFF
+      caPass.enabled = true;  renderBloomThenFinal(); const aOn  = rowA();   // alpha row, CA ON
+      caPass.material.uniforms.uAmount.value = amt0;
+      let alphaDiff = 0, diffX = -1;
+      for (let i = 0; i < W; i++) if (aOn[i] !== aOff[i]) { alphaDiff++; if (diffX < 0) diffX = i; }
+      renderBloomThenFinal();   // leave a normally-CA'd frame on screen for the reads below
+      // live-read: the globe is offset (coreGroup x=+3), so a single centre pixel is unreliable.
+      // One full readPixels + a coarse grid count -> drawn>0 proves a live render (not a cleared buffer).
+      const full = new Uint8Array(W * H * 4);
+      gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, full);
+      let drawn = 0; const S = 20;
+      for (let y = 0; y < H; y += S) for (let x = 0; x < W; x += S) if (full[(y * W + x) * 4 + 3] > 0) drawn++;
+      const out = { W, H, corner: rd(1, 1), centre: rd(W >> 1, cy), drawn, alphaDiff, diffX };
+      console.log('[postProbe] ' + JSON.stringify(out));
       return out;
     };
+    // SP4 dev tuning handle — Task 4 live-tunes these (all read live each frame);
+    // stripped in Task 5 alongside __postProbe. bloomComposer.passes: [0]=RenderPass, [1]=UnrealBloomPass.
+    window.__post = { bloom: bloomComposer.passes[1], grade: gradePass, ca: caPass };
   }
 
   addEventListener('resize', () => {
