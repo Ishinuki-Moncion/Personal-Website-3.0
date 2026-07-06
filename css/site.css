@@ -112,8 +112,7 @@ body[data-booting] { overflow: hidden; }
   opacity: var(--scene-glass-base);
   background:
     linear-gradient(105deg, transparent 0 42%, rgba(233, 241, 244, 0.07) 46%, transparent 52%),
-    radial-gradient(circle at 74% 34%, rgba(57, 240, 255, 0.12), transparent 30%),
-    radial-gradient(circle at 18% 76%, rgba(255, 158, 44, 0.10), transparent 28%);
+    radial-gradient(circle at 74% 34%, rgba(57, 240, 255, 0.12), transparent 30%);
 }
 @media (hover: none), (pointer: coarse) {
   :root {
@@ -486,7 +485,7 @@ section { position: relative; }
 .about-portrait .media { width: 100%; height: 100%; background-size: cover; background-position: center;
   filter: grayscale(40%) contrast(1.05) brightness(0.92); }
 .about-portrait .duo { position: absolute; inset: 0; mix-blend-mode: color;
-  background: linear-gradient(160deg, rgba(57,240,255,0.28), rgba(255,158,44,0.12)); pointer-events: none; }
+  background: linear-gradient(160deg, rgba(57,240,255,0.28), rgba(57,240,255,0.06)); pointer-events: none; }
 .about-portrait .scanmask { position: absolute; inset: 0; pointer-events: none;
   background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,0.18) 3px 4px); }
 .about-portrait .pcorner { position: absolute; width: 18px; height: 18px; border: 1px solid var(--cyan); }
