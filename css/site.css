@@ -4,8 +4,8 @@
    ============================================================ */
 
 :root {
-  --void: #05060a;
-  --void-2: #080a10;
+  --void: #0a1416;    /* teal-black floor (SP4): hue ~190, matches the high-tier grade shadow */
+  --void-2: #0e1a1d;
   --panel: rgba(8, 10, 16, 0.55);
   --panel-solid: rgba(7, 9, 14, 0.92);
   --cyan: #39f0ff;
@@ -181,7 +181,7 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
    BOOT sequence
    ============================================================ */
 .boot {
-  position: fixed; inset: 0; z-index: 9000; background: #030407;
+  position: fixed; inset: 0; z-index: 9000; background: #050e10;
   display: flex; flex-direction: column; justify-content: center;
   padding: clamp(20px, 6vw, 90px); overflow: hidden;
   font-family: var(--font-mono);
