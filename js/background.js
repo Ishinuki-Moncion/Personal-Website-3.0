@@ -1652,11 +1652,56 @@
     mixPass.needsSwap = true;
     mixPass.material.blending = THREE.NoBlending;   // NOT transparent=true — overwrite the stale target
 
+    // (c2) gradePass — analytic lift/gamma/gain + teal-black shadow crush + gentle
+    //      saturation, in DISPLAY-referred sRGB (runs AFTER OutputPass). NoBlending,
+    //      alpha straight through. Uniforms retuned in browser (SP4 Task 4).
+    const gradePass = new POST.ShaderPass(new THREE.ShaderMaterial({
+      uniforms: {
+        tDiffuse: { value: null },
+        uLift:    { value: new THREE.Vector3(-0.02, 0.006, 0.020) }, // teal shadows: R down, G/B up
+        uGamma:   { value: new THREE.Vector3( 1.00, 1.00, 1.04) },   // mids
+        uGain:    { value: new THREE.Vector3( 1.05, 1.00, 0.97) },   // highlights lean amber (signal)
+        uTeal:    { value: new THREE.Vector3( 0.00, 0.020, 0.030) }, // shadow floor colour
+        uTealAmt: { value: 0.6 },
+        uSat:     { value: 1.06 },                                   // keep cyan lead / amber pop
+      },
+      vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} `,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform vec3 uLift, uGamma, uGain, uTeal;
+        uniform float uTealAmt, uSat;
+        varying vec2 vUv;
+        const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+        void main(){
+          vec4 src = texture2D(tDiffuse, vUv);
+          vec3 c = src.rgb;
+
+          // (1) lift/gamma/gain (ASC-CDL-ish). Lift weighted by (1-c) => tints shadows
+          //     toward teal-black WITHOUT washing highlights.
+          c = c * uGain + uLift * (1.0 - c);
+          c = clamp(c, 0.0, 1.0);
+          c = pow(c, 1.0 / uGamma);
+
+          // (2) crush blacks toward a teal-black floor, strongest in shadows
+          float luma   = dot(c, LUMA);
+          float shadow = 1.0 - smoothstep(0.0, 0.35, luma);
+          c = mix(c, max(c, uTeal), shadow * uTealAmt);
+
+          // (3) gentle saturation
+          c = mix(vec3(dot(c, LUMA)), c, uSat);
+
+          gl_FragColor = vec4(clamp(c, 0.0, 1.0), src.a);   // alpha straight through
+        }
+      `,
+    }));
+    gradePass.material.blending = THREE.NoBlending;
+
     // (d) finalComposer — full REAL scene + ADD glow + restore on-screen sRGB (R6).
     finalComposer = new POST.EffectComposer(renderer);
     finalComposer.addPass(new POST.RenderPass(scene, camera));
     finalComposer.addPass(mixPass);
     finalComposer.addPass(new POST.OutputPass());   // REQUIRED: composer strips on-screen sRGB otherwise
+    finalComposer.addPass(gradePass);               // SP4: grade tone-mapped sRGB display values, keep .a
 
     // (e) Dark-material-swap (official pattern; depthWrite:false preserves the scene's
     //     real no-occlusion property since every emitter is additive/depthWrite:false).
