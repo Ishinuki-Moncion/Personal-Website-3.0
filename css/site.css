@@ -587,6 +587,25 @@ section { position: relative; }
    and the rest read as deliberate repetition. Span clamps cleanly at the 2-col/1-col
    breakpoints; 8:5 keeps its height ≈ its row-mate so row one stays even. */
 .shot.feature { grid-column: span 2; aspect-ratio: 8 / 5; }
+
+/* Motion L3 — boxed state-word: at each section lock one bracketed keyword snaps in at
+   the lower field, holds, then fades. Reuses the boot OK/LIVE keyword grammar at runtime
+   as an outline box (the outline is the signal, never a filled chip). Transient, not idle;
+   fired reduced-gated from effects.js (home excluded), so the field otherwise holds still. */
+.state-flash {
+  position: fixed; left: 50%; bottom: 42px; transform: translateX(-50%);
+  z-index: 180; pointer-events: none;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--cyan); border: 1px solid var(--cyan); border-radius: 2px; padding: 6px 16px;
+  box-shadow: 0 0 20px rgba(57, 240, 255, 0.18); opacity: 0; visibility: hidden;
+}
+.state-flash.show { animation: stateFlash 1.9s var(--ease-out) forwards; }
+@keyframes stateFlash {
+  0%   { opacity: 0; visibility: visible; transform: translateX(-50%) translateY(7px); letter-spacing: 0.5em; }
+  12%  { opacity: 1; transform: translateX(-50%) translateY(0); letter-spacing: 0.28em; }
+  70%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(0); }
+}
 .shot { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border: 1px solid var(--line);
   cursor: none; transition: border-color .4s, box-shadow .4s; background: var(--void-2); }
 .shot:hover { border-color: var(--cyan); box-shadow: 0 0 30px rgba(57,240,255,0.22); }

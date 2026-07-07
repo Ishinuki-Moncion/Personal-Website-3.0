@@ -4,6 +4,18 @@
    Exposes window.scramble() for text decrypt used by hero & locale swap. */
 (function () {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* Motion L3 — boxed state-word on section lock: one bracketed keyword snaps in then
+     holds/fades at the lower field. Transient (attaches to the one thing that changed),
+     reduced-gated, and skips 'home' so the hero cue is never covered. */
+  const stateFlashEl = document.querySelector('.state-flash');
+  function flashState(id) {
+    if (reduced || !stateFlashEl || id === 'home') return;
+    stateFlashEl.textContent = id;                 // section id; CSS upper-cases it
+    stateFlashEl.classList.remove('show');
+    void stateFlashEl.offsetWidth;                 // reflow → restart the snap-in
+    stateFlashEl.classList.add('show');
+  }
   const GLYPHS = 'ｱｲｳｴｵｶｷｸ01<>/\\#$%日本開発ABCDEF';
 
   /* ---- text scramble / decrypt ----
@@ -123,6 +135,7 @@
       const now = performance.now();
       if (window.__scenePing && now - lastPing > 600) { lastPing = now; window.__scenePing(); }
       if (window.__sceneFocus) window.__sceneFocus(active);
+      flashState(active);
     }
     ticking = false;
   }
