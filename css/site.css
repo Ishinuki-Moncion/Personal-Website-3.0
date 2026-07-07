@@ -4,10 +4,10 @@
    ============================================================ */
 
 :root {
-  --void: #0a1416;    /* teal-black floor (SP4): hue ~190, matches the high-tier grade shadow */
-  --void-2: #0e1a1d;
-  --void-deep: #050e10;  /* SP5a: deepest overlay-scrim floor (teal-black, = former .boot value) */
-  --panel-solid: rgba(8, 20, 22, 0.92);  /* SP5a: teal-black chrome panel bed */
+  --void: #05060a;    /* v3.1 deep-black floor: owner-directed revert to deep space black; matches scene fog 0x05060a */
+  --void-2: #080a10;
+  --void-deep: #030407;  /* v3.1: deepest overlay-scrim floor (near-black, cool-neutral) */
+  --panel-solid: rgba(7, 9, 14, 0.92);  /* v3.1: deep-black chrome panel bed */
   --cyan: #39f0ff;
   --cyan-dim: #1c6f7a;
   --amber: #ff9e2c;
@@ -296,7 +296,7 @@ body.menu-open .nav-burger span:nth-child(3) { transform: translateY(-6.5px) rot
 /* ============================================================
    MOBILE MENU overlay
    ============================================================ */
-.mobile-menu { position: fixed; inset: 0; z-index: 9300; background: rgba(5,14,16,0.97);
+.mobile-menu { position: fixed; inset: 0; z-index: 9300; background: rgba(3,4,7,0.97);
   backdrop-filter: blur(10px); display: flex; flex-direction: column;
   padding: clamp(20px, 6vw, 40px); opacity: 0; visibility: hidden; pointer-events: none;
   transform: translateY(-10px);
@@ -625,7 +625,7 @@ section { position: relative; }
 .shot:hover .id, .shot:hover .plus { opacity: 0.95; transform: translateY(0); }
 
 /* lightbox */
-.lightbox { position: fixed; inset: 0; z-index: 9500; background: rgba(5,14,16,0.96);
+.lightbox { position: fixed; inset: 0; z-index: 9500; background: rgba(2,3,6,0.96);
   backdrop-filter: blur(8px); display: flex; flex-direction: column; opacity: 0; pointer-events: none;
   transition: opacity .4s var(--ease-out); }
 .lightbox.open { opacity: 1; pointer-events: auto; }
