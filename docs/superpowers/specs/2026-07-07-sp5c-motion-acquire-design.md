@@ -76,6 +76,17 @@ No JS/CSS test runner → grep-gates + browser eyeball + diff-scope.
 - **`mix-blend:difference` on `.cursor`** (`:145`, kept per SP5b P7): cyan ring under difference stays visible on the dark field and inverts over bright media — same as before the hue change; no new issue, but confirm the cyan reticle reads on a gallery photo during the eyeball.
 - **`88+`→count start at `0+`.** On reveal `runCounter`'s first frame shows `0+` before counting up — a one-frame "reset" that reads as the readout resolving; acceptable and idiomatic (instrument self-test → read). Not a bug.
 
-## §8 — Decision record
+## §8 — Decision record — SP5c COMPLETE (2026-07-07)
 
-*(to be completed on build)* — commits, gate A–F results, eyeball notes, any cursor-geometry tune.
+Built inline via executing-plans. **2 feature commits on `v3-build`:**
+- `2cd0765` — Task 1: L2 acquiring reticle (`css/site.css:157-164` — `.is-hot` ring `56px/amber` → `28px/cyan`, corner ticks `7px` outer → `8px` inset cyan) + L6 readout placeholder (`index.html:136` visible `[data-count]` span `0+` → `88+`; `.sr-only` `100+` unchanged).
+- *(this commit)* — Task 2: `site.css?v` 3.10→3.11 + this record.
+
+**Gates A–F all PASS.**
+- **A** — `.cursor.is-hot .cursor-ring` = `28px` + `var(--cyan)`; no `56px`/`--amber` in the is-hot block; tick rules `var(--cyan)`. **B** — `.cursor-label` (`:167-172`) unchanged, still `var(--amber)`. **C** — `index.html:136` visible span `88+`, `.sr-only` `100+` intact.
+- **D** (browser, `?v=3.11`) — hovered the WORK nav link and the isolated deck toggle: **the acquire response is CYAN** (reticle + centre dot), **not** the old amber grow; the `data-cursor` **label "TWEAK" renders amber** (correct). *Limitation:* the exact tighten/inset-tick geometry can't be pixel-verified from a static screenshot — `mix-blend:difference` (`:145`) + the reticle sitting on its target entangle it, and a pointer-following reticle is best judged live. The CSS is grep-correct (gate A); the *feel* is owner-tunable if the tighten reads subtle (spec §7 risk). L6: `88+` grep-confirmed and `runCounter` untouched (HTML-only), so the count-up is unchanged.
+- **E** — code scope = `css/site.css` + `index.html` only; **no `js/`**, `V.fx`/`boot.mjs` untouched. **F** — `site.css?v=3.11`.
+
+**No geometry tune applied** (28px tighten + 8px inset cyan ticks shipped as specced). **Owner note:** worth a live mouse-over to judge whether the acquire tighten reads strongly enough; easy to enlarge the tighten delta or ticks if wanted.
+
+**NEXT — Motion-2** (deferred beats): L3 boxed state-word on section lock (new DOM + `effects.js` hook — biggest remaining beat), L4 chromatic ghost-echo, L5 per-letter stagger, L7 idle-jitter. Plus the other SP5 slices (Type/readouts, Composition; deferred HUD P5/P8). Owner picks. Nothing new pushed since `v3-build` was backed up.
