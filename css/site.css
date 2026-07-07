@@ -33,7 +33,8 @@
   /* L3: size→tracking scale — tracking as a monotonic function of smallness.
      Generic tracked-caps data-labels reference these. Deliberate signatures stay
      ad-hoc on purpose: hero-kicker 0.35, boot-title 0.5, sys-online 0.25,
-     mm-tag 0.24, sec-label 0.22, geo-kicker 0.2, seg button 0.08 (layout-tight). */
+     mm-tag 0.24, sec-label 0.22, geo-kicker 0.2, seg button 0.08 (layout-tight),
+     state-flash 0.28 (deliberately wider than --track-11 — it is a signal, not a label). */
   --track-9: 0.16em;
   --track-10: 0.14em;
   --track-11: 0.12em;
@@ -584,13 +585,25 @@ section { position: relative; }
   margin-bottom: clamp(28px, 4vw, 48px); }
 .gallery-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: var(--track-11); }
 .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(10px, 1.4vw, 18px); }
-@media (max-width: 880px) { .gallery-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 400px) { .gallery-grid { grid-template-columns: 1fr; } }
 /* Composition lever 6+7: one cinematic letterbox break in the otherwise-uniform field —
    the first tile spans two columns at a wide ~8:5 aspect so one image anchors the eye
-   and the rest read as deliberate repetition. Span clamps cleanly at the 2-col/1-col
-   breakpoints; 8:5 keeps its height ≈ its row-mate so row one stays even. */
+   and the rest read as deliberate repetition. 8:5 keeps its height ≈ its row-mate so
+   row one stays even. */
 .shot.feature { grid-column: span 2; aspect-ratio: 8 / 5; }
+/* v3.1 audit fix 2 (orphan tile): 13 cells in 3 columns ended on a lone tile — the
+   LAST tile mirrors the feature so the grid closes on a second cinematic band
+   (2+3+3+3+2, symmetric bookends). At the 2-col breakpoint it reads as a clean
+   full-width closing row. */
+.gallery-grid .shot:last-child { grid-column: span 2; aspect-ratio: 8 / 5; }
+@media (max-width: 880px) { .gallery-grid { grid-template-columns: repeat(2, 1fr); } }
+/* v3.1 audit fix 1 (CONFIRMED mobile bug): a span-2 tile in the 1-col grid forced an
+   implicit ~2px second track that collapsed alternating tiles. Both spanning tiles
+   drop to auto/4:5 here so no implicit tracks exist at phone width. These overrides
+   sit AFTER the span rules in source order — cascade order is load-bearing. */
+@media (max-width: 400px) {
+  .gallery-grid { grid-template-columns: 1fr; }
+  .shot.feature, .gallery-grid .shot:last-child { grid-column: auto; aspect-ratio: 4 / 5; }
+}
 
 /* Motion L3 — boxed state-word: at each section lock one bracketed keyword snaps in at
    the lower field, holds, then fades. Reuses the boot OK/LIVE keyword grammar at runtime
