@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@200;400&family=JetBrains+Mono:wght@400;500&family=M+PLUS+Rounded+1c:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/site.css?v=3.20" />
+<link rel="stylesheet" href="css/site.css?v=3.21" />
 </head>
 <body data-booting>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -274,6 +274,12 @@
     <div class="shell">
       <div class="sec-label"><span class="idx">[ 05 ]</span><span class="txt" data-en="Contact" data-ja="連絡">Contact</span><span class="rule"></span></div>
       <h2 data-reveal data-en="Let’s make something." data-ja="一緒に作りましょう。">Let’s make <em>something.</em></h2>
+      <button class="signal-row" type="button" data-reveal data-reveal-delay="0.05s" data-cursor="copy" aria-label="Copy email address to clipboard" translate="no">
+        <span class="signal-k">SIGNAL //</span>
+        <span class="signal-addr" data-addr>KEY//STANDBY</span>
+        <span class="signal-tick" aria-hidden="true">✓ COPIED</span>
+        <span class="sr-only" role="status" data-copy-status></span>
+      </button>
       <div class="pills" data-reveal data-reveal-delay="0.1s">
         <a class="pill" href="https://github.com/Ishinuki-Moncion" target="_blank" rel="noopener" data-magnetic data-cursor="open ↗"><span>GitHub ↗</span></a>
         <a class="pill" href="https://www.linkedin.com/in/daikie-moncion-6a637b71/" target="_blank" rel="noopener" data-magnetic data-cursor="open ↗"><span>LinkedIn ↗</span></a>
@@ -351,6 +357,6 @@
 
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
 
-<script type="module" src="js/boot.mjs?v=10"></script>
+<script type="module" src="js/boot.mjs?v=11"></script>
 </body>
 </html>

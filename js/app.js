@@ -303,6 +303,39 @@
     }
   });
 
+  /* ---------------- CONTACT SIGNAL ROW ----------------
+     Return path (v3.2f): the address is assembled at runtime from char codes —
+     by law it never appears as plaintext in any committed file. Click = copy,
+     amber tick = the event. */
+  const sigRow = $('.signal-row');
+  if (sigRow) {
+    const addr = String.fromCharCode(105, 115, 104, 105, 110, 117, 107, 105, 100, 97, 105, 107, 105, 101, 64, 105, 99, 108, 111, 117, 100, 46, 99, 111, 109);
+    const addrOut = sigRow.querySelector('[data-addr]');
+    const copyStatus = sigRow.querySelector('[data-copy-status]');
+    if (addrOut) addrOut.textContent = addr;
+    let sigTimer = null;
+    const copied = () => {
+      sigRow.classList.add('copied');
+      if (copyStatus) copyStatus.textContent = 'Email address copied';
+      clearTimeout(sigTimer);
+      sigTimer = setTimeout(() => {
+        sigRow.classList.remove('copied');
+        if (copyStatus) copyStatus.textContent = '';
+      }, 1600);
+    };
+    const fallbackCopy = () => {
+      const ta = document.createElement('textarea');
+      ta.value = addr; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { if (document.execCommand('copy')) copied(); } catch (e) {}
+      document.body.removeChild(ta);
+    };
+    sigRow.addEventListener('click', () => {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(addr).then(copied, fallbackCopy);
+      else fallbackCopy();
+    });
+  }
+
   // hero variant segment
   $$('.seg[data-seg="hero"] button').forEach(b => {
     b.classList.toggle('on', b.dataset.val === heroVariant);

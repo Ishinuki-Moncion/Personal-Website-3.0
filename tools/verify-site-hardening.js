@@ -227,6 +227,17 @@ check('v32e: black-floor fidelity — CA-pass hash dither, MSAA composer targets
     /renderer\.getPixelRatio\(\) !== newDpr/.test(background),
   'the final CA pass must carry the ±0.5/255 hash dither, the high-tier composer ping-pong targets must be 4x multisampled, and the debounced resize handler must re-read devicePixelRatio');
 
+check(
+  'v32f: contact return path — signal row present, address assembled at runtime only',
+  (() => {
+    const addr = String.fromCharCode(105, 115, 104, 105, 110, 117, 107, 105, 100, 97, 105, 107, 105, 101, 64, 105, 99, 108, 111, 117, 100, 46, 99, 111, 109);
+    return /class="signal-row"/.test(index) &&
+      /String\.fromCharCode/.test(app) &&
+      !index.includes(addr) && !app.includes(addr) && !css.includes(addr);
+  })(),
+  'contact needs the SIGNAL // row; the address must be JS-assembled, never plaintext in any committed file'
+);
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';

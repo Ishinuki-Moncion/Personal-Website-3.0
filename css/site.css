@@ -683,6 +683,18 @@ section { position: relative; }
   font-size: clamp(44px, 9.5vw, 150px); max-width: 13ch; color: var(--fg); text-shadow: 0 0 50px rgba(57,240,255,0.18); }
 .contact h2 em { font-style: normal; color: var(--cyan); }
 
+/* v3.2f — contact return path: one instrument row in the ledger grammar. The
+   address is JS-assembled (never in source); the copy tick is the amber event. */
+.signal-row { display: inline-flex; align-items: baseline; gap: 14px; margin-top: clamp(30px, 4vw, 48px);
+  font-family: var(--font-mono); border: 1px solid var(--line); padding: 13px 20px; cursor: none;
+  transition: border-color .3s var(--ease-out), box-shadow .3s var(--ease-out); }
+.signal-row:hover, .signal-row:focus-visible { border-color: var(--cyan); box-shadow: 0 0 18px rgba(57,240,255,0.25); }
+.signal-row .signal-k { font-size: 10px; letter-spacing: var(--track-10); color: var(--muted); text-transform: uppercase; }
+.signal-row .signal-addr { font-size: clamp(13px, 1.5vw, 16px); letter-spacing: var(--track-13); color: var(--cyan); }
+.signal-row .signal-tick { font-size: 10px; letter-spacing: var(--track-10); color: var(--amber);
+  opacity: 0; transition: opacity .25s; }
+.signal-row.copied .signal-tick { opacity: 1; text-shadow: 0 0 10px rgba(255,158,44,0.6); }
+
 /* L5 — JP-as-content: in Japanese mode the headline moments own the frame in the
    Zen Kaku Gothic display face, with JP metrics (positive tracking, looser leading)
    replacing the tight Latin recipe — and lifted off the ugly Hanken system-fallback.
