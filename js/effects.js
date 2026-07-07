@@ -130,8 +130,8 @@
 
     // entering a new section refocuses the scene story + flashes the state-word.
     // v3.1 (one signal per section change): the amber __scenePing ring-flash was
-    // retired from this handler — focus + state-word own the beat; the ping
-    // function itself stays in background.js for deck/reboot use.
+    // retired from this handler; v3.2d deleted the dead ping machinery outright
+    // (zero callers since v31c — the reserved "deck/reboot use" never landed).
     if (active !== lastActive) {
       lastActive = active;
       if (window.__sceneFocus) window.__sceneFocus(active);

@@ -212,6 +212,15 @@ check('v32b: city lights cluster on coastlines — the uniform 11% freckle is re
     /const pCity = gedge\[i\]/.test(background),
   'gcity must be weighted by the gedge coastline signal and a low-frequency cluster field (lit night-side area < ~5%), never the uniform 11% freckle');
 
+check('v32d: signals calmed — streaks retired, grid story-driven and de-ambered, rain tint beat-keyed, dead ping deleted',
+  !/vertical-data-streaks/.test(background) &&
+    !/__scenePing/.test(background) &&
+    /new THREE\.GridHelper\(160, 70, 0x1a4a5a, 0x10303a\)/.test(background) &&
+    /sceneState\.grid/.test(background) &&
+    /rainTintK = 1;/.test(background) &&
+    !background.includes('cx.fillRect(cv.width - 128 + i * 12'),
+  'streaks, dead __scenePing and the callout barcode ticks must be gone; grid centre lines cool (0x1a4a5a family) with opacity driven by sceneState.grid (near-0 in gallery); rain tint keys to the projects ENTRY beat, not residency');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';

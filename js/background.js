@@ -1,7 +1,7 @@
 /* Immersive scene: TOKYO DATA-GLOBE — a particle Earth whose points exist only
    where land exists, a pulsing amber Tokyo node with live coordinates, and a
    great-circle arc that draws his Dallas->Tokyo move on boot. Layered particle
-   fields, synthwave grid and data-streaks frame it; scroll dollies the camera.
+   fields and the synthwave grid frame it; scroll dollies the camera.
    One render loop, DPR-capped, paused when hidden, static under reduced-motion. */
 (function () {
   const CYAN = 0x39f0ff, AMBER = 0xff9e2c;
@@ -23,7 +23,6 @@
       dpr: 1,
       globeParticles: 2600,
       fieldCounts: [360, 180, 120],
-      streaks: 12,
       haloLabels: 1,
       haloTicks: 8,
       haloRings: 1,
@@ -33,7 +32,6 @@
       dpr: Math.min(window.devicePixelRatio || 1, 1.5),
       globeParticles: 2600,
       fieldCounts: [1100, 520, 360],
-      streaks: 22,
       haloLabels: 2,
       haloTicks: 12,
       haloRings: 1,
@@ -43,7 +41,6 @@
       dpr: Math.min(window.devicePixelRatio || 1, 2),
       globeParticles: 7000,
       fieldCounts: [2600, 1200, 900],
-      streaks: 40,
       haloLabels: 5,
       haloTicks: 24,
       haloRings: 2,
@@ -522,7 +519,7 @@
   }
 
   const tokyoRing = tangentRing(0.16, 0.2, 0.8, 'tokyo-focus-ring');
-  const pingRing = tangentRing(0.3, 0.34, 0, 'tokyo-ping-ring');     // expands on section change
+  // v3.2d: tokyo-ping-ring deleted with the dead scene-ping machinery (zero callers since v31c).
 
   // Tokyo holographic halo — spinGroup (rings/ticks/packet) rotates; staticGroup
   // (glow + labels) never does, so district labels stay put instead of orbiting.
@@ -832,10 +829,8 @@
       cx.fillText(status, 20, 70);
       cx.fillStyle = 'rgba(57, 240, 255, 0.78)';
       cx.fillText(target.detail, 20, 94);
-      cx.fillStyle = 'rgba(255, 158, 44, 0.82)';
-      for (let i = 0; i < 9; i++) {
-        cx.fillRect(cv.width - 128 + i * 12, 70, i % 3 === 0 ? 7 : 3, 22);
-      }
+      // v3.2d: the 9 amber barcode ticks were retired — pure noise that floated
+      // detached at hero scale and collided with the coordinate line up close.
       cx.restore();
       tex.needsUpdate = true;
     }
@@ -1270,7 +1265,9 @@
     rainSway += dt;
     const wind = 0.10 + Math.sin(rainSway * 0.6) * 0.05 + Math.max(-0.6, Math.min(0.6, rainShear));
     const beat = 0.85 + sceneState.haloPulse * 0.5 + sceneState.lockT * 0.45 + (flash || 0) * 1.3;
-    rainTintK += ((sceneState.section === 'projects' ? 1 : 0) - rainTintK) * Math.min(1, dt * 1.2);
+    // v3.2d: tint keys to the projects ENTRY beat (armed in __sceneFocus) and
+    // decays over ~2s — amber is an event, never section-residency wallpaper.
+    if (rainTintK > 0) rainTintK = Math.max(0, rainTintK - dt * 0.5);
     depthRain.layers[0].material.color.copy(RAIN_CYAN).lerp(RAIN_AMBER, rainTintK * 0.85);
     depthRain.layers.forEach(pts => {
       const p = pts.geometry.attributes.position.array;
@@ -1290,7 +1287,6 @@
   }
 
   // (g) orbital scan ring — equatorial, does not rotate with the land
-  const ringBaseC = new THREE.Color(CYAN), ringAmberC = new THREE.Color(AMBER);
   const ringMat = new THREE.MeshBasicMaterial({
     color: CYAN, transparent: true, opacity: 0.16,
     blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false });
@@ -1298,8 +1294,6 @@
   ring.rotation.x = Math.PI / 2.05;
   coreGroup.add(ring);
 
-  // section-change ping: scan ring flashes amber + ripple expands from Tokyo
-  let ping = 0;
   let focusedPlaceId = 'tokyo';
   let focusFlash = 0;
   function setFocusedPlace(id, intensity) {
@@ -1350,27 +1344,27 @@
   const sectionStories = {
     home: {
       place: 'tokyo', sequence: null, intensity: 1.2, route: 'replay',
-      halo: 1, rain: 0.6, labels: 1, callout: 1, camera: 0,   // v3.1: hero rain calmed 1.0→0.6 — type owns the hero, weather recedes
+      halo: 1, rain: 0.6, labels: 1, callout: 1, camera: 0, grid: 1,   // v3.1: hero rain calmed 1.0→0.6 — type owns the hero, weather recedes
     },
     about: {
       place: 'tokyo', sequence: ['dallas', 'tokyo'], intensity: 0.95, route: 'replay',
-      halo: 0.85, rain: 0.85, labels: 0.85, callout: 1, camera: -0.2,
+      halo: 0.85, rain: 0.85, labels: 0.85, callout: 1, camera: -0.2, grid: 1,
     },
     work: {
       place: 'tokyo', sequence: null, intensity: 0.85, route: 'hold',
-      halo: 1.15, rain: 0.7, labels: 1, callout: 0.9, camera: 0,
+      halo: 1.15, rain: 0.7, labels: 1, callout: 0.9, camera: 0, grid: 1,
     },
     gallery: {
       place: 'tokyo', sequence: null, intensity: 0.45, route: 'hold',
-      halo: 0.45, rain: 0.35, labels: 0.35, callout: 0.35, camera: 0.15,
+      halo: 0.45, rain: 0.35, labels: 0.35, callout: 0.35, camera: 0.15, grid: 0.06,
     },
     projects: {
       place: 'dallas', sequence: null, intensity: 0.75, route: 'hold',
-      halo: 0.35, rain: 0.55, labels: 0.2, callout: 0.65, camera: -0.1,
+      halo: 0.35, rain: 0.55, labels: 0.2, callout: 0.65, camera: -0.1, grid: 1,
     },
     contact: {
       place: 'tokyo', sequence: null, intensity: 1.0, route: 'hold',
-      halo: 1.25, rain: 0.8, labels: 1, callout: 1, camera: 0,
+      halo: 1.25, rain: 0.8, labels: 1, callout: 1, camera: 0, grid: 1,
     },
   };
   const sceneState = {
@@ -1378,11 +1372,11 @@
     halo: sectionStories.home.halo, rain: sectionStories.home.rain,
     labels: sectionStories.home.labels, callout: sectionStories.home.callout,
     camera: sectionStories.home.camera,
+    grid: sectionStories.home.grid,
     haloPulse: 0,
     lockT: 1,          // signal-lock timer (1 → 0), drives ring sweep + glow bloom; starts armed —
                        // boot IS the home entry (effects.js never emits an initial section focus)
   };
-  window.__scenePing = () => { ping = 1; };
   let storyCooldown = 0;                       // seconds; guards re-arming on scroll jitter
   window.__sceneFocus = sectionId => {
     const story = sectionStories[sectionId] || sectionStories.home;
@@ -1400,6 +1394,7 @@
     storyCooldown = 0.6;
     sceneState.haloPulse = Math.max(sceneState.haloPulse, story.intensity || 1);
     if (id === 'home' || id === 'contact') sceneState.lockT = 1;   // signal-lock beat
+    if (id === 'projects') rainTintK = 1;   // v3.2d: rain warms on the ENTRY beat, ~2s decay
     clearTimeout(storyTimer);
     if (story.route === 'replay') replayJourney();
     if (story.sequence) {
@@ -1451,20 +1446,16 @@
   if (sceneDebug) window.__sceneDebug = getSceneDebug;
 
   // ---- synthwave grid ----
-  const grid = nameObject(new THREE.GridHelper(160, 70, AMBER, 0x10303a), 'synthwave-grid');
+  // v3.2d: centre lines de-ambered (amber is an EVENT, never wallpaper) — a
+  // brighter member of the 0x10303a family keeps the axis readable; opacity
+  // rides sceneState.grid (near-0 in gallery so the photographs own the frame).
+  const grid = nameObject(new THREE.GridHelper(160, 70, 0x1a4a5a, 0x10303a), 'synthwave-grid');
   grid.material.transparent = true; grid.material.opacity = 0.2; grid.material.blending = THREE.AdditiveBlending;
   grid.position.y = -7; scene.add(grid);
 
-  // ---- vertical data streaks ----
-  const SN = quality.streaks; const sp = new Float32Array(SN * 6);
-  for (let i = 0; i < SN; i++) {
-    const x = (Math.random() - 0.5) * 60, z = -Math.random() * 50 - 5, y = (Math.random() - 0.5) * 24, len = 1 + Math.random() * 3;
-    sp.set([x, y, z, x, y + len, z], i * 6);
-  }
-  const streakGeo = makeGeometry('vertical-data-streaks', sp, 3);
-  if (!streakGeo) return;
-  const streaks = nameObject(new THREE.LineSegments(streakGeo, new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending })), 'vertical-data-streaks');
-  scene.add(streaks);
+  // v3.2d: the static vertical data streaks (40 on high tier) were retired —
+  // they duplicated the starfield's job (calm-the-signals: a layer with no
+  // distinct job is a layer to delete).
 
   const mouse = { x: 0, y: 0 };
   addEventListener('pointermove', e => { mouse.x = (e.clientX / innerWidth) * 2 - 1; mouse.y = (e.clientY / innerHeight) * 2 - 1; });
@@ -1629,7 +1620,7 @@
 
     // (a) Tag emitters — userData.bloom keeps their real material through the dark pass.
     //     Source intensities already sit in [0,1]; bloom is a blow-out multiplier (R14).
-    [fieldCyan, fieldAmber, tokyoRing, pingRing, comet].forEach(o => { o.userData.bloom = true; });
+    [fieldCyan, fieldAmber, tokyoRing, comet].forEach(o => { o.userData.bloom = true; });
     tokyoHalo.glow.userData.bloom = true;                       // glow Sprite (makeGlowSprite, 497)
     tokyoHalo.rings.forEach(r => { r.userData.bloom = true; }); // ring meshes/line (487-491)
     // Inline-added objects (no variable handle) — tag by their nameObject() name:
@@ -1887,6 +1878,7 @@
     sceneState.rain    += (sceneState.story.rain    - sceneState.rain)    * Math.min(1, 0.08 * f);
     sceneState.labels  += (sceneState.story.labels  - sceneState.labels)  * Math.min(1, 0.08 * f);
     sceneState.callout += (sceneState.story.callout - sceneState.callout) * Math.min(1, 0.08 * f);
+    sceneState.grid    += (sceneState.story.grid    - sceneState.grid)    * Math.min(1, 0.08 * f);
     sceneState.camera  += (sceneState.story.camera  - sceneState.camera)  * Math.min(1, 0.06 * f);
     if (sceneState.haloPulse > 0.01) sceneState.haloPulse *= Math.pow(0.92, f); else sceneState.haloPulse = 0;
     idleT += dt;
@@ -1914,6 +1906,7 @@
     fieldAmber.rotation.x += 0.0005 * f * drift;
     fieldDeep.rotation.y += 0.0002 * f;
     grid.position.z = ((t * 6 + scrollN * 70) % 4) - 2;
+    grid.material.opacity = 0.2 * sceneState.grid;   // v3.2d: story-driven — near-0 in gallery
 
     /* Globe motion — autonomous spin (t term keeps phones alive without
        pointermove) + scroll-advanced rotation, ABSOLUTE so smooth-scroll can't
@@ -1964,18 +1957,6 @@
     } else if (arcMat.opacity > 0) {
       arcMat.opacity = Math.max(0, arcMat.opacity - 0.15 * dt);   // ~4.5s afterglow
       if (arcMat.opacity === 0) arcGeo.setDrawRange(0, 0);
-    }
-
-    // section-change ping: ripple expands from Tokyo, scan ring flashes amber
-    if (ping > 0.01) {
-      ping *= Math.pow(0.94, f);
-      pingRing.scale.setScalar(1 + (1 - ping) * 2.2);
-      pingRing.material.opacity = ping * 0.8;
-      ringMat.color.copy(ringBaseC).lerp(ringAmberC, ping);
-      ringMat.opacity = 0.16 + ping * 0.2;
-    } else if (ping !== 0) {
-      ping = 0; pingRing.material.opacity = 0;
-      ringMat.color.copy(ringBaseC); ringMat.opacity = 0.16;
     }
 
     if (warp > 0.001) warp *= 0.92; else warp = 0;
