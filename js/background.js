@@ -144,9 +144,12 @@
     return nameObject(new THREE.Points(geo, mat), geo.name);
   }
   const fieldCyan = makeField(quality.fieldCounts[0], CYAN, 46, 0.05, 0.9);
-  const fieldAmber = makeField(quality.fieldCounts[1], AMBER, 36, 0.06, 0.8);
+  // v3.1 calm-the-signals: the mid field was AMBER at α.8 — the #1 warm-budget
+  // violation (amber as wallpaper). Recoloured to the deep field's cool blue and
+  // dimmed; amber now only appears as events (Tokyo node, arc replay, LIVE tags).
+  const fieldBlue = makeField(quality.fieldCounts[1], 0x6fb7ff, 36, 0.06, 0.5);
   const fieldDeep = makeField(quality.fieldCounts[2], 0x6fb7ff, 70, 0.035, 0.5);
-  scene.add(fieldCyan, fieldAmber, fieldDeep);
+  scene.add(fieldCyan, fieldBlue, fieldDeep);
 
   // ---- TOKYO DATA-GLOBE ----------------------------------------------------
   // coreGroup carries the mouse gyro tilt; `spin` (its child) carries the
@@ -368,12 +371,12 @@
   const placeById = id => PLACES.find(place => place.id === id) || PLACES[1];
   const placeVector = (place, radius) => toV3(place.lat, place.lon, radius);
 
+  /* v3.1 calm-the-signals: 5 labels → 2. 東京 anchors the halo, JST is the one
+     secondary (the live-time identity thread the whole site carries). The three
+     district labels (渋谷/新宿/秋葉原) were competing chatter — retired. */
   const TOKYO_HALO_LABELS = [
     { id: 'tokyo', jp: '東京', en: 'TOKYO', angle: 0, priority: 1, kind: 'place' },
     { id: 'jst', jp: '日本時間', en: 'JST', angle: 52, priority: 1, kind: 'status' },
-    { id: 'shibuya', jp: '渋谷', en: 'SHIBUYA', angle: 112, priority: 2, kind: 'district' },
-    { id: 'shinjuku', jp: '新宿', en: 'SHINJUKU', angle: 202, priority: 2, kind: 'district' },
-    { id: 'akihabara', jp: '秋葉原', en: 'AKIHABARA', angle: 292, priority: 3, kind: 'district' },
   ];
 
   // (c) personal place nodes: Dallas origin + Tokyo current focus
@@ -857,9 +860,11 @@
   const arcGeo = makeGeometry('dallas-to-tokyo-arc', arcPts, 3);
   if (!arcGeo) return;
   arcGeo.setDrawRange(0, 0);
-  let arcN = 0, arcArm = 0;
-  spin.add(nameObject(new THREE.Line(arcGeo, new THREE.LineBasicMaterial({
-    color: AMBER, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending })), 'dallas-to-tokyo-arc'));
+  let arcN = 0;
+  const ARC_OPACITY = 0.7;
+  const arcMat = new THREE.LineBasicMaterial({
+    color: AMBER, transparent: true, opacity: ARC_OPACITY, blending: THREE.AdditiveBlending });
+  spin.add(nameObject(new THREE.Line(arcGeo, arcMat), 'dallas-to-tokyo-arc'));
   const cometGeo = makeGeometry('journey-comet-point', new Float32Array(3), 3);
   if (!cometGeo) return;
   const cometMat = new THREE.PointsMaterial({
@@ -1317,7 +1322,7 @@
   }
   function replayJourney() {
     arcN = 0;
-    arcArm = 0;
+    arcMat.opacity = ARC_OPACITY;
     arcGeo.setDrawRange(0, 0);
     setCometAt(0);
   }
@@ -1325,7 +1330,7 @@
   const sectionStories = {
     home: {
       place: 'tokyo', sequence: null, intensity: 1.2, route: 'replay',
-      halo: 1, rain: 1, labels: 1, callout: 1, camera: 0,
+      halo: 1, rain: 0.6, labels: 1, callout: 1, camera: 0,   // v3.1: hero rain calmed 1.0→0.6 — type owns the hero, weather recedes
     },
     about: {
       place: 'tokyo', sequence: ['dallas', 'tokyo'], intensity: 0.95, route: 'replay',
@@ -1358,7 +1363,7 @@
                        // boot IS the home entry (effects.js never emits an initial section focus)
   };
   window.__scenePing = () => { ping = 1; };
-  let storyCooldown = 0;                       // seconds; mirrors the effects.js ping guard
+  let storyCooldown = 0;                       // seconds; guards re-arming on scroll jitter
   window.__sceneFocus = sectionId => {
     const story = sectionStories[sectionId] || sectionStories.home;
     const id = sectionStories[sectionId] ? sectionId : 'home';
@@ -1604,7 +1609,7 @@
 
     // (a) Tag emitters — userData.bloom keeps their real material through the dark pass.
     //     Source intensities already sit in [0,1]; bloom is a blow-out multiplier (R14).
-    [fieldCyan, fieldAmber, tokyoRing, pingRing, comet].forEach(o => { o.userData.bloom = true; });
+    [fieldCyan, fieldBlue, tokyoRing, pingRing, comet].forEach(o => { o.userData.bloom = true; });
     tokyoHalo.glow.userData.bloom = true;                       // glow Sprite (makeGlowSprite, 497)
     tokyoHalo.rings.forEach(r => { r.userData.bloom = true; }); // ring meshes/line (487-491)
     // Inline-added objects (no variable handle) — tag by their nameObject() name:
@@ -1872,7 +1877,7 @@
     const drift = 0.7 + 0.6 * Math.sin(t * 0.31) * Math.sin(t * 0.113 + 1.7);
 
     fieldCyan.rotation.y -= 0.0004 * f * drift;
-    fieldAmber.rotation.x += 0.0005 * f * drift;
+    fieldBlue.rotation.x += 0.0005 * f * drift;
     fieldDeep.rotation.y += 0.0002 * f;
     grid.position.z = ((t * 6 + scrollN * 70) % 4) - 2;
 
@@ -1896,7 +1901,11 @@
     const tokyoFacing = Math.max(0, Math.sin(tokyoA0 - spin.rotation.y));
     updateTokyoHalo(f, focusedFacing, tokyoFacing);
     callout.sprite.position.copy(focusedVector).multiplyScalar(1.22).add(calloutOffset);
-    callout.sprite.material.opacity = focusedFacing * focusedFacing * sceneState.callout * (focusedPlace.primary ? 0.9 : 0.55);
+    // v3.1: hard facing gate (0 below 0.35, full above 0.72) — the old facing²
+    // curve left a half-faded panel drifting off the limb as a grey rectangle;
+    // now it fades out completely before the node detaches from the disc.
+    const calloutGate = THREE.MathUtils.smoothstep(focusedFacing, 0.35, 0.72);
+    callout.sprite.material.opacity = calloutGate * sceneState.callout * (focusedPlace.primary ? 0.9 : 0.55);
     if (focusFlash > 0.01) focusFlash *= Math.pow(0.9, f);
     else focusFlash = 0;
     for (const id in placeNodesById) {
@@ -1908,16 +1917,19 @@
     }
     if (!GLOBE_ELEV) halo.material.opacity = 0.10 + 0.05 * (Math.sin(t * 1.5) * 0.5 + 0.5);
 
-    // Dallas -> Tokyo arc: draws over ~1.5s, comet rides the front, re-arms ~12s
-    arcArm += dt;
+    // Dallas -> Tokyo arc: draws over ~1.5s, comet rides the front. v3.1: plays
+    // ONCE per journey trigger (boot + route:'replay' section stories), then the
+    // trace lingers a few seconds and fades — amber is an event, never wallpaper.
+    // No idle re-arm; only replayJourney() re-arms it.
     if (arcN < ARC_SEG) {
       arcN = Math.min(ARC_SEG, arcN + 1.4 * f);
       const head = Math.max(0, Math.min(ARC_SEG, Math.floor(arcN)));
       arcGeo.setDrawRange(0, head + 1);
       setCometAt(head);
       cometMat.opacity = arcN >= ARC_SEG ? 0 : 0.9;
-    } else if (arcArm > 12) {
-      arcN = 0; arcArm = 0; arcGeo.setDrawRange(0, 0);
+    } else if (arcMat.opacity > 0) {
+      arcMat.opacity = Math.max(0, arcMat.opacity - 0.15 * dt);   // ~4.5s afterglow
+      if (arcMat.opacity === 0) arcGeo.setDrawRange(0, 0);
     }
 
     // section-change ping: ripple expands from Tokyo, scan ring flashes amber

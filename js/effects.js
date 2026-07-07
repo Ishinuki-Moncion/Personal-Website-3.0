@@ -101,7 +101,7 @@
   document.querySelectorAll('.nav-link[data-sec]').forEach(a => { navLinks[a.getAttribute('data-sec')] = a; });
 
   let ticking = false;
-  let lastActive = 'home', lastPing = 0;
+  let lastActive = 'home';
   function frame() {
     const y = scrollY;
     const max = Math.max(1, document.body.scrollHeight - innerHeight);
@@ -128,12 +128,12 @@
     Object.entries(hudLinks).forEach(([k, a]) => a.classList.toggle('active', k === active));
     Object.entries(navLinks).forEach(([k, a]) => a.classList.toggle('active', k === active));
 
-    // entering a new section pings the scene (globe ripple + ring flash);
-    // cooldown keeps fast scrolling from strobing it
+    // entering a new section refocuses the scene story + flashes the state-word.
+    // v3.1 (one signal per section change): the amber __scenePing ring-flash was
+    // retired from this handler — focus + state-word own the beat; the ping
+    // function itself stays in background.js for deck/reboot use.
     if (active !== lastActive) {
       lastActive = active;
-      const now = performance.now();
-      if (window.__scenePing && now - lastPing > 600) { lastPing = now; window.__scenePing(); }
       if (window.__sceneFocus) window.__sceneFocus(active);
       flashState(active);
     }
