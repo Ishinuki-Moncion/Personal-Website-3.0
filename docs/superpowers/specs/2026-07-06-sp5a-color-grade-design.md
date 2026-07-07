@@ -94,6 +94,20 @@ No CSS unit runner exists (consistent with SP1–SP4) → verify = **grep-gates 
 - **The `.scene-glass` glint** (`rgba(233,241,244,.07)`) is intentionally **kept** (neutral specular glass-glint at ~1.5% effective opacity, not a warm/white *state*) — noted so a later audit doesn't "fix" it.
 - **`[DATA]` tokens are PIL-measured off graded film frames** — reliable as *relative* hue/value structure, not colorimetric spec; treat all hexes as tune-by-eye targets.
 
-## §9 — Decision record
+## §9 — Decision record — SP5a COMPLETE (2026-07-07)
 
-*(to be completed on build)* — commits, grep-gate results A–G, eyeball notes, any value tunes.
+Built inline via executing-plans. **3 feature commits on `v3-build`:**
+- `30956be` — Task 1: teal-black floors (add `--void-deep #050e10`, delete dead `--panel`, re-hue `--panel-solid` → `rgba(8,20,22,.92)`, repoint `.boot`/`.mobile-menu` `rgba(5,14,16,.97)`/`.lightbox` `rgba(5,14,16,.96)`).
+- `d862f26` — Task 2: kill the 2 amber area-washes (`.scene-glass` amber radial removed → single-temp cyan; `.about-portrait .duo` → cyan-only `rgba(57,240,255,.28)→(.06)`).
+- *(this commit)* — Task 3: `site.css?v` 3.8→3.9 + this record.
+
+**Gate results (spec §7): A–G all PASS.**
+- **A** (no blue-black floor literal) → empty. *In-flight fix:* the first run tripped on my own `--panel-solid` comment, which quoted the old `rgba(7,9,14)` value; trimmed the comment so no stale blue literal sits in source even as documentation → gate clean-by-construction.
+- **B** (`--void-deep` defined once + referenced by `.boot`) → 2 lines. **C** (dead `--panel` unreferenced) → empty.
+- **D** (no amber area-wash; point-marks intact) → washes gone from former `:116`/`:489`; the 8 point-marks (`--bloom-amber` token, cursor label, `.sec-label .idx`, hero amberline, 2 glitch drop-shadows, `.geo-trail` hairline, `.live-tag`) all preserved.
+- **E** (browser eyeball, `localhost:8080`, hard-reloaded) → render clean across hero/about/work/gallery (no CSS break); **About portrait reads cool cyan-only** (the intended visible change); **control deck** (`--panel-solid`) teal-black with legible cyan chrome; **lightbox scrim** teal-black, opens clean (`IMG_01` chrome legible). **Mobile-menu** scrim not separately screenshotted — verified by gate A (identical `rgba(5,14,16,.97)` teal literal) + treatment-parity with the confirmed lightbox.
+- **F** (diff scope) → only `css/site.css` + `index.html`; `js/background.js` absent; `V.bg` unchanged (`3.9`). **G** → `site.css?v=3.9`.
+
+**Value tunes:** none needed — the planned `.duo` second-stop `rgba(57,240,255,.06)` and the retained `.scene-glass` neutral glint held on-device.
+
+**Deferred (unchanged from §6/§8):** the inert fog literal (`background.js:67`); structural point-amber demotion (HUD P1 / composition lever 5); the other four SP5 briefs. **NEXT SP5 slice = owner's pick** (HUD / Type / Motion / Composition).
