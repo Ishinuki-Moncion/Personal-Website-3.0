@@ -241,12 +241,13 @@ check(
 check(
   'v32g: gallery EXIF is real per-photo data, never the fabricated universal readout',
   !index.includes('ƒ/2.8 · 1/250s') &&
+    index.includes('ƒ/16 · 1/50s · ISO 100 · 50mm') &&
     (index.match(/data-meta="/g) || []).length === 12 &&
     /EXIF\/\/REDACTED/.test(index) &&
     (index.match(/data-title="/g) || []).length === 12 &&
     /dataset\.meta/.test(app) &&
     /class="lb-exif"/.test(index),
-  'every .shot bakes data-meta from mdls (stripped files = EXIF//REDACTED) + a data-title; the lightbox meta reads dataset.meta'
+  'every .shot bakes data-meta from mdls (stripped files = EXIF//REDACTED) + a data-title; the lightbox meta reads dataset.meta; the known-real gallery-03 bake (ƒ/16 · 1/50s · ISO 100 · 50mm) must stay pinned'
 );
 
 const failed = checks.filter(item => !item.pass);
