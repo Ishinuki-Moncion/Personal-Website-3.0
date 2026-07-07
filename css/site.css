@@ -493,8 +493,12 @@ section { position: relative; }
 }
 .geo-copy { color: var(--muted); font-size: clamp(14px, 1.1vw, 16px); line-height: 1.65; max-width: 68ch; }
 .about-portrait { position: relative; aspect-ratio: 3 / 4; }
+/* v3.1 — same dim-at-rest treatment as the gallery tiles (duotone layer stays);
+   hover restores the photograph. */
 .about-portrait .media { width: 100%; height: 100%; background-size: cover; background-position: center;
-  filter: grayscale(40%) contrast(1.05) brightness(0.92); }
+  filter: brightness(.62) saturate(.55) contrast(1.05);
+  transition: filter .45s var(--ease-out); }
+.about-portrait:hover .media { filter: none; }
 .about-portrait .duo { position: absolute; inset: 0; mix-blend-mode: color;
   background: linear-gradient(160deg, rgba(57,240,255,0.28), rgba(57,240,255,0.06)); pointer-events: none; }
 .about-portrait .scanmask { position: absolute; inset: 0; pointer-events: none;
@@ -609,10 +613,13 @@ section { position: relative; }
 .shot { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border: 1px solid var(--line);
   cursor: none; transition: border-color .4s, box-shadow .4s; background: var(--void-2); }
 .shot:hover { border-color: var(--cyan); box-shadow: 0 0 30px rgba(57,240,255,0.22); }
+/* v3.1 — photos join the world: dim-at-rest (sunk into the noir frame),
+   full-on-demand (hover/keyboard focus lifts the filter entirely; the lightbox
+   is the full-color payoff). Transition covered by the reduced-motion kill-switch. */
 .shot .media { position: absolute; inset: 0; background-size: cover; background-position: center;
-  filter: grayscale(60%) brightness(0.82) contrast(1.06);
-  transition: transform .9s cubic-bezier(0.22,1,0.36,1), filter .6s; transform: scale(1.04); }
-.shot:hover .media { transform: scale(1.12); filter: grayscale(0%) brightness(1) contrast(1.05); }
+  filter: brightness(.62) saturate(.55) contrast(1.05);
+  transition: transform .9s cubic-bezier(0.22,1,0.36,1), filter .45s var(--ease-out); transform: scale(1.04); }
+.shot:hover .media, .shot:focus-visible .media { transform: scale(1.12); filter: none; }
 .shot .sweep { position: absolute; inset: 0; pointer-events: none; opacity: 0;
   background: linear-gradient(180deg, transparent, rgba(57,240,255,0.12), transparent);
   transition: opacity .3s; }
