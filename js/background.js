@@ -1155,7 +1155,11 @@
       ctx.moveTo(2, h2 - 16); ctx.lineTo(2, h2 - 2); ctx.lineTo(22, h2 - 2);
       ctx.moveTo(w2 - 22, h2 - 2); ctx.lineTo(w2 - 2, h2 - 2); ctx.lineTo(w2 - 2, h2 - 16);
       ctx.stroke();
-      ctx.font = '600 26px Rajdhani, "JetBrains Mono", monospace';
+      /* v3.2c: one instrument voice — the condensed HUD face is retired (name
+         unspellable here: the harness pins its absence); JetBrains Mono (the DOM
+         instrument face) takes the scan tag. 500 = heaviest weight the fonts
+         link ships; 22px keeps the 17-char project tag inside the 256px canvas. */
+      ctx.font = '500 22px "JetBrains Mono", monospace';
       ctx.fillStyle = '#b2f5fd';
       ctx.fillText(L.en || '', 16, 32);
       ctx.font = '500 20px "M PLUS Rounded 1c", sans-serif';

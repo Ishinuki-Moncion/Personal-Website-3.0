@@ -146,11 +146,12 @@ check('globe carries live terminator, city lights, holo-scan shell, and celestia
     !/earth-atmosphere-rim/.test(background),
   'night-side shader, sologram scan shell (NOT the rejected realistic rim), events, and reveal beat must be wired');
 
-check('wave 3: transit halo, scan-and-tag, and Rajdhani HUD face are wired',
+check('wave 3: transit halo + scan-and-tag are wired; scan tag speaks JetBrains Mono (Rajdhani retired, v32c)',
   /TRANSIT_LOOP/.test(background) && /tokyo-transit-loop/.test(background) &&
     /__scanPlace/.test(background) && /scan-tag-assembly/.test(background) &&
-    /GALLERY_PLACES/.test(background) && /Rajdhani/.test(background) && /Rajdhani/.test(index),
-  'Soliton transit loop, particle-assembled scan tags (gallery + projects), and Rajdhani must be present');
+    /GALLERY_PLACES/.test(background) && /'500 22px "JetBrains Mono", monospace'/.test(background) &&
+    !/Rajdhani/.test(background) && !/Rajdhani/.test(index),
+  'Soliton transit loop and particle-assembled scan tags stay; Rajdhani must NOT appear anywhere — one instrument voice (JetBrains Mono)');
 
 check('scene exposes a live fps gauge for QA gates',
   /fpsEMA/.test(background) && /fps: Math\.round\(fpsEMA\)/.test(background),
