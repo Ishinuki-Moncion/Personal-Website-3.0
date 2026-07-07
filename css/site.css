@@ -679,6 +679,18 @@ html[lang="ja"] .hero-kicker span { letter-spacing: 0.14em; }
 .deck h4 { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
   color: var(--cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
 .deck h4::before { content: '◆'; color: var(--muted); font-size: 8px; }
+/* P8 — worn-hardware read: demote the flat full border to a faint bezel + add crisp
+   L-corner brackets (two opposite corners) and a header model-rail, so the deck reads
+   as an instrument, not a card. The lightbox stage already wears its combiner frame
+   via .lb-corner. Chrome stays crisp; the content layer is untouched. */
+.deck { border-color: var(--line); }
+.deck::before, .deck::after {
+  content: ''; position: absolute; width: 13px; height: 13px;
+  border: 0 solid var(--line-strong); pointer-events: none;
+}
+.deck::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
+.deck::after { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
+.deck h4::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent); }
 .deck .grp { margin-bottom: 16px; }
 .deck .grp:last-child { margin-bottom: 0; }
 .deck .grp > label { font-family: var(--font-mono); font-size: 9px; letter-spacing: var(--track-9);
