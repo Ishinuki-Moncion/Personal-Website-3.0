@@ -90,6 +90,21 @@ No CSS test runner (SP1–SP5a method) → **grep-gates + browser eyeball + diff
 - **pill hover feel (P4).** Removing the slide-up fill changes a polished affordance; the replacement (border-brighten + existing glow, text stays cyan) must still read as a clear hover — eyeball.
 - **Reduced-motion / a11y preserved.** `.live-tag` dot pulse already respects the site's reduced-motion; the border add is static. `:focus-visible` and `.sr-only` semantics untouched.
 
-## §8 — Decision record
+## §8 — Decision record — SP5b COMPLETE (2026-07-07)
 
-*(to be completed on build)* — commits, grep-gate results A–G, eyeball notes, any `--muted`→`--cyan` fallback or seg-glow tune.
+Built inline via executing-plans. **3 feature commits on `v3-build`:**
+- `4acc727` — Task 1 (P1): demote 5 structural-amber marks → `--muted` (`.mm-idx`, `.sec-label .idx` +dropped its amber glow, `.geo-kicker`, `.proj-idx`, `.deck h4::before`).
+- `d163244` — Task 2 (P4): `.seg button.on` filled-cyan → outline-active (cyan border + text + `0 0 14px` glow); `.live-tag` → amber bracket-tag (`border:1px solid var(--amber); border-radius:2px; padding:2px 7px`); `.tag:hover` fill dropped → border-brighten; `.pill` slide-up fill removed → outline-hover (text stays cyan; dead `::before`/`overflow`/`.pill span` scaffolding removed).
+- *(this commit)* — Task 3: `site.css?v` 3.9→3.10 + this record.
+
+**Gates A–G all PASS.**
+- **A** — the 5 targeted marks no longer resolve to `--amber`; `.sec-label .idx` glow (`rgba(255,158,44,0.5)`) gone.
+- **B** — no filled chip (`.seg button.on { … background: var(--cyan) }`, `.pill::before`, `.tag:hover` fill all absent). **C** — `.live-tag` carries `border: 1px solid var(--amber)`. **D** — no `.pill::before`; `.pill:hover` no longer sets `color: var(--void)`.
+- **E** (browser, `localhost:8080`, `?v=3.10`) — Work section: `[ 02 ]` reads **muted grey**, `LIVE` is a **boxed amber bracket-tag** with pulsing dot, tags are cyan outlines. Deck: `◆` **muted**; active `DECRYPT`/`EN` read as **lit cyan outlines + glow**, clearly distinct from faint inactive; no filled chips. Only on-screen amber = `LIVE` + active-nav `[ WORK ]`. Globe/scene unchanged. Pills verified by code (fill removed, hover→cyan+glow) + parity with the confirmed seg pattern.
+- **F** — code scope = `css/site.css` + `index.html` only (no `js/`). **G** — `site.css?v=3.10`.
+
+**No fallback needed:** `--muted` reads clearly on-device (section ordinals stay legible, subordinate to the cyan name); the `0 0 14px rgba(57,240,255,0.22)` seg-glow gives enough active/inactive contrast — no tune applied.
+
+**Additional amber found, deliberately LEFT (out of this slice's P1 scope, recorded for a future pass):** `.amber` utility `:69`; cursor hot-state (`:157/161/170` — Motion slice owns `cursor.js`); boot `.warn` `:214` (boot state); `.mm-close:hover`/`.lb-close:hover` `:305/:595` (close-affordance hovers); `.scroll-hud .tick` amber→cyan gradient `:354` (progress-rail — arguably structural, candidate for a later demote); `.sys-online` `:443` ("● SYS//ONLINE" status — kept as a live-status assertion); `.glitch.fire::after` `:452` (decorative hero glitch). None is a structural *ordinal*; all are state/affordance/decorative or owned by another slice.
+
+**NEXT SP5 slices:** HUD sub-slices still open — **numerals & readouts + Type** (P3+P6+`.readout`, has font-feature `zero` dependency), **P5 graticule**, **P8 worn-hardware**; plus **Motion** and **Composition** briefs. Owner picks order. Still nothing pushed to origin.
