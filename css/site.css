@@ -28,6 +28,7 @@
   --font-display: 'Hanken Grotesk', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-jp: 'M PLUS Rounded 1c', 'Hanken Grotesk', sans-serif;
+  --font-ja-hero: 'Zen Kaku Gothic New', var(--font-jp);  /* L5: JP-as-content display face (angular signage authority, distinct from the rounded --font-jp accent) */
 
   /* L3: size→tracking scale — tracking as a monotonic function of smallness.
      Generic tracked-caps data-labels reference these. Deliberate signatures stay
@@ -622,6 +623,22 @@ section { position: relative; }
 .contact h2 { font-weight: 200; letter-spacing: -0.03em; line-height: 0.9;
   font-size: clamp(44px, 9.5vw, 150px); max-width: 13ch; color: var(--fg); text-shadow: 0 0 50px rgba(57,240,255,0.18); }
 .contact h2 em { font-style: normal; color: var(--cyan); }
+
+/* L5 — JP-as-content: in Japanese mode the headline moments own the frame in the
+   Zen Kaku Gothic display face, with JP metrics (positive tracking, looser leading)
+   replacing the tight Latin recipe — and lifted off the ugly Hanken system-fallback.
+   Pure CSS reacting to the existing html[lang="ja"] state (js/app.js:129).
+   L6 vertical kanji index deferred: it would duplicate the existing [ 0X ] section
+   indices — the brief's "one signal at a time / don't over-Japanese". */
+html[lang="ja"] .about-lead {
+  font-family: var(--font-ja-hero); font-weight: 500;
+  letter-spacing: 0.01em; line-height: 1.28;
+}
+html[lang="ja"] .contact h2 {
+  font-family: var(--font-ja-hero); font-weight: 700;
+  letter-spacing: 0.02em; line-height: 1.15;
+}
+html[lang="ja"] .hero-kicker span { letter-spacing: 0.14em; }
 .pills { display: flex; flex-wrap: wrap; gap: 14px; margin-top: clamp(36px, 5vw, 64px); }
 .pill { font-family: var(--font-mono); font-size: 13px; letter-spacing: var(--track-13); color: var(--cyan);
   border: 1px solid var(--line); border-radius: 75px; padding: 11px 24px;
