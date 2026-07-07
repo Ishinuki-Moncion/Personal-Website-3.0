@@ -1633,6 +1633,14 @@
 
     // (b) bloomComposer — renders ONLY tagged emitters (rest swapped to black), off-screen.
     bloomComposer = new POST.EffectComposer(renderer);   // no type arg -> HalfFloatType RGBA16F LINEAR target (EffectComposer.js:27)
+    /* v3.2e: renderer {antialias:true} only multisamples the DEFAULT framebuffer;
+       composer passes rasterize into plain targets, so the high tier shipped
+       WORSE line quality (graticule, arc, transit loop) than LITE's direct path.
+       samples=4 = WebGL2 MSAA, auto-resolved on sample; EffectComposer.setSize
+       reallocates targets preserving .samples, so resize keeps it. Set before
+       first render — targets allocate lazily on first bind. */
+    bloomComposer.renderTarget1.samples = 4;
+    bloomComposer.renderTarget2.samples = 4;
     bloomComposer.renderToScreen = false;
     bloomComposer.addPass(new POST.RenderPass(scene, camera));
     bloomComposer.addPass(new POST.UnrealBloomPass(
@@ -1738,7 +1746,12 @@
           float r = texture2D(tDiffuse, vUv + off).r;
           vec4  c = texture2D(tDiffuse, vUv).rgba;   // CENTRE tap: green + the alpha we keep
           float b = texture2D(tDiffuse, vUv - off).b;
-          gl_FragColor = vec4(r, c.g, b, c.a);   // <-- centre alpha => undrawn stays 0
+          // v3.2e: +-0.5/255 hash dither at the ONLY 8-bit quantisation point in
+          // the chain (intermediate targets are HalfFloat). Deep-black gradients
+          // are the worst banding case for the #05060a floor; one LSB of spatial
+          // noise breaks the bands. The fixed-point canvas write clamps negatives.
+          float dth = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) / 255.0 - 0.5 / 255.0;
+          gl_FragColor = vec4(r + dth, c.g + dth, b + dth, c.a);   // <-- centre alpha => undrawn stays 0
         }
       `,
     }));
@@ -1746,6 +1759,8 @@
 
     // (d) finalComposer — full REAL scene + ADD glow + restore on-screen sRGB (R6).
     finalComposer = new POST.EffectComposer(renderer);
+    finalComposer.renderTarget1.samples = 4;   // v3.2e MSAA — see bloomComposer note
+    finalComposer.renderTarget2.samples = 4;
     finalComposer.addPass(new POST.RenderPass(scene, camera));
     finalComposer.addPass(mixPass);
     finalComposer.addPass(new POST.OutputPass());   // REQUIRED: composer strips on-screen sRGB otherwise
@@ -1786,11 +1801,21 @@
     };
   }
 
+  const DPR_CAP = reduced ? 1 : LITE ? 1.5 : 2;   // mirrors getQualityProfile's per-tier caps
   addEventListener('resize', () => {
     clearTimeout(resizeTm);
     resizeTm = setTimeout(() => {
       if (coarse && innerWidth === w && Math.abs(innerHeight - h) < 120) return;
       w = innerWidth; h = innerHeight;
+      /* v3.2e: re-read devicePixelRatio — dragging the window between a Retina
+         and a 1x display (or zooming) changes DPR without a reload; the boot-time
+         snapshot left the canvas soft (or 4x oversized) after such a move. */
+      const newDpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
+      if (renderer.getPixelRatio() !== newDpr) {
+        renderer.setPixelRatio(newDpr);
+        globeMat.uniforms.uPx.value = newDpr;   // land-particle gl_PointSize is uPx-scaled
+        if (bloomComposer) { bloomComposer.setPixelRatio(newDpr); finalComposer.setPixelRatio(newDpr); }
+      }
       camera.aspect = w / h; camera.updateProjectionMatrix();
       renderer.setSize(w, h);
       if (bloomComposer) { bloomComposer.setSize(w, h); finalComposer.setSize(w, h); }

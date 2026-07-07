@@ -221,6 +221,12 @@ check('v32d: signals calmed — streaks retired, grid story-driven and de-ambere
     !background.includes('cx.fillRect(cv.width - 128 + i * 12'),
   'streaks, dead __scenePing and the callout barcode ticks must be gone; grid centre lines cool (0x1a4a5a family) with opacity driven by sceneState.grid (near-0 in gallery); rain tint keys to the projects ENTRY beat, not residency');
 
+check('v32e: black-floor fidelity — CA-pass hash dither, MSAA composer targets, live DPR re-read',
+  /fract\(sin\(dot\(gl_FragCoord\.xy, vec2\(12\.9898, 78\.233\)\)\) \* 43758\.5453\) \/ 255\.0/.test(background) &&
+    /renderTarget1\.samples = 4/.test(background) &&
+    /renderer\.getPixelRatio\(\) !== newDpr/.test(background),
+  'the final CA pass must carry the ±0.5/255 hash dither, the high-tier composer ping-pong targets must be 4x multisampled, and the debounced resize handler must re-read devicePixelRatio');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';
