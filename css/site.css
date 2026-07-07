@@ -505,6 +505,17 @@ section { position: relative; }
 .about-portrait .ptag { position: absolute; bottom: 10px; left: 12px; font-family: var(--font-mono);
   font-size: 10px; letter-spacing: 0.1em; color: var(--cyan); text-shadow: 0 0 8px rgba(57,240,255,0.6); }
 .stat-row { display: flex; gap: clamp(20px, 4vw, 48px); margin-top: 36px; flex-wrap: wrap; }
+
+/* P5 — persistent oscilloscope graticule substrate behind data-dense regions
+   (reuses the .boot-grid gradient recipe, dimmed to ~0.04α — well below --line 0.16
+   and the data, near-black-preserving; painted as a background so it stays under all
+   content with zero z-index risk). The graticule the whole HUD grammar descends from. */
+.stat-row, .gallery-grid, .lb-stage {
+  background-image:
+    linear-gradient(rgba(57, 240, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57, 240, 255, 0.04) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
 .stat { font-family: var(--font-mono); }
 .stat .n { font-weight: 400; font-size: clamp(34px, 4vw, 56px);
   color: var(--cyan); line-height: 1; text-shadow: 0 0 24px rgba(57,240,255,0.3); }
