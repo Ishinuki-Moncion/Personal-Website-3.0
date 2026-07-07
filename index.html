@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@200;400&family=JetBrains+Mono:wght@400;500&family=M+PLUS+Rounded+1c:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/site.css?v=3.22" />
+<link rel="stylesheet" href="css/site.css?v=3.23" />
 </head>
 <body data-booting>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -60,7 +60,7 @@
     </div>
     <div class="nav-meta">
       <span class="clock" data-clock aria-hidden="true">JST --:--:--</span>
-      <span>TOKYO // 東京</span>
+      <span>TOKYO // <span lang="ja">東京</span></span>
     </div>
     <button class="hud-btn lang-btn" aria-label="Toggle language" data-cursor="toggle"><span class="swap">EN / 日本</span></button>
     <button class="nav-burger" aria-label="Open menu" aria-expanded="false" data-cursor="menu"><span></span><span></span><span></span></button>
@@ -75,16 +75,16 @@
     <button class="mm-close" aria-label="Close menu" data-cursor="close">CLOSE ✕</button>
   </div>
   <nav class="mm-links">
-    <a href="#home" data-mm><span class="mm-idx">00</span><span class="mm-label">Home</span><span class="mm-ja">ホーム</span></a>
-    <a href="#about" data-mm><span class="mm-idx">01</span><span class="mm-label">About</span><span class="mm-ja">概要</span></a>
-    <a href="#work" data-mm><span class="mm-idx">02</span><span class="mm-label">Work</span><span class="mm-ja">経歴</span></a>
-    <a href="#gallery" data-mm><span class="mm-idx">03</span><span class="mm-label">Gallery</span><span class="mm-ja">写真</span></a>
-    <a href="#projects" data-mm><span class="mm-idx">04</span><span class="mm-label">Projects</span><span class="mm-ja">制作</span></a>
-    <a href="#contact" data-mm><span class="mm-idx">05</span><span class="mm-label">Contact</span><span class="mm-ja">連絡</span></a>
+    <a href="#home" data-mm><span class="mm-idx">00</span><span class="mm-label">Home</span><span class="mm-ja" lang="ja">ホーム</span></a>
+    <a href="#about" data-mm><span class="mm-idx">01</span><span class="mm-label">About</span><span class="mm-ja" lang="ja">概要</span></a>
+    <a href="#work" data-mm><span class="mm-idx">02</span><span class="mm-label">Work</span><span class="mm-ja" lang="ja">経歴</span></a>
+    <a href="#gallery" data-mm><span class="mm-idx">03</span><span class="mm-label">Gallery</span><span class="mm-ja" lang="ja">写真</span></a>
+    <a href="#projects" data-mm><span class="mm-idx">04</span><span class="mm-label">Projects</span><span class="mm-ja" lang="ja">制作</span></a>
+    <a href="#contact" data-mm><span class="mm-idx">05</span><span class="mm-label">Contact</span><span class="mm-ja" lang="ja">連絡</span></a>
   </nav>
   <div class="mm-foot">
     <span class="clock" data-clock aria-hidden="true">JST --:--:--</span>
-    <span class="mm-coord" translate="no">35.6762° N, 139.6503° E — TOKYO // 東京</span>
+    <span class="mm-coord" translate="no">35.6762° N, 139.6503° E — TOKYO // <span lang="ja">東京</span></span>
   </div>
 </div>
 
@@ -103,7 +103,7 @@
   <section class="hero" id="home">
     <div class="hero-kicker">
       <span class="bar"></span>
-      <span data-en="開発者 / 写真家 — Tokyo, Japan" data-ja="開発者 / 写真家 — 東京, 日本">開発者 / 写真家 — Tokyo, Japan</span>
+      <span lang="ja" data-en="開発者 / 写真家 — Tokyo, Japan" data-ja="開発者 / 写真家 — 東京, 日本">開発者 / 写真家 — Tokyo, Japan</span>
     </div>
     <h1>
       <span class="sr-only">Ishinuki Daikie — developer and photographer in Tokyo</span>
@@ -137,7 +137,7 @@
           <div class="stat-row">
             <div class="stat" data-reveal data-reveal-delay="0.18s"><div class="n"><span data-count="100" data-suffix="+" aria-hidden="true">88+</span><span class="sr-only">100+</span></div><div class="l" data-en="Campaigns shipped" data-ja="キャンペーン">Campaigns shipped</div></div>
             <div class="stat" data-reveal data-reveal-delay="0.24s"><div class="n">N3</div><div class="l" data-en="JLPT Japanese" data-ja="日本語能力">JLPT Japanese</div></div>
-            <div class="stat" data-reveal data-reveal-delay="0.30s"><div class="n">東京</div><div class="l" data-en="Based in Tokyo" data-ja="東京在住">Based in Tokyo</div></div>
+            <div class="stat" data-reveal data-reveal-delay="0.30s"><div class="n" lang="ja">東京</div><div class="l" data-en="Based in Tokyo" data-ja="東京在住">Based in Tokyo</div></div>
           </div>
         </div>
         <div class="about-portrait clip-reveal" data-parallax="0.06">
@@ -155,7 +155,7 @@
   <section class="work" id="work">
     <div class="shell">
       <div class="sec-label"><span class="idx">[ 02 ]</span><span class="txt" data-en="Work / Experience" data-ja="作品 / 経歴">Work / Experience</span><span class="rule"></span></div>
-      <h2 class="heading-xl" data-reveal>Work</h2>
+      <h2 class="heading-xl" data-reveal data-en="Work" data-ja="作品">Work</h2>
       <div data-stagger>
         <article class="row" data-reveal data-cursor="">
           <div class="work-grid">
@@ -206,7 +206,7 @@
     <div class="shell">
       <div class="sec-label"><span class="idx">[ 03 ]</span><span class="txt" data-en="Gallery / Photography" data-ja="写真 / 撮影">Gallery / Photography</span><span class="rule"></span></div>
       <div class="gallery-head">
-        <h2 class="heading-xl" data-reveal style="margin-bottom:0">Through the lens</h2>
+        <h2 class="heading-xl" data-reveal style="margin-bottom:0" data-en="Through the lens" data-ja="レンズ越しに">Through the lens</h2>
         <span class="gallery-count" data-reveal>12 FRAMES // SELECTED 2021–2025</span>
       </div>
     </div>
@@ -232,7 +232,7 @@
   <section class="projects" id="projects">
     <div class="shell">
       <div class="sec-label"><span class="idx">[ 04 ]</span><span class="txt" data-en="Projects / Selected" data-ja="制作 / 選抜">Projects / Selected</span><span class="rule"></span></div>
-      <h2 class="heading-xl" data-reveal>Selected Work</h2>
+      <h2 class="heading-xl" data-reveal data-en="Selected Work" data-ja="代表作">Selected Work</h2>
       <div data-stagger>
         <a class="row" href="https://github.com/Ishinuki-Moncion" target="_blank" rel="noopener" data-reveal data-cursor="open ↗">
           <div class="proj-grid">
@@ -287,7 +287,7 @@
       </div>
       <div class="footer">
         <span>© <span id="year"></span> Ishinuki Daikie — daikieOS</span>
-        <span class="coord" translate="no">35.6762° N, 139.6503° E — 東京</span>
+        <span class="coord" translate="no" lang="ja">35.6762° N, 139.6503° E — 東京</span>
       </div>
     </div>
   </section>
@@ -330,7 +330,7 @@
     <label>Language</label>
     <div class="seg" data-seg="lang">
       <button data-val="en" data-cursor="set">EN</button>
-      <button data-val="ja" data-cursor="set">日本語</button>
+      <button data-val="ja" data-cursor="set" lang="ja">日本語</button>
     </div>
   </div>
   <div class="grp">
@@ -357,6 +357,6 @@
 
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
 
-<script type="module" src="js/boot.mjs?v=13"></script>
+<script type="module" src="js/boot.mjs?v=14"></script>
 </body>
 </html>

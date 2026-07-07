@@ -126,6 +126,12 @@
     });
     const btn = $('.lang-btn .swap');
     if (btn) btn.textContent = lang === 'en' ? 'EN / 日本' : '日本 / EN';
+    const langBtn = $('.lang-btn');
+    if (langBtn) {
+      // the label announces the TARGET language, in that language
+      langBtn.setAttribute('aria-label', lang === 'en' ? 'Switch to Japanese' : '英語に切り替える');
+      langBtn.setAttribute('lang', lang === 'en' ? 'en' : 'ja');
+    }
     document.documentElement.lang = lang === 'ja' ? 'ja' : 'en';
     try { localStorage.setItem('daikie-lang', lang); } catch (e) {}
     // deck seg

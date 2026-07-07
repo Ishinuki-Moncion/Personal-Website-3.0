@@ -264,6 +264,17 @@ check(
   'the --z-* ladder must exist with boot above lightbox; closed lightbox/deck must be inert; deck uses disclosure semantics'
 );
 
+check(
+  'v32i: JP fragments carry lang="ja" and display headlines full-translate',
+  (index.match(/lang="ja"/g) || []).length >= 10 &&
+    /<h2 class="heading-xl"[^>]*data-ja="作品"/.test(index) &&
+    /data-ja="レンズ越しに"/.test(index) &&
+    /data-ja="代表作"/.test(index) &&
+    /Switch to Japanese/.test(app) &&
+    /html\[lang="ja"\] \.heading-xl/.test(css),
+  'always-JP text nodes need lang="ja"; Work/Through the lens/Selected Work translate via data-ja; the toggle label announces its target'
+);
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';
