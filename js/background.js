@@ -1652,17 +1652,20 @@
     mixPass.needsSwap = true;
     mixPass.material.blending = THREE.NoBlending;   // NOT transparent=true — overwrite the stale target
 
-    // (c2) gradePass — analytic lift/gamma/gain + teal-black shadow crush + gentle
-    //      saturation, in DISPLAY-referred sRGB (runs AFTER OutputPass). NoBlending,
-    //      alpha straight through. Uniforms retuned in browser (SP4 Task 4).
+    // (c2) gradePass — analytic lift/gamma/gain + gentle saturation, in
+    //      DISPLAY-referred sRGB (runs AFTER OutputPass). NoBlending, alpha
+    //      straight through. v3.1: teal shadow crush neutralised (uTealAmt 0)
+    //      and lift pulled uniformly negative — shadows sink to true black so
+    //      the scene sits on the deep-black CSS floor; amber-highlight gain
+    //      (the signal look) stays.
     const gradePass = new POST.ShaderPass(new THREE.ShaderMaterial({
       uniforms: {
         tDiffuse: { value: null },
-        uLift:    { value: new THREE.Vector3(-0.02, 0.006, 0.020) }, // teal shadows: R down, G/B up
+        uLift:    { value: new THREE.Vector3(-0.02, -0.02, -0.02) }, // neutral crush: all channels down, no teal cast
         uGamma:   { value: new THREE.Vector3( 1.00, 1.00, 1.04) },   // mids
         uGain:    { value: new THREE.Vector3( 1.05, 1.00, 0.97) },   // highlights lean amber (signal)
-        uTeal:    { value: new THREE.Vector3( 0.00, 0.020, 0.030) }, // shadow floor colour
-        uTealAmt: { value: 0.6 },
+        uTeal:    { value: new THREE.Vector3( 0.00, 0.020, 0.030) }, // shadow floor colour (inert at uTealAmt 0)
+        uTealAmt: { value: 0.0 },
         uSat:     { value: 1.06 },                                   // keep cyan lead / amber pop
       },
       vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} `,
