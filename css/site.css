@@ -497,7 +497,7 @@ section { position: relative; }
 /* v3.1 — same dim-at-rest treatment as the gallery tiles (duotone layer stays);
    hover restores the photograph. */
 .about-portrait .media { width: 100%; height: 100%; background-size: cover; background-position: center;
-  filter: brightness(.62) saturate(.55) contrast(1.05);
+  filter: brightness(.58) saturate(.45) contrast(1.05); /* v3.1f: rest grade one notch deeper for the black floor */
   transition: filter .45s var(--ease-out); }
 .about-portrait:hover .media { filter: none; }
 .about-portrait .duo { position: absolute; inset: 0; mix-blend-mode: color;
@@ -583,7 +583,11 @@ section { position: relative; }
 .gallery { padding-block: clamp(72px, 11vw, 150px); }
 .gallery-head { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px;
   margin-bottom: clamp(28px, 4vw, 48px); }
-.gallery-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: var(--track-11); }
+/* v3.1f: the count gets its own clear line — at ~1440px it fit the headline's row with
+   almost no slack and sat tight against the headline's right end. Basis-100% forces the
+   wrap at every width; right-aligned to keep the HUD right-rail grammar. */
+.gallery-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: var(--track-11);
+  flex-basis: 100%; text-align: right; }
 .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(10px, 1.4vw, 18px); }
 /* Composition lever 6+7: one cinematic letterbox break in the otherwise-uniform field —
    the first tile spans two columns at a wide ~8:5 aspect so one image anchors the eye
@@ -630,7 +634,7 @@ section { position: relative; }
    full-on-demand (hover/keyboard focus lifts the filter entirely; the lightbox
    is the full-color payoff). Transition covered by the reduced-motion kill-switch. */
 .shot .media { position: absolute; inset: 0; background-size: cover; background-position: center;
-  filter: brightness(.62) saturate(.55) contrast(1.05);
+  filter: brightness(.58) saturate(.45) contrast(1.05); /* v3.1f: rest grade one notch deeper for the black floor */
   transition: transform .9s cubic-bezier(0.22,1,0.36,1), filter .45s var(--ease-out); transform: scale(1.04); }
 .shot:hover .media, .shot:focus-visible .media { transform: scale(1.12); filter: none; }
 .shot .sweep { position: absolute; inset: 0; pointer-events: none; opacity: 0;
