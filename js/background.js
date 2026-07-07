@@ -663,7 +663,10 @@
         ctx.save();
         ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 0.92, 0, 6.2832); ctx.clip();
         ctx.translate(d.x, d.y); ctx.rotate(Math.PI);
-        ctx.globalAlpha = 0.65 * a;
+        // v3.1f: 0.65 -> 0.22 — the lens samples the (bright, additive) WebGL frame,
+        // and at 0.65 a droplet over a dark page gap read as a bright smudge on the
+        // deep-black floor. Capped so a drop is never more than a faint glint.
+        ctx.globalAlpha = 0.22 * a;
         ctx.drawImage(src, (d.x - sr) * k, (d.y - sr) * k, sr * 2 * k, sr * 2 * k, -d.r, -d.r, d.r * 2, d.r * 2);
         ctx.restore();
         ctx.globalAlpha = 1;
@@ -675,7 +678,7 @@
       g.addColorStop(1, 'rgba(0, 8, 12, 0)');
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, 6.2832); ctx.fill();
-      ctx.fillStyle = 'rgba(235, 250, 255, ' + (0.55 * a).toFixed(3) + ')';
+      ctx.fillStyle = 'rgba(235, 250, 255, ' + (0.2 * a).toFixed(3) + ')';   // v3.1f: highlight 0.55 -> 0.2 (whisper, not signal)
       ctx.beginPath();
       ctx.ellipse(d.x - d.r * 0.34, d.y - d.r * 0.42, d.r * 0.2, d.r * 0.12, -0.6, 0, 6.2832);
       ctx.fill();
@@ -831,7 +834,9 @@
       tex.needsUpdate = true;
     }
     draw();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw());
+    // v3.1f: re-draw the FOCUSED place, not the Tokyo default — a fonts-ready tick
+    // mid-sequence (about: dallas->tokyo) used to snap the callout back to Tokyo
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw(placeById(focusedPlaceId)));
     const sp = nameObject(new THREE.Sprite(new THREE.SpriteMaterial({
       map: tex, transparent: true, opacity: 0, depthWrite: false
     })), 'place-coordinate-callout');
@@ -863,7 +868,8 @@
   let arcN = 0;
   const ARC_OPACITY = 0.7;
   const arcMat = new THREE.LineBasicMaterial({
-    color: AMBER, transparent: true, opacity: ARC_OPACITY, blending: THREE.AdditiveBlending });
+    color: AMBER, transparent: true, opacity: ARC_OPACITY, blending: THREE.AdditiveBlending,
+    depthWrite: false });   // v3.1f: depth writes from the arc clipped later-drawn glow fragments behind it (1px dark cuts through the halo)
   spin.add(nameObject(new THREE.Line(arcGeo, arcMat), 'dallas-to-tokyo-arc'));
   const cometGeo = makeGeometry('journey-comet-point', new Float32Array(3), 3);
   if (!cometGeo) return;
@@ -1292,32 +1298,35 @@
   }
   function updateTokyoHalo(f, focusedFacing, tokyoFacing) {
     if (!tokyoHalo) return;
-    const halo = sceneState.halo, lab = sceneState.labels;
+    // v3.1f: local was named `halo`, shadowing the atmosphere-halo sprite (:889) — renamed
+    const haloK = sceneState.halo, lab = sceneState.labels;
     const pulse = sceneState.haloPulse, lock = sceneState.lockT;
     // spin ONLY rings/ticks/packet; a faster sweep during the signal-lock
     tokyoHalo.spinGroup.rotation.z += 0.0016 * f * (LITE ? 0.5 : 1) + lock * 0.02 * f;
-    tokyoHalo.group.visible = halo > 0.02;
+    tokyoHalo.group.visible = haloK > 0.02;
     tokyoHalo.rings.forEach((r, i) => {                       // ring keeps a small floor so the hub reads as "there"
       const base = i === 0 ? 0.24 : 0.12;
-      r.material.opacity = (0.10 + tokyoFacing * 0.9) * halo * (base + pulse * 0.10 + lock * 0.25);
+      r.material.opacity = (0.10 + tokyoFacing * 0.9) * haloK * (base + pulse * 0.10 + lock * 0.25);
     });
-    if (tokyoHalo.ticks) tokyoHalo.ticks.material.opacity = tokyoFacing * halo * (0.20 + pulse * 0.18);
-    if (tokyoHalo.transit) tokyoHalo.transit.material.opacity = tokyoFacing * halo * (0.14 + lock * 0.2);
-    if (tokyoHalo.stations) tokyoHalo.stations.material.opacity = tokyoFacing * halo * (0.3 + pulse * 0.3);
-    if (tokyoHalo.glow) tokyoHalo.glow.material.opacity = (0.10 + tokyoFacing * 0.5) * halo * (0.4 + pulse * 0.8 + lock * 1.0 + idleK * 0.35);
+    if (tokyoHalo.ticks) tokyoHalo.ticks.material.opacity = tokyoFacing * haloK * (0.20 + pulse * 0.18);
+    if (tokyoHalo.transit) tokyoHalo.transit.material.opacity = tokyoFacing * haloK * (0.14 + lock * 0.2);
+    if (tokyoHalo.stations) tokyoHalo.stations.material.opacity = tokyoFacing * haloK * (0.3 + pulse * 0.3);
+    if (tokyoHalo.glow) tokyoHalo.glow.material.opacity = (0.10 + tokyoFacing * 0.5) * haloK * (0.4 + pulse * 0.8 + lock * 1.0 + idleK * 0.35);
     tokyoHalo.labels.forEach(sp => {                          // per-label facing gate: only 1–2 read at once
       const a = (sp.userData.label.angle || 0) * Math.PI / 180;
       const lf = Math.max(0, Math.cos(a - spin.rotation.y + tokyoA0));
       // priority-1 labels keep a floor so TOKYO/JST stay legible at Tokyo dead-centre,
-      // where their own facing term bottoms out (browser-verified phase gap)
-      const gate = Math.max(lf * lf, sp.userData.label.priority === 1 ? 0.45 : 0);
+      // where their own facing term bottoms out (browser-verified phase gap).
+      // v3.1f: floor 0.45 -> 0.3 (post-merge ledger) — labels sit quieter off-phase
+      const gate = Math.max(lf * lf, sp.userData.label.priority === 1 ? 0.3 : 0);
       sp.material.opacity = tokyoFacing * lab * gate * (LITE ? 0.72 : 0.9);
     });
     if (tokyoHalo.packet && tokyoHalo.packetMat) {            // packet is event-gated, never a perpetual orbit
-      tokyoHalo.setPacketAt(t * 0.22);            // ~15s per lap of the transit loop
       const p = Math.max(pulse, lock);
       tokyoHalo.packet.visible = p > 0.03;
-      tokyoHalo.packetMat.opacity = tokyoFacing * halo * p * 0.9;
+      // v3.1f: buffer write gated on visibility (was every frame, ledger nit)
+      if (tokyoHalo.packet.visible) tokyoHalo.setPacketAt(t * 0.22);   // ~15s per lap of the transit loop
+      tokyoHalo.packetMat.opacity = tokyoFacing * haloK * p * 0.9;
     }
   }
   function replayJourney() {
@@ -1744,7 +1753,13 @@
     // (e) Dark-material-swap (official pattern; depthWrite:false preserves the scene's
     //     real no-occlusion property since every emitter is additive/depthWrite:false).
     const darkMat    = new THREE.MeshBasicMaterial({ color: 0x000000, depthWrite: false });
-    const darkSprite = new THREE.SpriteMaterial({ color: 0x000000, depthWrite: false });
+    /* v3.1f: SpriteMaterial defaults transparent:true, so a plain black swap kept the
+       untagged canvas sprites (halo labels, callout, scan tag) in the TRANSPARENT queue
+       as opaque black quads — each one stamped its rectangle over the additive emitters
+       already drawn behind it in the bloom pass, and the missing bloom read as dark/grey
+       slabs around the halo cluster on the deep-black floor. opacity:0 makes untagged
+       sprites contribute nothing instead (this scene has no occluders by design). */
+    const darkSprite = new THREE.SpriteMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false });
     const matCache = new Map();
     const darken = o => {
       if (o.userData.bloom) return;
