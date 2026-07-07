@@ -6,3 +6,6 @@ docs/superpowers/research/refs/
 
 # Personal Claude Code overrides (local, not shared)
 .claude/settings.local.json
+
+# v3.2 gate screenshots (owner end-of-pass review artifacts; heavy PNGs, not site assets)
+docs/superpowers/gates/v32/

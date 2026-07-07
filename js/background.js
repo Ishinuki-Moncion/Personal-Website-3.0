@@ -54,7 +54,6 @@
     cyan: CYAN,
     amber: AMBER,
     softAmber: 0xffd9a0,
-    alert: 0xff3b5c,
     terminal: 0x8dffb3,
   };
   const dpr = quality.dpr;
@@ -952,7 +951,8 @@
   }
 
   /* Instrument palette anchors (dossier [DATA]: MGSV iDroid field #0f394c,
-     active #b2f5fd, hue discipline 193-201; alert red reserved for alerts). */
+     active #b2f5fd, hue discipline 193-201; v3.2 law: no alert red — the
+     palette is cyan/amber, complete (2026-07-08 law addendum, ruling 2). */
   const DL = { instrumentField: 0x0f394c, instrumentActive: 0xb2f5fd };
 
   /* (f2) holo-scan shell — a thin latitude scanline sweeping the planet like a

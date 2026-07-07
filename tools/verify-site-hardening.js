@@ -8,7 +8,6 @@ const index = read('index.html');
 const app = read('js/app.js');
 const background = read('js/background.js');
 const css = read('css/site.css');
-const three = read('js/vendor/three.global.min.js');
 
 const checks = [];
 
@@ -24,11 +23,13 @@ check(
 );
 
 check(
-  'vendored Three.js is a generated global build without the deprecated browser entry',
-  /Generated from three@0\.158\.0\/build\/three\.module\.min\.js/.test(three) &&
-    /globalThis\.THREE=/.test(three) &&
-    !three.includes('Scripts "build/three.js" and "build/three.min.js" are deprecated'),
-  'use the generated global build instead of the deprecated browser entry'
+  'ESM chain is live with no dead global Three.js build (v3.2 law)',
+  /"three":\s*"\.\/js\/vendor\/three-0\.158\.0\/three\.module\.min\.js"/.test(index) &&
+    /"three\/addons\/":\s*"\.\/js\/vendor\/three-0\.158\.0\/examples\/jsm\/"/.test(index) &&
+    /<script type="module" src="js\/boot\.mjs\?v=\d+"><\/script>/.test(index) &&
+    !index.includes('three.global.min.js') &&
+    !fs.existsSync(path.join(root, 'js/vendor/three.global.min.js')),
+  'import-map + versioned boot.mjs is the only Three.js path; the 651KB global build must stay deleted and unreferenced'
 );
 
 check(
@@ -160,6 +161,48 @@ check(
   /class="geo-trail"/.test(index) &&
     /Dallas[\s\S]*Tokyo/.test(index),
   'regular page content should explain the same geography as the globe'
+);
+
+/* ---- v3.2 law pins (2026-07-08 addendum; update-with-feature, never delete) ---- */
+
+check(
+  'v3.2 law: deep-black floor tokens pinned (no teal floor regression)',
+  /--void:\s*#05060a/.test(css) &&
+    /--void-2:\s*#080a10/.test(css) &&
+    /--void-deep:\s*#030407/.test(css) &&
+    /--panel-solid:\s*rgba\(7,\s*9,\s*14,\s*0\.92\)/.test(css) &&
+    !/0a1416/i.test(css) &&
+    !/0a1416/i.test(index),
+  'site.css :root must keep the #05060a deep-black family; no #0a1416 teal floor token may return in css or index.html'
+);
+
+check(
+  'v3.2 law: teal shadow crush stays neutralised in the scene grade',
+  /uTealAmt:\s*\{\s*value:\s*0\.0\s*\}/.test(background),
+  'background.js gradePass must keep uTealAmt at 0.0 — shadows sink to true black, no teal cast'
+);
+
+check(
+  'v3.2 law: photos dim at rest, full on demand',
+  /\.shot \.media \{[^}]*brightness\(\.58\) saturate\(\.45\) contrast\(1\.05\)/.test(css) &&
+    /\.shot:hover \.media, \.shot:focus-visible \.media \{ transform: scale\(1\.12\); filter: none; \}/.test(css) &&
+    /\.about-portrait \.media \{[^}]*brightness\(\.58\) saturate\(\.45\) contrast\(1\.05\)/.test(css),
+  'gallery tiles + about portrait keep the v3.1f rest grade; hover/focus-visible lifts the filter entirely (lightbox stays unfiltered)'
+);
+
+check(
+  'v3.2 law: amber starfield signature present (owner timeline)',
+  /const fieldAmber = makeField\(quality\.fieldCounts\[1\], AMBER, 36, 0\.06, 0\.8\);/.test(background) &&
+    /scene\.add\(fieldCyan, fieldAmber, fieldDeep\);/.test(background),
+  'the cyan+amber two-temperature starfield is the owner signature exception to the warm budget — AMBER field at alpha .8 must stay'
+);
+
+check(
+  'v3.2 law: scene palette is cyan/amber, complete — no alert red',
+  /softAmber: 0xffd9a0/.test(background) &&
+    !/alert:\s*0xff3b5c/.test(background) &&
+    !/SCENE_COLORS\.alert/.test(background),
+  'SCENE_COLORS.alert was deleted by v3.2 ruling (red-on-failure rejected as a third-hue palette-law change); it must not return'
 );
 
 const failed = checks.filter(item => !item.pass);
