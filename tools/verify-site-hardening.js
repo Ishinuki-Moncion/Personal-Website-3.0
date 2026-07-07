@@ -205,6 +205,12 @@ check(
   'SCENE_COLORS.alert was deleted by v3.2 ruling (red-on-failure rejected as a third-hue palette-law change); it must not return'
 );
 
+check('v32b: city lights cluster on coastlines — the uniform 11% freckle is retired',
+  !/gcity\[i\] = Math\.random\(\) < 0\.11/.test(background) &&
+    /cityCluster/.test(background) &&
+    /const pCity = gedge\[i\]/.test(background),
+  'gcity must be weighted by the gedge coastline signal and a low-frequency cluster field (lit night-side area < ~5%), never the uniform 11% freckle');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';

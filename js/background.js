@@ -195,7 +195,7 @@
   // pole density honest), one phase attribute drives GPU breathing: zero
   // per-frame buffer uploads, unlike the old CPU-distorted icosahedron.
   const gp = new Float32Array(GLOBE_N * 3), gph = new Float32Array(GLOBE_N), gedge = new Float32Array(GLOBE_N);
-  const gcity = new Float32Array(GLOBE_N);   // sparse night-side city lights (motivated amber emitters)
+  const gcity = new Float32Array(GLOBE_N);   // coastline-clustered night-side city lights (motivated amber emitters, v3.2b)
   let globeFilled = 0;
   for (let i = 0, guard = 0; i < GLOBE_N && guard < GLOBE_N * 10; guard++) {
     const lat = Math.asin(Math.random() * 2 - 1) * 180 / Math.PI;
@@ -204,7 +204,14 @@
     toV3(lat, lon, R).toArray(gp, i * 3);
     gph[i] = Math.random() * Math.PI * 2;
     gedge[i] = landEdgeAt(lon, lat);
-    gcity[i] = Math.random() < 0.11 ? 1 : 0;
+    /* v3.2b (globe brief lever 1): coastline-weighted city clustering replaces
+       the uniform 11% freckle. A low-frequency lon/lat field, cubed to sharpen
+       its peaks, gates WHERE metropolitan clusters exist; the gedge coastline
+       signal pulls them onto coasts (cities are coastal). Expected lit share
+       ~2-4% of land points — under the <5% night-side budget. */
+    const cityCluster = Math.pow(0.5 + 0.5 * Math.sin(lon * 0.12 + 1.7) * Math.sin(lat * 0.19 - 0.6), 3.0);
+    const pCity = gedge[i] ? 0.45 * cityCluster : 0.03 * cityCluster;
+    gcity[i] = Math.random() < pCity ? 1 : 0;
     globeFilled = i + 1;
     i++;
   }
