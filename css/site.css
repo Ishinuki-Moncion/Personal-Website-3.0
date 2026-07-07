@@ -518,7 +518,7 @@ section { position: relative; }
 }
 .stat { font-family: var(--font-mono); }
 .stat .n { font-weight: 400; font-size: clamp(34px, 4vw, 56px);
-  color: var(--cyan); line-height: 1; text-shadow: 0 0 24px rgba(57,240,255,0.3); }
+  color: var(--cyan); line-height: 1; } /* composition L1: resting glow removed — mono stats read as crisp instrument output, one fewer bloom competing for the eye */
 .stat .l { font-size: 10px; letter-spacing: var(--track-10); text-transform: uppercase; color: var(--muted); margin-top: 8px; }
 @media (max-width: 800px) { .about-grid { grid-template-columns: 1fr; } .about-portrait { max-width: 420px; } }
 
@@ -582,6 +582,11 @@ section { position: relative; }
 .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(10px, 1.4vw, 18px); }
 @media (max-width: 880px) { .gallery-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 400px) { .gallery-grid { grid-template-columns: 1fr; } }
+/* Composition lever 6+7: one cinematic letterbox break in the otherwise-uniform field —
+   the first tile spans two columns at a wide ~8:5 aspect so one image anchors the eye
+   and the rest read as deliberate repetition. Span clamps cleanly at the 2-col/1-col
+   breakpoints; 8:5 keeps its height ≈ its row-mate so row one stays even. */
+.shot.feature { grid-column: span 2; aspect-ratio: 8 / 5; }
 .shot { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border: 1px solid var(--line);
   cursor: none; transition: border-color .4s, box-shadow .4s; background: var(--void-2); }
 .shot:hover { border-color: var(--cyan); box-shadow: 0 0 30px rgba(57,240,255,0.22); }
