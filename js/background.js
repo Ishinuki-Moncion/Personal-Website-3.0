@@ -144,12 +144,12 @@
     return nameObject(new THREE.Points(geo, mat), geo.name);
   }
   const fieldCyan = makeField(quality.fieldCounts[0], CYAN, 46, 0.05, 0.9);
-  // v3.1 calm-the-signals: the mid field was AMBER at α.8 — the #1 warm-budget
-  // violation (amber as wallpaper). Recoloured to the deep field's cool blue and
-  // dimmed; amber now only appears as events (Tokyo node, arc replay, LIVE tags).
-  const fieldBlue = makeField(quality.fieldCounts[1], 0x6fb7ff, 36, 0.06, 0.5);
+  // Owner decision 2026-07-07: the cyan+orange two-temperature starfield is the
+  // site's signature — restored to its original timeline values (AMBER α.8) after
+  // v3.1 briefly cooled it; scarcity now comes from the calmed arc/labels instead.
+  const fieldAmber = makeField(quality.fieldCounts[1], AMBER, 36, 0.06, 0.8);
   const fieldDeep = makeField(quality.fieldCounts[2], 0x6fb7ff, 70, 0.035, 0.5);
-  scene.add(fieldCyan, fieldBlue, fieldDeep);
+  scene.add(fieldCyan, fieldAmber, fieldDeep);
 
   // ---- TOKYO DATA-GLOBE ----------------------------------------------------
   // coreGroup carries the mouse gyro tilt; `spin` (its child) carries the
@@ -1618,7 +1618,7 @@
 
     // (a) Tag emitters — userData.bloom keeps their real material through the dark pass.
     //     Source intensities already sit in [0,1]; bloom is a blow-out multiplier (R14).
-    [fieldCyan, fieldBlue, tokyoRing, pingRing, comet].forEach(o => { o.userData.bloom = true; });
+    [fieldCyan, fieldAmber, tokyoRing, pingRing, comet].forEach(o => { o.userData.bloom = true; });
     tokyoHalo.glow.userData.bloom = true;                       // glow Sprite (makeGlowSprite, 497)
     tokyoHalo.rings.forEach(r => { r.userData.bloom = true; }); // ring meshes/line (487-491)
     // Inline-added objects (no variable handle) — tag by their nameObject() name:
@@ -1752,7 +1752,14 @@
 
     // (e) Dark-material-swap (official pattern; depthWrite:false preserves the scene's
     //     real no-occlusion property since every emitter is additive/depthWrite:false).
-    const darkMat    = new THREE.MeshBasicMaterial({ color: 0x000000, depthWrite: false });
+    /* v3.1g: a MeshBasicMaterial on THREE.Points leaves gl_PointSize UNWRITTEN —
+       undefined per GLSL ES, so many GPUs rasterized the untagged deep starfield as
+       random-sized opaque black squares in the bloom buffer: square bloom-holes that
+       drifted with the field (the owner's "dark squares stuttering"). Every untagged
+       object now swaps to a type-correct fully-invisible material instead — safe
+       because this scene has no occluders by design (all emitters additive). */
+    const darkMat    = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false });
+    const darkPoints = new THREE.PointsMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false, size: 0.001 });
     /* v3.1f: SpriteMaterial defaults transparent:true, so a plain black swap kept the
        untagged canvas sprites (halo labels, callout, scan tag) in the TRANSPARENT queue
        as opaque black quads — each one stamped its rectangle over the additive emitters
@@ -1764,7 +1771,8 @@
     const darken = o => {
       if (o.userData.bloom) return;
       if (o.isSprite) { matCache.set(o, o.material); o.material = darkSprite; }
-      else if (o.isMesh || o.isPoints || o.isLine) { matCache.set(o, o.material); o.material = darkMat; }
+      else if (o.isPoints) { matCache.set(o, o.material); o.material = darkPoints; }
+      else if (o.isMesh || o.isLine) { matCache.set(o, o.material); o.material = darkMat; }
     };
     const restore = o => { const m = matCache.get(o); if (m) { o.material = m; matCache.delete(o); } };
 
@@ -1892,7 +1900,7 @@
     const drift = 0.7 + 0.6 * Math.sin(t * 0.31) * Math.sin(t * 0.113 + 1.7);
 
     fieldCyan.rotation.y -= 0.0004 * f * drift;
-    fieldBlue.rotation.x += 0.0005 * f * drift;
+    fieldAmber.rotation.x += 0.0005 * f * drift;
     fieldDeep.rotation.y += 0.0002 * f;
     grid.position.z = ((t * 6 + scrollN * 70) % 4) - 2;
 

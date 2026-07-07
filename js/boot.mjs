@@ -14,7 +14,7 @@ import { OutputPass }      from 'three/addons/postprocessing/OutputPass.js';
 window.POST = { EffectComposer, RenderPass, ShaderPass, UnrealBloomPass, OutputPass };
 
 // Same order + ?v= as the old classic <script> tags (index.html:339-343).
-const V = { bg: '4.1', boot: '3.1', cursor: '3.1', fx: '3.5', app: '3.4' };
+const V = { bg: '4.2', boot: '3.1', cursor: '3.1', fx: '3.5', app: '3.4' };
 await import(`./background.js?v=${V.bg}`);
 await import(`./boot.js?v=${V.boot}`);
 await import(`./cursor.js?v=${V.cursor}`);
