@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@200;400&family=JetBrains+Mono:wght@400;500&family=M+PLUS+Rounded+1c:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/site.css?v=3.21" />
+<link rel="stylesheet" href="css/site.css?v=3.22" />
 </head>
 <body data-booting>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -90,12 +90,12 @@
 
 <!-- ============ SCROLL HUD ============ -->
 <div class="scroll-hud" aria-hidden="true">
-  <a href="#home" data-sec="home"><span class="lbl">Home</span><span class="tick"></span></a>
-  <a href="#about" data-sec="about"><span class="lbl">About</span><span class="tick"></span></a>
-  <a href="#work" data-sec="work"><span class="lbl">Work</span><span class="tick"></span></a>
-  <a href="#gallery" data-sec="gallery"><span class="lbl">Gallery</span><span class="tick"></span></a>
-  <a href="#projects" data-sec="projects"><span class="lbl">Projects</span><span class="tick"></span></a>
-  <a href="#contact" data-sec="contact"><span class="lbl">Contact</span><span class="tick"></span></a>
+  <a href="#home" data-sec="home" tabindex="-1"><span class="lbl">Home</span><span class="tick"></span></a>
+  <a href="#about" data-sec="about" tabindex="-1"><span class="lbl">About</span><span class="tick"></span></a>
+  <a href="#work" data-sec="work" tabindex="-1"><span class="lbl">Work</span><span class="tick"></span></a>
+  <a href="#gallery" data-sec="gallery" tabindex="-1"><span class="lbl">Gallery</span><span class="tick"></span></a>
+  <a href="#projects" data-sec="projects" tabindex="-1"><span class="lbl">Projects</span><span class="tick"></span></a>
+  <a href="#contact" data-sec="contact" tabindex="-1"><span class="lbl">Contact</span><span class="tick"></span></a>
 </div>
 
 <main id="main">
@@ -294,7 +294,7 @@
 </main>
 
 <!-- ============ LIGHTBOX ============ -->
-<div class="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer" aria-hidden="true">
+<div class="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer" aria-hidden="true" inert>
   <div class="lb-meta" translate="no"><span class="lb-id">IMG_01</span><br /><span class="lb-exif">EXIF//REDACTED</span><br />SELECTED ARCHIVE</div>
   <button class="lb-close" data-cursor="close">CLOSE ✕</button>
   <div class="lb-stage">
@@ -313,10 +313,10 @@
 </div>
 
 <!-- ============ CONTROL DECK ============ -->
-<button class="deck-toggle" aria-label="Open control deck" aria-expanded="false" data-cursor="tweak">
+<button class="deck-toggle" aria-controls="deck" aria-label="Open control deck" aria-expanded="false" data-cursor="tweak">
   <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round"><g class="gear"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></g></svg>
 </button>
-<div class="deck" role="dialog" aria-modal="true" aria-label="Control deck" aria-hidden="true">
+<div class="deck" id="deck" role="group" aria-label="Control deck" aria-hidden="true" inert>
   <h4>Control Deck</h4>
   <div class="grp">
     <label>Hero entrance</label>
@@ -357,6 +357,6 @@
 
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
 
-<script type="module" src="js/boot.mjs?v=12"></script>
+<script type="module" src="js/boot.mjs?v=13"></script>
 </body>
 </html>

@@ -42,6 +42,19 @@
   --track-13: 0.04em;
 
   --shell: min(1440px, 100%);
+
+  /* v3.2h — tokenized z-ladder (fixed stack law). Values preserve the working
+     order except boot, which now outranks the lightbox (confirmed defect: deck
+     "Reboot sequence" fired under an open lightbox played the boot underneath).
+     Cursor (9998/9999) and skip-link (9999) deliberately stay topmost, hardcoded. */
+  --z-scene: 0;
+  --z-content: 1;
+  --z-scrollhud: 95;
+  --z-nav: 100;
+  --z-deck: 200;
+  --z-menu: 9300;
+  --z-lightbox: 9500;
+  --z-boot: 9600;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -90,7 +103,7 @@ body[data-booting] { overflow: hidden; }
    Layered scene roots
    ============================================================ */
 #scene-root {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  position: fixed; inset: 0; z-index: var(--z-scene); pointer-events: none;
   transition: opacity 1.2s var(--ease-out);
 }
 .scene-debug {
@@ -107,7 +120,7 @@ body[data-booting] { overflow: hidden; }
 .scene-atmosphere {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: var(--z-scene);
   pointer-events: none;
   overflow: hidden;
   opacity: 1;
@@ -192,7 +205,7 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
    BOOT sequence
    ============================================================ */
 .boot {
-  position: fixed; inset: 0; z-index: 9000; background: var(--void-deep);
+  position: fixed; inset: 0; z-index: var(--z-boot); background: var(--void-deep);
   display: flex; flex-direction: column; justify-content: center;
   padding: clamp(20px, 6vw, 90px); overflow: hidden;
   font-family: var(--font-mono);
@@ -239,7 +252,7 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
    NAV
    ============================================================ */
 .nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  position: fixed; top: 0; left: 0; right: 0; z-index: var(--z-nav);
   padding: 18px clamp(20px, 4vw, 40px);
   display: flex; align-items: center; justify-content: space-between;
   transition: opacity 1s var(--ease-out), background .4s, backdrop-filter .4s, padding .4s;
@@ -264,9 +277,9 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
   margin-right: 4px; transform: translateX(6px); display: inline-block; transition: .3s; }
 .nav-link::after { content: ']'; color: var(--amber); opacity: 0;
   margin-left: 4px; transform: translateX(-6px); display: inline-block; transition: .3s; }
-.nav-link:hover, .nav-link.active { color: var(--cyan); }
-.nav-link:hover::before, .nav-link.active::before,
-.nav-link:hover::after, .nav-link.active::after { opacity: 0.8; transform: translateX(0); }
+.nav-link:hover, .nav-link:focus-visible, .nav-link.active { color: var(--cyan); }
+.nav-link:hover::before, .nav-link:focus-visible::before, .nav-link.active::before,
+.nav-link:hover::after, .nav-link:focus-visible::after, .nav-link.active::after { opacity: 0.8; transform: translateX(0); }
 .nav-meta { font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--track-10); color: var(--muted);
   display: flex; flex-direction: column; align-items: flex-end; line-height: 1.5; white-space: nowrap; }
 .nav-meta span { white-space: nowrap; }
@@ -297,7 +310,7 @@ body.menu-open .nav-burger span:nth-child(3) { transform: translateY(-6.5px) rot
 /* ============================================================
    MOBILE MENU overlay
    ============================================================ */
-.mobile-menu { position: fixed; inset: 0; z-index: 9300; background: rgba(3,4,7,0.97);
+.mobile-menu { position: fixed; inset: 0; z-index: var(--z-menu); background: rgba(3,4,7,0.97);
   backdrop-filter: blur(10px); display: flex; flex-direction: column;
   padding: clamp(20px, 6vw, 40px); opacity: 0; visibility: hidden; pointer-events: none;
   transform: translateY(-10px);
@@ -348,7 +361,7 @@ body.menu-open .mm-links a:nth-child(6) { transition-delay: .42s; }
 
 /* scroll progress + section HUD (right rail) */
 .scroll-hud {
-  position: fixed; top: 50%; right: 18px; transform: translateY(-50%); z-index: 95;
+  position: fixed; top: 50%; right: 18px; transform: translateY(-50%); z-index: var(--z-scrollhud);
   display: flex; flex-direction: column; gap: 14px; align-items: flex-end;
   transition: opacity 1s var(--ease-out); mix-blend-mode: difference;
 }
@@ -369,7 +382,7 @@ body.menu-open .mm-links a:nth-child(6) { transition-delay: .42s; }
 /* ============================================================
    Layout shells + section labels
    ============================================================ */
-main { position: relative; z-index: 1; transition: opacity 1s var(--ease-out); }
+main { position: relative; z-index: var(--z-content); transition: opacity 1s var(--ease-out); }
 section { position: relative; }
 .shell { width: var(--shell); margin: 0 auto; padding-inline: clamp(20px, 4vw, 40px); }
 
@@ -540,8 +553,8 @@ section { position: relative; }
   background: linear-gradient(90deg, var(--cyan), transparent); box-shadow: 0 0 10px var(--cyan);
   transform: scaleX(0); transform-origin: left;
   transition: transform .6s var(--ease-out); }
-.row:hover::before { transform: scaleX(1); }
-.row:hover { background: linear-gradient(90deg, rgba(57,240,255,0.04), transparent 70%); }
+.row:hover::before, .row:focus-visible::before { transform: scaleX(1); }
+.row:hover, .row:focus-visible { background: linear-gradient(90deg, rgba(57,240,255,0.04), transparent 70%); }
 .work-grid { display: grid; grid-template-columns: 7fr 5fr; gap: clamp(16px, 3vw, 44px); align-items: baseline; }
 .proj-grid { display: grid; grid-template-columns: auto 7fr 4fr; gap: clamp(12px, 2.5vw, 44px); align-items: baseline; }
 .row-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
@@ -554,7 +567,7 @@ section { position: relative; }
 @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
 .row-title { font-weight: 200; letter-spacing: -0.02em; line-height: 1.02;
   font-size: clamp(26px, 4.4vw, 56px); color: var(--fg); transition: color .35s, text-shadow .35s; }
-.row:hover .row-title { color: var(--cyan); text-shadow: 0 0 24px rgba(57,240,255,0.4); }
+.row:hover .row-title, .row:focus-visible .row-title { color: var(--cyan); text-shadow: 0 0 24px rgba(57,240,255,0.4); }
 .row-sub { margin-top: 8px; font-size: clamp(14px, 1.2vw, 18px); color: var(--muted); }
 .row-desc { font-size: clamp(15px, 1.2vw, 18px); line-height: 1.55; color: var(--fg); max-width: 42ch; }
 .proj-idx { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: var(--track-12);
@@ -566,11 +579,11 @@ section { position: relative; }
 .tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
 .tag { font-family: var(--font-mono); font-size: 10px; color: var(--cyan); border: 1px solid var(--line);
   padding: 3px 8px; transition: .25s; }
-.row:hover .tag { border-color: var(--line-strong); }
+.row:hover .tag, .row:focus-visible .tag { border-color: var(--line-strong); }
 .tag:hover { border-color: var(--cyan); }
 .row-arrow { font-family: var(--font-mono); color: var(--cyan); display: inline-block;
   transition: transform .35s var(--ease-out); }
-.row:hover .row-arrow { transform: translate(4px, -4px); }
+.row:hover .row-arrow, .row:focus-visible .row-arrow { transform: translate(4px, -4px); }
 .row-end-rule { border-top: 1px solid var(--line); }
 @media (max-width: 720px) {
   .work-grid, .proj-grid { grid-template-columns: 1fr; }
@@ -629,7 +642,7 @@ section { position: relative; }
 }
 .shot { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border: 1px solid var(--line);
   cursor: none; transition: border-color .4s, box-shadow .4s; background: var(--void-2); }
-.shot:hover { border-color: var(--cyan); box-shadow: 0 0 30px rgba(57,240,255,0.22); }
+.shot:hover, .shot:focus-visible { border-color: var(--cyan); box-shadow: 0 0 30px rgba(57,240,255,0.22); }
 /* v3.1 — photos join the world: dim-at-rest (sunk into the noir frame),
    full-on-demand (hover/keyboard focus lifts the filter entirely; the lightbox
    is the full-color payoff). Transition covered by the reduced-motion kill-switch. */
@@ -640,19 +653,21 @@ section { position: relative; }
 .shot .sweep { position: absolute; inset: 0; pointer-events: none; opacity: 0;
   background: linear-gradient(180deg, transparent, rgba(57,240,255,0.12), transparent);
   transition: opacity .3s; }
-.shot:hover .sweep { opacity: 1; animation: shotScan 1.4s linear infinite; }
+.shot:hover .sweep, .shot:focus-visible .sweep { opacity: 1; animation: shotScan 1.4s linear infinite; }
 @keyframes shotScan { from { transform: translateY(-100%); } to { transform: translateY(100%); } }
 .shot .id { position: absolute; top: 8px; left: 10px; font-family: var(--font-mono); font-size: 10px;
   color: var(--cyan); opacity: 0; transform: translateY(-4px); transition: .35s; text-shadow: 0 0 8px rgba(57,240,255,0.6); }
 .shot .plus { position: absolute; bottom: 8px; right: 10px; font-family: var(--font-mono); font-size: 13px;
   color: var(--cyan); opacity: 0; transition: .35s; }
-.shot:hover .id, .shot:hover .plus { opacity: 0.95; transform: translateY(0); }
+.shot:hover .id, .shot:focus-visible .id, .shot:hover .plus, .shot:focus-visible .plus { opacity: 0.95; transform: translateY(0); }
 
 /* lightbox */
-.lightbox { position: fixed; inset: 0; z-index: 9500; background: rgba(2,3,6,0.96);
+.lightbox { position: fixed; inset: 0; z-index: var(--z-lightbox); background: rgba(2,3,6,0.96);
   backdrop-filter: blur(8px); display: flex; flex-direction: column; opacity: 0; pointer-events: none;
-  transition: opacity .4s var(--ease-out); }
-.lightbox.open { opacity: 1; pointer-events: auto; }
+  visibility: hidden;
+  transition: opacity .4s var(--ease-out), visibility 0s linear .4s; }
+.lightbox.open { opacity: 1; pointer-events: auto; visibility: visible;
+  transition: opacity .4s var(--ease-out), visibility 0s; }
 .lb-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: clamp(40px,6vw,90px) 20px 20px; position: relative; }
 .lb-img { max-height: 80vh; max-width: 92vw; object-fit: contain; border: 1px solid var(--line);
   box-shadow: 0 0 60px rgba(0,0,0,0.7); transition: opacity .35s, transform .5s var(--ease-out); }
@@ -724,18 +739,20 @@ html[lang="ja"] .hero-kicker span { letter-spacing: 0.14em; }
 /* ============================================================
    CONTROL DECK (HUD settings panel)
    ============================================================ */
-.deck-toggle { position: fixed; bottom: 22px; left: 22px; z-index: 200; width: 42px; height: 42px;
+.deck-toggle { position: fixed; bottom: 22px; left: 22px; z-index: var(--z-deck); width: 42px; height: 42px;
   border: 1px solid var(--line); background: var(--panel-solid); backdrop-filter: blur(8px);
   display: grid; place-items: center; cursor: none; transition: .25s; }
 .deck-toggle:hover { border-color: var(--cyan); box-shadow: 0 0 16px rgba(57,240,255,0.3); }
 .deck-toggle svg { width: 18px; height: 18px; stroke: var(--cyan); }
 .deck-toggle .gear { transition: transform .6s var(--ease-out); }
 .deck-toggle:hover .gear { transform: rotate(90deg); }
-.deck { position: fixed; bottom: 74px; left: 22px; z-index: 200; width: 250px;
+.deck { position: fixed; bottom: 74px; left: 22px; z-index: var(--z-deck); width: 250px;
   background: var(--panel-solid); backdrop-filter: blur(12px); border: 1px solid var(--line-strong);
   padding: 16px; transform: translateY(12px) scale(0.96); opacity: 0; pointer-events: none;
-  transition: .3s var(--ease-out); }
-.deck.open { transform: none; opacity: 1; pointer-events: auto; }
+  visibility: hidden;
+  transition: opacity .3s var(--ease-out), transform .3s var(--ease-out), visibility 0s linear .3s; }
+.deck.open { transform: none; opacity: 1; pointer-events: auto; visibility: visible;
+  transition: opacity .3s var(--ease-out), transform .3s var(--ease-out), visibility 0s; }
 .deck h4 { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
   color: var(--cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
 .deck h4::before { content: '◆'; color: var(--muted); font-size: 8px; }

@@ -102,8 +102,9 @@ check(
 );
 
 check('atmosphere sits below main content',
-  /\.scene-atmosphere\s*\{[^}]*z-index:\s*0\b/.test(css),
-  '.scene-atmosphere must render beneath main so content is not tinted');
+  /\.scene-atmosphere\s*\{[^}]*z-index:\s*var\(--z-scene\)/.test(css) &&
+    /--z-scene:\s*0\b/.test(css),
+  '.scene-atmosphere must render beneath main so content is not tinted (v32h: via the --z-scene token, pinned to 0)');
 
 check('depth rain renders as camera-space parallax particle layers',
   /makeDepthRain/.test(background) && /depth-rain/.test(background) &&
@@ -248,6 +249,19 @@ check(
     /dataset\.meta/.test(app) &&
     /class="lb-exif"/.test(index),
   'every .shot bakes data-meta from mdls (stripped files = EXIF//REDACTED) + a data-title; the lightbox meta reads dataset.meta; the known-real gallery-03 bake (ƒ/16 · 1/50s · ISO 100 · 50mm) must stay pinned'
+);
+
+check(
+  'v32h: z-ladder tokens exist, boot outranks the lightbox, closed overlays are inert',
+  (() => {
+    const g = n => { const m = css.match(new RegExp('--z-' + n + ':\\s*(\\d+)')); return m ? parseInt(m[1], 10) : NaN; };
+    const order = g('scene') < g('content') && g('content') < g('scrollhud') && g('scrollhud') < g('nav') &&
+      g('nav') < g('deck') && g('deck') < g('menu') && g('menu') < g('lightbox') && g('lightbox') < g('boot');
+    return order && /class="lightbox"[^>]*\binert\b/.test(index) && /class="deck"[^>]*\binert\b/.test(index) &&
+      /lb\.inert/.test(app) && /deck\.inert/.test(app) && /trapTab/.test(app) &&
+      !/<div class="deck"[^>]*aria-modal/.test(index);
+  })(),
+  'the --z-* ladder must exist with boot above lightbox; closed lightbox/deck must be inert; deck uses disclosure semantics'
 );
 
 const failed = checks.filter(item => !item.pass);

@@ -218,19 +218,29 @@
      open, restore it on close — without this a keyboard user is left tabbing
      the page underneath an open modal. */
   let lbReturnFocus = null;
+  /* v32h — overlays are visibility-gated while closed, and Blink applies the closed
+     state's transition delay on the opening edge, so the focus target can stay
+     computed-hidden (unfocusable) for up to ~.45s after open. Retry until it lands. */
+  function focusWhenFocusable(el, tries = 10) {
+    if (!el) return;
+    el.focus();
+    if (document.activeElement !== el && tries > 0) setTimeout(() => focusWhenFocusable(el, tries - 1), 80);
+  }
   function openLb(i) {
     if (!lb) return;
     lbReturnFocus = document.activeElement;
     show(i);
+    lb.inert = false;                       // un-inert BEFORE moving focus in
     lb.classList.add('open');
     lb.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    const c = $('.lb-close'); if (c) c.focus();
+    focusWhenFocusable($('.lb-close'));
   }
   function closeLb() {
     if (!lb) return;
     lb.classList.remove('open');
     lb.setAttribute('aria-hidden', 'true');
+    lb.inert = true;
     document.body.style.overflow = '';
     if (lbReturnFocus && lbReturnFocus.focus) lbReturnFocus.focus();
     lbReturnFocus = null;
@@ -241,19 +251,21 @@
   $('.lb-prev') && $('.lb-prev').addEventListener('click', () => show(lbIndex - 1));
   $('.lb-next') && $('.lb-next').addEventListener('click', () => show(lbIndex + 1));
   lb && lb.addEventListener('click', e => { if (e.target === lb || e.target.classList.contains('lb-stage')) closeLb(); });
+  /* Tab trap shared by every fullscreen overlay (lightbox + mobile menu):
+     cycle focus among the container's visible interactive elements. */
+  function trapTab(container, e) {
+    const f = [...container.querySelectorAll('button, a[href]')].filter(el => el.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
   addEventListener('keydown', e => {
     if (!lb || !lb.classList.contains('open')) return;
     if (e.key === 'Escape') closeLb();
     else if (e.key === 'ArrowLeft') show(lbIndex - 1);
     else if (e.key === 'ArrowRight') show(lbIndex + 1);
-    else if (e.key === 'Tab') {
-      // trap Tab inside the open lightbox
-      const f = [...lb.querySelectorAll('button')].filter(b => b.offsetParent !== null);
-      if (!f.length) return;
-      const first = f[0], last = f[f.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    }
+    else if (e.key === 'Tab') trapTab(lb, e);
   });
 
   // touch swipe inside the lightbox
@@ -277,7 +289,7 @@
     document.body.style.overflow = open ? 'hidden' : '';
     if (open) {
       menuReturnFocus = document.activeElement;
-      const c = $('.mm-close'); if (c) c.focus();
+      focusWhenFocusable($('.mm-close'));
     } else if (menuReturnFocus && menuReturnFocus.focus) {
       menuReturnFocus.focus(); menuReturnFocus = null;
     }
@@ -285,13 +297,18 @@
   burger && burger.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open')));
   $('.mm-close') && $('.mm-close').addEventListener('click', () => setMenu(false));
   $$('.mm-links a').forEach(a => a.addEventListener('click', () => setMenu(false)));
-  addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) setMenu(false); });
+  addEventListener('keydown', e => {
+    if (!document.body.classList.contains('menu-open')) return;
+    if (e.key === 'Escape') setMenu(false);
+    else if (e.key === 'Tab' && mmenu) trapTab(mmenu, e);
+  });
 
   /* ---------------- CONTROL DECK ---------------- */
   const deck = $('.deck');
   const deckToggle = $('.deck-toggle');
   function setDeck(open) {
     if (!deck || !deckToggle) return;
+    deck.inert = !open;
     deck.classList.toggle('open', open);
     deck.setAttribute('aria-hidden', open ? 'false' : 'true');
     deckToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
