@@ -94,6 +94,18 @@ No CSS test runner (SP1–SP5c method) → **grep-gates + browser eyeball + diff
 - **`tabular-nums` on `.geo-line`.** If `.geo-line` is pure text (no digits), `tabular-nums` is a harmless no-op and `slashed-zero` never triggers — no regression; the unification is still correct intent.
 - **Reduced-motion / a11y.** Static-text change only; `runCounter` already honors `reduced`; `.sr-only` counter value (`100+`) untouched. Nothing new animates.
 
-## §8 — Decision record — SP5d (to be completed at build)
+## §8 — Decision record — SP5d COMPLETE (2026-07-07)
 
-*(Fill on completion: feature commits, gates A–F results, eyeball notes, whether the slashed-zero fallback or a mono-weight tune was applied, and the NEXT pointer.)*
+Built inline via executing-plans. **2 feature commits on `v3-build`:**
+- `c632c7e` — Task 1: `.stat .n` Hanken→**JetBrains Mono weight 400** (`css/site.css:498`; dropped the `--font-display` override → inherits `--font-mono` from `.stat`); tabular declaration (`:693-695`) `tabular-nums` → **`tabular-nums slashed-zero`** + added **`.geo-line`** (L4) and **`.boot-pct`** (L7) to the selector list; comment updated.
+- *(this commit)* — Task 2: `site.css?v` 3.11→3.12 + this record.
+
+**Gates A–F all PASS.**
+- **A** — tabular decl = `tabular-nums slashed-zero`; list includes `.geo-line` + `.boot-pct`; still the only `font-variant-numeric` in the file (grep count = 1).
+- **B** — `.stat .n` no longer sets `--font-display` (grep EMPTY); sets `font-weight: 400`.
+- **C** — `.boot-pct` + `.geo-line` in the list; ordinals `.mm-idx`/`.proj-idx` deliberately **not** added.
+- **D** (browser, `localhost:8080`, `?v=3.12`) — About stat row: **`100+` renders in JetBrains Mono** (monospace, weight 400, cyan + glow from `:499` preserved) — a clear read-shift from the old thin Hanken to instrument output; **the zeros render disambiguated (dotted)** — `slashed-zero` takes on the Google-served JetBrains Mono build, so **no `font-feature-settings` fallback needed**, and weight 400 sits well beside its `N3`/`東京` siblings so **no weight tune applied**. Reading copy (the "A Tokyo-based developer & photographer." head + bios) stays Hanken sentence-case; the section ordinal `[ 02 ]` stays muted/plain (correctly outside slashed-zero). Globe/scene/HUD unchanged. Mono is fixed-width, so the count-up cannot wobble. *(Note: the `.geo-line` visible near the globe with live coordinates is a **canvas** scan-tag in Rajdhani, not the DOM `.geo-line` — the DOM readouts are the stat row and coord clusters; the CSS change is scoped to DOM as intended.)*
+- **E** — code scope = `css/site.css` + `index.html` (the `?v` bump only, no markup); **no `js/`** (0 js files touched).
+- **F** — `site.css?v=3.12`.
+
+**No fallback or tune needed.** **NEXT (this session's autonomous run, owner-delegated):** L3 tracking-scale → Bilingual (L5/L6) → HUD P5/P8 → Composition → Motion-2, then push + report. Owner-data debts (SP3 photo→city labels, project/district geo) left for the owner.
