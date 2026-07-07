@@ -140,6 +140,7 @@
   const lbImg = $('.lb-img');
   const lbPos = $('.lb-pos');
   const lbId = $('.lb-id');
+  const lbExif = $('.lb-exif');
   const strip = $('.lb-strip');
   const shots = $$('.shot');
   const sources = shots.map(s => s.getAttribute('data-src'));
@@ -164,7 +165,10 @@
   /* Image strategy: inline styles ship 140px thumbs as instant placeholders;
      the 640px tile swaps in when a shot nears the viewport; only the lightbox
      ever touches the full-size originals. */
-  shots.forEach((s, i) => s.setAttribute('aria-label', 'View photograph ' + (i + 1) + ' full screen'));
+  shots.forEach((s, i) => {
+    const t = s.getAttribute('data-title');
+    s.setAttribute('aria-label', 'View photograph ' + (i + 1) + (t ? ' — ' + t : '') + ' full screen');
+  });
   const upgradeTile = s => {
     const m = s.querySelector('.media'), src = s.getAttribute('data-src');
     if (m && src) m.style.backgroundImage = `url("${src.replace('images/', 'images/tiles/')}")`;
@@ -197,12 +201,14 @@
       lbImg.classList.add('swapping');
       setTimeout(() => {
         lbImg.src = sources[lbIndex];
-        lbImg.alt = 'Gallery photograph ' + (lbIndex + 1) + ' of ' + sources.length;
+        const t = shots[lbIndex] && shots[lbIndex].getAttribute('data-title');
+        lbImg.alt = (t ? t + ' — ' : '') + 'gallery photograph ' + (lbIndex + 1) + ' of ' + sources.length;
         lbImg.classList.remove('swapping');
       }, 180);
     }
     if (lbPos) lbPos.textContent = String(lbIndex + 1).padStart(2, '0') + ' / ' + String(sources.length).padStart(2, '0');
     if (lbId) lbId.textContent = 'IMG_' + String(lbIndex + 1).padStart(2, '0');
+    if (lbExif) lbExif.textContent = (shots[lbIndex] && shots[lbIndex].dataset.meta) || 'EXIF//REDACTED';
     thumbs.forEach((t, k) => t.classList.toggle('active', k === lbIndex));
     const active = thumbs[lbIndex];
     if (active && active.scrollIntoView) { /* avoid scrollIntoView per guidance */ }

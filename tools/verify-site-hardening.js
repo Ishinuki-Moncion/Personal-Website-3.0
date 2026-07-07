@@ -238,6 +238,17 @@ check(
   'contact needs the SIGNAL // row; the address must be JS-assembled, never plaintext in any committed file'
 );
 
+check(
+  'v32g: gallery EXIF is real per-photo data, never the fabricated universal readout',
+  !index.includes('ƒ/2.8 · 1/250s') &&
+    (index.match(/data-meta="/g) || []).length === 12 &&
+    /EXIF\/\/REDACTED/.test(index) &&
+    (index.match(/data-title="/g) || []).length === 12 &&
+    /dataset\.meta/.test(app) &&
+    /class="lb-exif"/.test(index),
+  'every .shot bakes data-meta from mdls (stripped files = EXIF//REDACTED) + a data-title; the lightbox meta reads dataset.meta'
+);
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';
