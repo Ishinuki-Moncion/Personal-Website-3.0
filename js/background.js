@@ -1452,14 +1452,21 @@
   /* v3.2m — eased focus-bias: while a story window is open the spin drifts
      toward the focused place so the callout's facing gate (:1930) is met when
      the beat fires; afterwards it decays back to pure autonomous drift.
-     SUBLIMINAL-SLOW constraint: BIAS_MAX_RADS_PER_SEC caps the ADDED angular
-     velocity at ~2× the autonomous 0.066 rad/s — below a conscious "gesture".
-     ONE-SIGNAL RULE: the boxed state-word remains the section's one signal;
-     this bias must never read as a second one. It cannot cover >~0.7 rad in a
-     window by design — partial facing is accepted over a perceptible lurch. */
+     ONE-SIGNAL RULE (v3.2m retune): the boxed state-word is the section's ONE
+     signal; the bias must never read as a second one. The ADDED angular velocity
+     cap is held STRICTLY BELOW the autonomous spin rate (0.22·0.3 = 0.066 rad/s,
+     see spinBase at :2030) so total y-velocity = 0.066 ± cap stays strictly
+     POSITIVE — the globe only ever speeds up or gently slows the forward drift,
+     it can never null, freeze, or reverse (any of which the eye reads as a
+     second beat). At 0.045 the far-side worst case still floors at 0.021 rad/s
+     forward while catch-up runs 0.111 rad/s (~1.7×); max deflection ≈ cap·window
+     ≈ 0.27 rad — partial facing accepted over a perceptible steer. A ~0.3s
+     smoothstep onset ramps the added velocity in (matching the decay's ease-out)
+     so neither edge is a velocity step. */
   let focusBias = 0, focusBiasT = 0;
-  const BIAS_MAX_RADS_PER_SEC = 0.12;
+  const BIAS_MAX_RADS_PER_SEC = 0.045;   // < autonomous 0.066 by construction — forward-only
   const BIAS_WINDOW_S = 6;
+  const BIAS_ONSET_S = 0.3;              // ease-in over the leading edge (no 0→cap velocity step)
   window.__sceneFocus = sectionId => {
     const story = sectionStories[sectionId] || sectionStories.home;
     const id = sectionStories[sectionId] ? sectionId : 'home';
@@ -2030,9 +2037,11 @@
     const spinBase = t * 0.22 + scrollN * 2.4;
     if (focusBiasT > 0) {          // chase: rate-capped P-controller (eases as it closes)
       focusBiasT = Math.max(0, focusBiasT - dt);
+      const os = Math.min(1, (BIAS_WINDOW_S - focusBiasT) / BIAS_ONSET_S);
+      const onset = os * os * (3 - 2 * os);      // smoothstep ease-in over the first BIAS_ONSET_S
       let e = (focusedA0 - Math.PI / 2 - (spinBase + focusBias)) % (Math.PI * 2);
       if (e > Math.PI) e -= Math.PI * 2; else if (e < -Math.PI) e += Math.PI * 2;
-      focusBias += Math.sign(e) * Math.min(BIAS_MAX_RADS_PER_SEC * dt, Math.abs(e) * 0.9 * dt);
+      focusBias += Math.sign(e) * Math.min(BIAS_MAX_RADS_PER_SEC * onset * dt, Math.abs(e) * 0.9 * dt);
     } else if (focusBias !== 0) {  // decay home at the same subliminal cap
       const back = Math.min(BIAS_MAX_RADS_PER_SEC * dt, Math.abs(focusBias) * 0.4 * dt);
       focusBias -= Math.sign(focusBias) * back;
