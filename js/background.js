@@ -848,6 +848,23 @@
   })();
   const calloutOffset = new THREE.Vector3(0, 0.45, 0);
 
+  // v3.2k — the callout bakes "BASE: JST HH:MM" into its texture at draw()
+  // time; with no periodic redraw it reads stale within a minute. Wake exactly
+  // at the next minute boundary (not 60x/min), redraw the FOCUSED place, skip
+  // work while the tab is hidden (visibilitychange repaints on return). A
+  // 1/min texture refresh of live data is clock truth, not idle animation.
+  (function alignCalloutClock() {
+    let t = null;
+    function wake() {
+      clearTimeout(t);
+      t = setTimeout(wake, 60000 - (Date.now() % 60000) + 50);
+      if (document.hidden) return;
+      callout.draw(placeById(focusedPlaceId));
+    }
+    t = setTimeout(wake, 60000 - (Date.now() % 60000) + 50);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+  })();
+
   // (e) Dallas -> Tokyo great-circle arc (SLERP, lifted at mid-flight) + comet
   const DALLAS = placeVector(DALLAS_PLACE, R);
   const ARC_SEG = 128;

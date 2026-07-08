@@ -53,6 +53,14 @@
   /* ---- collect animated elements ---- */
   let reveals = [], counters = [], parallaxEls = [];
 
+  /* v3.2k — one-shot coordinate decrypt (spec 3.6, "hero coordinates only"):
+     the site's signature Tokyo coordinate readout (contact footer .coord)
+     resolves once, on first reveal. Real text ships in the HTML — noscript and
+     print stay truthful; scramble supplies the placeholder frames itself.
+     One element only (no signal storm); no idle loop; reduced-motion takes
+     scramble's instant path. */
+  let coordEl = document.querySelector('.footer .coord');
+
   function bind() {
     document.querySelectorAll('[data-stagger]').forEach(group => {
       [...group.children].forEach((k, i) => k.style.setProperty('--d', (i * 0.07) + 's'));
@@ -89,6 +97,10 @@
     for (let i = counters.length - 1; i >= 0; i--) {
       const el = counters[i];
       if (el.getBoundingClientRect().top < vh * 0.85) { runCounter(el); counters.splice(i, 1); }
+    }
+    if (coordEl && coordEl.getBoundingClientRect().top < vh * 0.92) {
+      const el = coordEl; coordEl = null;             // one-shot, never re-arms
+      window.scramble(el, el.textContent, { duration: 900 });
     }
   }
 

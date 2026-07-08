@@ -8,6 +8,7 @@ const index = read('index.html');
 const app = read('js/app.js');
 const background = read('js/background.js');
 const css = read('css/site.css');
+const effects = read('js/effects.js');
 
 const checks = [];
 
@@ -291,6 +292,16 @@ check(
       !/family=Hanken\+Grotesk/.test(index) && !/family=JetBrains\+Mono/.test(index);
   })(),
   'share/crawl/no-JS/print surfaces must exist; Latin faces self-hosted (JP faces stay on CDN — recorded law exception)'
+);
+
+check(
+  'v32k: instrument micro-fidelity — readout unit, compact lb-pos, minute-aligned callout clock, one-shot coord decrypt',
+  /class="readout-unit"/.test(index) && /\.readout-unit \{/.test(css) &&
+    /padStart\(2, '0'\) \+ '\/' \+ String/.test(app) &&
+    /alignCalloutClock/.test(background) && /60000 - \(Date\.now\(\) % 60000\)/.test(background) &&
+    /coordEl/.test(effects) &&
+    index.includes('class="coord" translate="no" lang="ja"'),
+  'stat births the .readout pattern; lb-pos reads 01/12; the callout JST wakes on the minute; contact coords decrypt once on reveal; the whole-span .coord interface (translate="no" lang="ja") the decrypt consumes stays intact'
 );
 
 const failed = checks.filter(item => !item.pass);

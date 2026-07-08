@@ -212,7 +212,7 @@
         lbImg.classList.remove('swapping');
       }, 180);
     }
-    if (lbPos) lbPos.textContent = String(lbIndex + 1).padStart(2, '0') + ' / ' + String(sources.length).padStart(2, '0');
+    if (lbPos) lbPos.textContent = String(lbIndex + 1).padStart(2, '0') + '/' + String(sources.length).padStart(2, '0');
     if (lbId) lbId.textContent = 'IMG_' + String(lbIndex + 1).padStart(2, '0');
     if (lbExif) lbExif.textContent = (shots[lbIndex] && shots[lbIndex].dataset.meta) || 'EXIF//REDACTED';
     thumbs.forEach((t, k) => t.classList.toggle('active', k === lbIndex));
