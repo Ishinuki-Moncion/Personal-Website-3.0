@@ -275,6 +275,23 @@ check(
   'always-JP text nodes need lang="ja"; Work/Through the lens/Selected Work translate via data-ja; the toggle label announces its target'
 );
 
+check(
+  'v32j: the world beyond the viewport is real (meta/og/404/noscript/watchdog/print/JSON-LD/fonts)',
+  (() => {
+    const exists = f => fs.existsSync(path.join(root, f));
+    return /property="og:image"/.test(index) && /rel="canonical"/.test(index) &&
+      /name="twitter:card"/.test(index) && /rel="apple-touch-icon"/.test(index) &&
+      /<noscript>/.test(index) && /application\/ld\+json/.test(index) &&
+      /setTimeout\(reveal, 10000\)/.test(index) &&
+      exists('404.html') && fs.readFileSync(path.join(root, '404.html'), 'utf8').includes('SIGNAL LOST // 404') &&
+      exists('images/og.png') && exists('images/apple-touch-icon.png') &&
+      /@media print/.test(css) && /@font-face/.test(css) &&
+      exists('fonts/hanken-grotesk-latin.woff2') && exists('fonts/jetbrains-mono-latin.woff2') &&
+      !/family=Hanken\+Grotesk/.test(index) && !/family=JetBrains\+Mono/.test(index);
+  })(),
+  'share/crawl/no-JS/print surfaces must exist; Latin faces self-hosted (JP faces stay on CDN — recorded law exception)'
+);
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';
