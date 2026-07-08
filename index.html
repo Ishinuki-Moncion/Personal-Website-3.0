@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/site.css?v=3.24" />
+<link rel="stylesheet" href="css/site.css?v=3.25" />
 <noscript>
   <style>
     /* No-JS truth: kill the boot screen and reveal everything the engine would */
@@ -411,8 +411,10 @@ document.getElementById('year').textContent = new Date().getFullYear();
    forever. On any script error (capture phase catches resource failures) or
    after 10s, force-reveal the DOM content. No-ops when boot.js finished. */
 (function () {
+  var fired = false;
   function reveal() {
     if (!document.body.hasAttribute('data-booting')) return;
+    fired = true;
     var b = document.getElementById('boot');
     if (b && b.parentNode) b.parentNode.removeChild(b);
     document.body.removeAttribute('data-booting');
@@ -424,6 +426,12 @@ document.getElementById('year').textContent = new Date().getFullYear();
     if (t && t.tagName === 'SCRIPT') setTimeout(reveal, 0);
   }, true);
   setTimeout(reveal, 10000);
+  /* boot.js's finish() also adds .revealed — on a NORMAL boot drop it, so the
+     css force-reveal (body.revealed [data-reveal]) can't blank the scroll
+     choreography. The class means "watchdog force-revealed", nothing else. */
+  document.addEventListener('boot:done', function () {
+    if (!fired) document.body.classList.remove('revealed');
+  });
 })();
 </script>
 

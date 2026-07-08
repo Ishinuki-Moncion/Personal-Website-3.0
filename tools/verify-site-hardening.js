@@ -283,6 +283,7 @@ check(
       /name="twitter:card"/.test(index) && /rel="apple-touch-icon"/.test(index) &&
       /<noscript>/.test(index) && /application\/ld\+json/.test(index) &&
       /setTimeout\(reveal, 10000\)/.test(index) &&
+      /body\.revealed \[data-reveal\]/.test(css) &&
       exists('404.html') && fs.readFileSync(path.join(root, '404.html'), 'utf8').includes('SIGNAL LOST // 404') &&
       exists('images/og.png') && exists('images/apple-touch-icon.png') &&
       /@media print/.test(css) && /@font-face/.test(css) &&

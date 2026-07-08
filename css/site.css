@@ -113,8 +113,10 @@ button { font: inherit; color: inherit; background: none; border: none; }
 .muted { color: var(--muted); }
 
 /* hide-until-boot — the boot overlay is opaque and covers everything, so we
-   only need to lock scrolling; content sits underneath at full opacity and is
-   revealed by the boot wipe. Content is NEVER opacity-hidden by JS/animation. */
+   only need to lock scrolling; content sits underneath and is revealed by the
+   boot wipe. Below-the-fold [data-reveal] content DOES sit at opacity 0 until
+   app.js's observer lands .seen; if the module chain dies, the body.revealed
+   watchdog override (see "reveal primitives") force-shows it. */
 body[data-booting] { overflow: hidden; }
 
 /* ============================================================
@@ -431,6 +433,11 @@ section { position: relative; }
   transform: translateY(0); transition: transform 1s var(--ease-io); z-index: 2; }
 .clip-reveal.seen::after { transform: translateY(-101%); }
 .clip-reveal.seen img, .clip-reveal.seen .media { transform: scale(1); }
+
+/* watchdog force-reveal path (index.html) — app.js may never load, so .seen never arrives; a normal boot drops .revealed on boot:done */
+body.revealed [data-reveal] { opacity: 1 !important; transform: none !important; }
+body.revealed .clip-reveal::after { display: none; }
+body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important;
