@@ -508,7 +508,7 @@
         transparent: true, opacity: 0, depthWrite: false,
         blending: THREE.AdditiveBlending, color: 0xbfeaff,
       })), 'rain-layer-' + li);
-      pts.userData = { speeds: spd, halfW, halfH, baseOp: d.op };
+      pts.userData = { speeds: spd, halfW, halfH, baseOp: d.op, zMid: (d.z[0] + d.z[1]) / 2 };  // v3.2l: camera-space mid-depth for the per-plane well falloff
       pts.renderOrder = 3;
       group.add(pts);
       return pts;
@@ -669,8 +669,12 @@
         // v3.1f: 0.65 -> 0.22 — the lens samples the (bright, additive) WebGL frame,
         // and at 0.65 a droplet over a dark page gap read as a bright smudge on the
         // deep-black floor. Capped so a drop is never more than a faint glint.
+        // v3.2l: sample through worn glass — desaturated + dimmed (rain brief Lever A
+        // one-liner); Safari ignores ctx.filter (harmless no-op there).
+        ctx.filter = 'saturate(0.5) brightness(0.9)';
         ctx.globalAlpha = 0.22 * a;
         ctx.drawImage(src, (d.x - sr) * k, (d.y - sr) * k, sr * 2 * k, sr * 2 * k, -d.r, -d.r, d.r * 2, d.r * 2);
+        ctx.filter = 'none';
         ctx.restore();
         ctx.globalAlpha = 1;
       }
@@ -690,7 +694,7 @@
     function update(dt) {
       if ((skip = 1 - skip)) return;                 // ~30fps is plenty for glass
       dt = Math.min(dt * 2, 0.1);
-      spawnIn -= dt * (0.4 + sceneState.rain);
+      spawnIn -= dt * (0.4 + sceneState.rain * 0.6);   // v3.2l: rain is presence (≈1) now — rescaled to the old veil-era spawn rate
       if (spawnIn <= 0 && drops.length < cap) { spawn(); spawnIn = 1 + Math.random() * 2.4; }
       if (!drops.length) {
         if (fadeOut > 0) {
@@ -1274,11 +1278,48 @@
   ['pointermove', 'pointerdown', 'wheel', 'keydown', 'touchstart', 'scroll'].forEach(ev =>
     window.addEventListener(ev, () => { idleT = 0; }, { passive: true }));
   const RAIN_CYAN = new THREE.Color(0xbfeaff), RAIN_AMBER = new THREE.Color(0xffd2a0);
+  /* v3.2l — rain lever A (rain brief, the one never-built research surface):
+     rain is bright only where motivated light reaches it. ≤3 screen-space
+     falloff wells at projected emitter positions — Tokyo halo (the city IS
+     the lamp), the focused place node, and lightning while it flashes —
+     evaluated per PLANE, never per drop:
+        terminal opacity = baseOp × vis × beat × motivation
+     `vis` (sceneState.rain) is now a simple presence envelope (see
+     sectionStories); density/art-direction moved into the wells. LITE skips
+     all projection math: one flat veil (RAIN_LITE_VEIL). No new scene
+     objects/materials — the bloom dark-swap set is untouched. */
+  const MOTIV_FLOOR = 0.16;      // rain never fully dies while a section calls for weather (0.22→0.16: hero mean read +0.3 over baseline at 0.22 — retuned per the luminance gate)
+  const MOTIV_CAP   = 0.80;      // motivated rain always sits BELOW the retired flat-veil peaks
+  const RAIN_LITE_VEIL = 0.55;   // LITE: single flat veil ≤ every old per-section value
+  const WELL_DEPTH_SIGMA = 6.0;  // camera-Z reach of an emitter's light, world units
+  const TOKYO_HALO_LOCAL = TOKYO.clone().multiplyScalar(1.08);   // halo group's spin-local seat (:526)
+  const rainWells = [{ s: 0, z: 0 }, { s: 0, z: 0 }, { s: 0, z: 0 }];
+  const _wellP = new THREE.Vector3(), _wellN = new THREE.Vector3(), _wellC = new THREE.Vector3();
+  function setWell(well, worldV, strength) {
+    // world→screen: the exact path the DOM HUD reticle uses (interrogate(), :1577-1580)
+    // — matrixWorldInverse is one render stale here; irrelevant at falloff scale.
+    _wellC.copy(worldV).applyMatrix4(camera.matrixWorldInverse);   // camera-space depth
+    if (_wellC.z > -0.1) { well.s = 0; return; }                   // at/behind the camera — dark
+    _wellN.copy(worldV).project(camera);
+    const edge = Math.max(Math.abs(_wellN.x), Math.abs(_wellN.y));
+    well.s = strength * (1 - THREE.MathUtils.smoothstep(edge, 0.9, 1.5)); // screen-space falloff as the emitter leaves frame
+    well.z = _wellC.z;
+  }
   function updateDepthRain(dt, flash) {
     if (!depthRain) return;
     const vis = sceneState.rain;
     depthRain.group.visible = vis > 0.02;
     if (!depthRain.group.visible) return;
+    if (!LITE) {   // wells: 1 Tokyo halo, 2 focused place node, 3 lightning reach while active
+      _wellP.copy(TOKYO_HALO_LOCAL); spin.localToWorld(_wellP);
+      setWell(rainWells[0], _wellP, sceneState.halo * (0.30 + sceneState.haloPulse * 0.25 + sceneState.lockT * 0.20));
+      _wellP.copy(focusedPlaceId === 'dallas' ? DALLAS : TOKYO); spin.localToWorld(_wellP);
+      setWell(rainWells[1], _wellP, 0.15 + focusFlash * 0.20);
+      if (lightning && lightning.t > 0) {
+        _wellP.copy(lightning.sp.position); camera.localToWorld(_wellP);   // sprite is a camera child (:1093)
+        setWell(rainWells[2], _wellP, (flash || 0) * 0.9);
+      } else rainWells[2].s = 0;
+    }
     rainSway += dt;
     const wind = 0.10 + Math.sin(rainSway * 0.6) * 0.05 + Math.max(-0.6, Math.min(0.6, rainShear));
     const beat = 0.85 + sceneState.haloPulse * 0.5 + sceneState.lockT * 0.45 + (flash || 0) * 1.3;
@@ -1299,7 +1340,17 @@
         }
       }
       pts.geometry.attributes.position.needsUpdate = true;
-      pts.material.opacity = ud.baseOp * vis * beat;
+      // v3.2l terminal opacity = baseOp × vis × beat × motivation (per PLANE, not per drop)
+      let motivation = RAIN_LITE_VEIL;               // LITE: flat veil, zero projection math on phones
+      if (!LITE) {
+        let m = 0;
+        for (let wi = 0; wi < 3; wi++) {
+          const wl = rainWells[wi];
+          if (wl.s > 0) m += wl.s * Math.exp(-Math.abs(ud.zMid - wl.z) / WELL_DEPTH_SIGMA);
+        }
+        motivation = Math.min(MOTIV_CAP, MOTIV_FLOOR + m);
+      }
+      pts.material.opacity = ud.baseOp * vis * beat * motivation;
     });
   }
 
@@ -1361,27 +1412,27 @@
   const sectionStories = {
     home: {
       place: 'tokyo', sequence: null, intensity: 1.2, route: 'replay',
-      halo: 1, rain: 0.6, labels: 1, callout: 1, camera: 0, grid: 1,   // v3.1: hero rain calmed 1.0→0.6 — type owns the hero, weather recedes
+      halo: 1, rain: 1, labels: 1, callout: 1, camera: 0, grid: 1,   // v3.2l: veil retired — rain is presence; density comes from motivated light
     },
     about: {
       place: 'tokyo', sequence: ['dallas', 'tokyo'], intensity: 0.95, route: 'replay',
-      halo: 0.85, rain: 0.85, labels: 0.85, callout: 1, camera: -0.2, grid: 1,
+      halo: 0.85, rain: 1, labels: 0.85, callout: 1, camera: -0.2, grid: 1,
     },
     work: {
       place: 'tokyo', sequence: null, intensity: 0.85, route: 'hold',
-      halo: 1.15, rain: 0.7, labels: 1, callout: 0.9, camera: 0, grid: 1,
+      halo: 1.15, rain: 1, labels: 1, callout: 0.9, camera: 0, grid: 1,
     },
     gallery: {
       place: 'tokyo', sequence: null, intensity: 0.45, route: 'hold',
-      halo: 0.45, rain: 0.35, labels: 0.35, callout: 0.35, camera: 0.15, grid: 0.06,
+      halo: 0.45, rain: 0.3, labels: 0.35, callout: 0.35, camera: 0.15, grid: 0.06,
     },
     projects: {
       place: 'dallas', sequence: null, intensity: 0.75, route: 'hold',
-      halo: 0.35, rain: 0.55, labels: 0.2, callout: 0.65, camera: -0.1, grid: 1,
+      halo: 0.35, rain: 1, labels: 0.2, callout: 0.65, camera: -0.1, grid: 1,
     },
     contact: {
       place: 'tokyo', sequence: null, intensity: 1.0, route: 'hold',
-      halo: 1.25, rain: 0.8, labels: 1, callout: 1, camera: 0, grid: 1,
+      halo: 1.25, rain: 1, labels: 1, callout: 1, camera: 0, grid: 1,
     },
   };
   const sceneState = {

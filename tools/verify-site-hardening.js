@@ -304,6 +304,13 @@ check(
   'stat births the .readout pattern; lb-pos reads 01/12; the callout JST wakes on the minute; contact coords decrypt once on reveal; the whole-span .coord interface (translate="no" lang="ja") the decrypt consumes stays intact'
 );
 
+check('v3.2l — rain is motivated light, not a flat veil',
+  /MOTIV_FLOOR/.test(background) && /MOTIV_CAP/.test(background) &&
+    /baseOp \* vis \* beat \* motivation/.test(background) &&
+    /saturate\(0\.5\) brightness\(0\.9\)/.test(background) &&
+    !/rain: 0\.6,/.test(background),
+  'per-plane motivation term (rain brief Lever A), worn-glass droplet filter, and the retired flat hero veil');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';
