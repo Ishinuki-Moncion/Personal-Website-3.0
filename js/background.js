@@ -1049,7 +1049,7 @@
     return {
       sat, linkGeo, linkMat, star,
       satA: Math.random() * 6.28, linkT: 0, starT: 0,
-      nextLink: 20 + Math.random() * 40, nextStar: 12 + Math.random() * 30,
+      nextLink: 60 + Math.random() * 60, nextStar: 12 + Math.random() * 30,   // v3.2m: idle downlink rarer — contact owns the beat
       starFrom: new THREE.Vector3(), starTo: new THREE.Vector3(), tokyoW: new THREE.Vector3(),
     };
   })();
@@ -1065,7 +1065,7 @@
       spin.localToWorld(c.tokyoW);
       coreGroup.worldToLocal(c.tokyoW);
       const los = c.tokyoW.dot(c.sat.position) / (c.tokyoW.length() * c.sat.position.length());
-      if (los > 0.25) { c.linkT = 1; c.nextLink = 45 + Math.random() * 45; }
+      if (los > 0.25) { c.linkT = 1; c.nextLink = 90 + Math.random() * 90; }   // v3.2m: post-fire idle re-arm lengthened
       else c.nextLink = 4 + Math.random() * 6;   // Tokyo behind the disc — retry when it faces the sat
     }
     if (c.linkT > 0) {
@@ -1364,9 +1364,12 @@
 
   let focusedPlaceId = 'tokyo';
   let focusFlash = 0;
+  let focusedA0 = tokyoA0;   // v3.2m: focused place's xz rest angle — the spin-bias target
   function setFocusedPlace(id, intensity) {
     focusedPlaceId = placeById(id).id;
     focusFlash = Math.max(focusFlash, intensity || 1);
+    const fv = placeVector(placeById(focusedPlaceId), R);   // one alloc per focus CHANGE, never per frame
+    focusedA0 = Math.atan2(fv.z, fv.x);
     if (callout && callout.draw) callout.draw(placeById(focusedPlaceId));
   }
   function updateTokyoHalo(f, focusedFacing, tokyoFacing) {
@@ -1408,7 +1411,7 @@
     arcGeo.setDrawRange(0, 0);
     setCometAt(0);
   }
-  let storyTimer = 0;
+  let seqArrival = null;   // v3.2m: pending sequence payload — fires on arc ARRIVAL (arcN >= ARC_SEG), not wall-clock
   const sectionStories = {
     home: {
       place: 'tokyo', sequence: null, intensity: 1.2, route: 'replay',
@@ -1446,6 +1449,17 @@
                        // boot IS the home entry (effects.js never emits an initial section focus)
   };
   let storyCooldown = 0;                       // seconds; guards re-arming on scroll jitter
+  /* v3.2m — eased focus-bias: while a story window is open the spin drifts
+     toward the focused place so the callout's facing gate (:1930) is met when
+     the beat fires; afterwards it decays back to pure autonomous drift.
+     SUBLIMINAL-SLOW constraint: BIAS_MAX_RADS_PER_SEC caps the ADDED angular
+     velocity at ~2× the autonomous 0.066 rad/s — below a conscious "gesture".
+     ONE-SIGNAL RULE: the boxed state-word remains the section's one signal;
+     this bias must never read as a second one. It cannot cover >~0.7 rad in a
+     window by design — partial facing is accepted over a perceptible lurch. */
+  let focusBias = 0, focusBiasT = 0;
+  const BIAS_MAX_RADS_PER_SEC = 0.12;
+  const BIAS_WINDOW_S = 6;
   window.__sceneFocus = sectionId => {
     const story = sectionStories[sectionId] || sectionStories.home;
     const id = sectionStories[sectionId] ? sectionId : 'home';
@@ -1454,20 +1468,29 @@
     sceneState.story = story;                  // target always updates (interpolation continues)
     if (sameSection || storyCooldown > 0) {     // guard re-arming replay/pulse on scroll jitter
       if (!sameSection) {                       // focus still tracks the section; kill any pending
-        clearTimeout(storyTimer);               // sequence timer so a dead section can't hijack it
+        seqArrival = null;                      // arrival payload so a dead section can't hijack it
         setFocusedPlace(story.sequence ? story.sequence[1] : story.place, story.intensity * 0.85);
       }
       return;
     }
     storyCooldown = 0.6;
+    focusBiasT = BIAS_WINDOW_S;   // v3.2m: open the subliminal facing window
     sceneState.haloPulse = Math.max(sceneState.haloPulse, story.intensity || 1);
-    if (id === 'home' || id === 'contact') sceneState.lockT = 1;   // signal-lock beat
+    if (id === 'home') sceneState.lockT = 1;   // signal-lock beat (boot/home only)
+    /* v3.2m — contact's own signature: fire the existing LOS-gated satellite
+       downlink on section lock (the callout already reads SIGNAL ONLINE).
+       REPLACES the duplicated home lockT copy — one signal per section-change
+       is preserved: replace, never add. Null under reduced (no celestial). */
+    if (id === 'contact' && celestial) celestial.nextLink = 0;
     if (id === 'projects') rainTintK = 1;   // v3.2d: rain warms on the ENTRY beat, ~2s decay
-    clearTimeout(storyTimer);
+    seqArrival = null;
     if (story.route === 'replay') replayJourney();
     if (story.sequence) {
+      /* v3.2m — narrative sync: the second beat fires when the comet ARRIVES
+         (arcN >= ARC_SEG), replacing the desynced 650ms wall-clock timer.
+         The callout announces TOKYO exactly when the journey lands. */
       setFocusedPlace(story.sequence[0], story.intensity);
-      storyTimer = setTimeout(() => setFocusedPlace(story.sequence[1], story.intensity * 0.85), 650);
+      seqArrival = { place: story.sequence[1], intensity: story.intensity * 0.85 };
       return;
     }
     setFocusedPlace(story.place, story.intensity);
@@ -2004,7 +2027,18 @@
     /* Globe motion — autonomous spin (t term keeps phones alive without
        pointermove) + scroll-advanced rotation, ABSOLUTE so smooth-scroll can't
        make it jumpy. Gyro tilt eases on coreGroup; spin owns the y-rotation. */
-    spin.rotation.y = t * 0.22 + scrollN * 2.4;
+    const spinBase = t * 0.22 + scrollN * 2.4;
+    if (focusBiasT > 0) {          // chase: rate-capped P-controller (eases as it closes)
+      focusBiasT = Math.max(0, focusBiasT - dt);
+      let e = (focusedA0 - Math.PI / 2 - (spinBase + focusBias)) % (Math.PI * 2);
+      if (e > Math.PI) e -= Math.PI * 2; else if (e < -Math.PI) e += Math.PI * 2;
+      focusBias += Math.sign(e) * Math.min(BIAS_MAX_RADS_PER_SEC * dt, Math.abs(e) * 0.9 * dt);
+    } else if (focusBias !== 0) {  // decay home at the same subliminal cap
+      const back = Math.min(BIAS_MAX_RADS_PER_SEC * dt, Math.abs(focusBias) * 0.4 * dt);
+      focusBias -= Math.sign(focusBias) * back;
+      if (Math.abs(focusBias) < 1e-4) focusBias = 0;
+    }
+    spin.rotation.y = spinBase + focusBias;
     coreGroup.rotation.x += ((-mouse.y * 0.26) - coreGroup.rotation.x) * 0.03;
     coreGroup.rotation.z += ((mouse.x * 0.12) - coreGroup.rotation.z) * 0.03;
     globeMat.uniforms.uTime.value = t * 10;   // GPU breathing — one uniform,
@@ -2050,6 +2084,10 @@
     } else if (arcMat.opacity > 0) {
       arcMat.opacity = Math.max(0, arcMat.opacity - 0.15 * dt);   // ~4.5s afterglow
       if (arcMat.opacity === 0) arcGeo.setDrawRange(0, 0);
+    }
+    if (seqArrival && arcN >= ARC_SEG) {   // v3.2m: the label lands when the comet does
+      const s = seqArrival; seqArrival = null;
+      setFocusedPlace(s.place, s.intensity);
     }
 
     if (warp > 0.001) warp *= 0.92; else warp = 0;

@@ -311,6 +311,12 @@ check('v3.2l — rain is motivated light, not a flat veil',
     !/rain: 0\.6,/.test(background),
   'per-plane motivation term (rain brief Lever A), worn-glass droplet filter, and the retired flat hero veil');
 
+check('v3.2m — story beats are guaranteed: arc-arrival sync, subliminal focus-bias, contact downlink',
+  /BIAS_MAX_RADS_PER_SEC/.test(background) && /seqArrival/.test(background) &&
+    !/storyTimer/.test(background) &&
+    /celestial\.nextLink = 0/.test(background),
+  'sequence beat keys to arc arrival (no 650ms timer), spin carries a rate-capped focus bias, contact fires the LOS downlink');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';
