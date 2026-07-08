@@ -264,12 +264,31 @@
   function openLb(i) {
     if (!lb) return;
     lbReturnFocus = document.activeElement;
-    show(i);
-    lb.inert = false;                       // un-inert BEFORE moving focus in
-    lb.classList.add('open');
-    lb.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    focusWhenFocusable($('.lb-close'));
+    const openNow = () => {
+      show(i);
+      lb.inert = false;                       // un-inert BEFORE moving focus in
+      lb.classList.add('open');
+      lb.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      focusWhenFocusable($('.lb-close'));
+    };
+    /* v3.2o — progressive enhancement: shared-element morph tile→stage where
+       View Transitions exist; everywhere else (and under reduced motion) the
+       original fade runs untouched. Name lives on the tile in the OLD state
+       and moves to the stage image in the NEW state — never both at once. */
+    const srcTile = shots[(i + sources.length) % sources.length];
+    const media = srcTile && srcTile.querySelector('.media');
+    if (!reduced && typeof document.startViewTransition === 'function' && media && lbImg) {
+      media.style.viewTransitionName = 'lb-photo';
+      const vt = document.startViewTransition(() => {
+        media.style.viewTransitionName = '';
+        lbImg.style.viewTransitionName = 'lb-photo';
+        openNow();
+      });
+      vt.finished.finally(() => { lbImg.style.viewTransitionName = ''; });
+    } else {
+      openNow();
+    }
   }
   function closeLb() {
     if (!lb) return;
@@ -280,6 +299,31 @@
     if (lbReturnFocus && lbReturnFocus.focus) lbReturnFocus.focus();
     lbReturnFocus = null;
   }
+
+  /* v3.2o GATED — photo ambient halo: average-colour DOM glow behind the
+     lightbox image. The pass's ONLY new-emissive-layer candidate; ships OFF.
+     Owner decides on gates/v32/o-halo-on.png vs o-halo-off.png plus the
+     frame-luminance numbers. Flip HALO_GATE to true ONLY for the gate capture. */
+  const HALO_GATE = false;
+  if (HALO_GATE && lbImg) {
+    const av = document.createElement('canvas'); av.width = av.height = 1;
+    const avx = av.getContext('2d', { willReadFrequently: true });
+    lbImg.addEventListener('load', () => {
+      try {
+        avx.drawImage(lbImg, 0, 0, 1, 1);
+        const d = avx.getImageData(0, 0, 1, 1).data;
+        lbImg.style.boxShadow =
+          '0 0 60px rgba(0,0,0,0.7), 0 0 110px 8px rgba(' + d[0] + ',' + d[1] + ',' + d[2] + ',0.20)';
+      } catch (e) { /* tainted canvas — halo silently off */ }
+    });
+  }
+
+  /* v3.2o GATED — minimal typographic stack rail: per-row tech readouts align
+     as ONE column; the alignment IS the rail, nothing is drawn (the L3
+     deferral's over-framing warning stands). Ships OFF pending owner A/B:
+     gates/v32/o-rail-on.png vs o-rail-off.png. */
+  const RAIL_GATE = false;
+  if (RAIL_GATE) document.body.classList.add('proj-rail');
 
   shots.forEach((s, i) => s.addEventListener('click', () => openLb(i)));
   $('.lb-close') && $('.lb-close').addEventListener('click', closeLb);

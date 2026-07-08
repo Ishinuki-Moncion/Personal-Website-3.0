@@ -323,6 +323,13 @@ check('v3.2n — portrait globe branch + touch photo parity',
     /\.shot\.lit \.media/.test(css),
   'aspect-aware globe offset (sphere high behind the name, name on the dim limb) and one-at-a-time .lit focus grade');
 
+check('v3.2o — lightbox is the one light event (deep scrim, safe-centred strip, gated halo/rail, work shift)',
+  /rgba\(2,3,6,0\.985\)/.test(css) && /justify-content: flex-start/.test(css) &&
+    /\.lb-thumb:first-child \{ margin-left: auto/.test(css) &&
+    /const HALO_GATE = false/.test(app) && /const RAIL_GATE = false/.test(app) &&
+    /startViewTransition/.test(app) && /shift: \[-1\.2, -2\.0\]/.test(background),
+  'scrim sinks toward true black, strip safe-centres, halo/rail ship OFF behind gates, view-transition morph present, work globe eases left/deeper');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';
