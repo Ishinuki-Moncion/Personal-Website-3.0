@@ -73,3 +73,17 @@ Six pins in `tools/verify-site-hardening.js` (harness total: 27):
 `ESM chain is live with no dead global Three.js build (v3.2 law)` · `v3.2 law: deep-black floor tokens pinned` · `v3.2 law: teal shadow crush stays neutralised` · `v3.2 law: photos dim at rest, full on demand` · `v3.2 law: amber starfield signature present` · `v3.2 law: scene palette is cyan/amber, complete — no alert red`.
 
 - **Fonts ruling (v32j):** Latin instrument faces (Hanken Grotesk 200/400, JetBrains Mono 400/500) are self-hosted woff2 in `fonts/`; JP faces (Zen Kaku Gothic New, M PLUS Rounded 1c) STAY on the Google Fonts CDN — JP glyph subsetting impractical to self-host (recorded exception).
+
+## §8b Re-baseline of record (2026-07-08, HEAD 8474267, post-v32l)
+
+**Why:** the §8 luminance rows do not reproduce on current code (Task 12 review: §8 row 7 hero mean 15.41 / p95 26 / warmShare 0.0014 vs identical-procedure re-captures at mean ~18.6–19 / p95 ~83 / warm ~0.008) — the original v32a capture is suspected to have caught a pre-reveal frame, and 13 tasks of visual drift have landed since; **§8 is kept for provenance, §8b is now the baseline of record for Tasks 14/15/16.**
+
+**Procedure (reproduce exactly):** `http://127.0.0.1:8765/index.html` (python3 http.server from repo root), cache-busts at HEAD: `boot.mjs?v=16` / `site.css?v=3.26`. All stale QA tabs closed first (GPU contention corrupts readings); ONE tab for the whole session; fresh page + hard reload (`ignoreCache`). Viewport **1440×743 CSS px @ DPR 2** → 2880×1486 PNG captures (`resize_page(1440,900)` clips to 743 inner height under window chrome — whatever height you get, hold it constant). **11 s settle** after boot and after each section scroll; scroll landing verified via `evaluate_script` before every capture (hero `scrollTo(0,0)` → scrollY 0; `#gallery` → scrollY 3410, top 74 px; `#projects` → scrollY 6807.5, top 74 px). **N=5 frames per section**, scripted 2 s inter-frame wait (effective spacing ~13–16 s incl. capture overhead — widens event-phase sampling). Statistic = **per-metric median of the 5**; `node tools/frame-luminance.mjs <png>`. Frames kept (git-ignored): `docs/superpowers/gates/v32/rebase-{hero,projects,gallery}-{1..5}.png`. Zero console messages for the entire session.
+
+| Section | mean (median) | mean spread | p50 (median) | p50 spread | p95 (median) | p95 spread | warmShare (median) | warmShare spread |
+|---|---|---|---|---|---|---|---|---|
+| hero | **18.43** | 15.90–18.99 | **8** | 7–8 | **70** | 63–80 | **0.0027** | 0.0021–0.0090 |
+| projects | **20.61** | 19.59–22.89 | **7** | 7–7 | **101** | 91–120 | **0.0089** | 0.0032–0.0103 |
+| gallery | **37.76** | 37.10–38.94 | **9** | 9–9 | **120** | 120–120 | **0.0020** | 0.0017–0.0042 |
+
+**Variance law for future gates:** per-frame readings are event-phase-sensitive — measured per-frame σ on mean is ~0.4–1.2 (hero σ 1.11 incl. one event frame, 0.40 without it; projects 1.17; gallery 0.72), and warmShare swings **3–4× frame-to-frame** when a halo-pulse / rain warm-beat is caught (hero-1 read warm 0.0090 vs section median 0.0027 — an event frame, kept in the set deliberately). Therefore future gates MUST compare **medians of ≥5 interleaved-or-matched frames**, or isolate the effect under test via an `evaluate_script` A/B toggle (rain/effect on-off on the same frame phase) — **never single frames**. Gallery p95 saturates at 120 (photo bright tail) — use mean as the sensitive gallery metric.
