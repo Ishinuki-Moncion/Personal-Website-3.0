@@ -153,8 +153,14 @@
   const coreGroup = new THREE.Group();
   // host page may reposition the globe (the lab centres it); the portfolio's
   // hero layout is the default
-  const DEFAULT_OFFSET = LITE ? [5.8, 0.35, -4.5] : [3, 0.4, -2];
-  const OFF = window.__SCENE_OFFSET || DEFAULT_OFFSET;
+  /* v3.2n — the globe survives the phone: below ~0.7 aspect (or <700px) the
+     sphere sits smaller (deeper, z -7.5) and HIGH (y 4.5) behind the hero name,
+     so the name overlaps only the facing-dimmed lower limb (alpha floors at
+     0.18 via vFacing — luminance-under-text discipline, zero added GPU work). */
+  const offsetFor = () => ((w / h) < 0.7 || w < 700)
+    ? [0.8, 4.5, -7.5]
+    : LITE ? [5.8, 0.35, -4.5] : [3, 0.4, -2];
+  let OFF = window.__SCENE_OFFSET || offsetFor();
   coreGroup.position.set(OFF[0], OFF[1], OFF[2]);
   scene.add(coreGroup);
   const spin = new THREE.Group();
@@ -1916,6 +1922,10 @@
       }
       camera.aspect = w / h; camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      if (!window.__SCENE_OFFSET) {          // v3.2n: portrait↔landscape re-aim
+        OFF = offsetFor();
+        coreGroup.position.set(OFF[0], OFF[1], OFF[2]);
+      }
       if (bloomComposer) { bloomComposer.setSize(w, h); finalComposer.setSize(w, h); }
       maxScroll = Math.max(1, document.body.scrollHeight - innerHeight);
     }, 150);

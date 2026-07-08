@@ -317,6 +317,12 @@ check('v3.2m — story beats are guaranteed: arc-arrival sync, subliminal focus-
     /celestial\.nextLink = 0/.test(background),
   'sequence beat keys to arc arrival (no 650ms timer), spin carries a rate-capped focus bias, contact fires the LOS downlink');
 
+check('v3.2n — portrait globe branch + touch photo parity',
+  /offsetFor/.test(background) && /0\.8, 4\.5, -7\.5/.test(background) &&
+    /pointer: coarse/.test(app) && /classList\.add\('lit'\)/.test(app) &&
+    /\.shot\.lit \.media/.test(css),
+  'aspect-aware globe offset (sphere high behind the name, name on the dim limb) and one-at-a-time .lit focus grade');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';

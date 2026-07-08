@@ -87,3 +87,19 @@ Six pins in `tools/verify-site-hardening.js` (harness total: 27):
 | gallery | **37.76** | 37.10–38.94 | **9** | 9–9 | **120** | 120–120 | **0.0020** | 0.0017–0.0042 |
 
 **Variance law for future gates:** per-frame readings are event-phase-sensitive — measured per-frame σ on mean is ~0.4–1.2 (hero σ 1.11 incl. one event frame, 0.40 without it; projects 1.17; gallery 0.72), and warmShare swings **3–4× frame-to-frame** when a halo-pulse / rain warm-beat is caught (hero-1 read warm 0.0090 vs section median 0.0027 — an event frame, kept in the set deliberately). Therefore future gates MUST compare **medians of ≥5 interleaved-or-matched frames**, or isolate the effect under test via an `evaluate_script` A/B toggle (rain/effect on-off on the same frame phase) — **never single frames**. Gallery p95 saturates at 120 (photo bright tail) — use mean as the sensitive gallery metric.
+
+## §8c — v32n perf re-measure (2026-07-08, Task 14, mobile portrait globe branch)
+
+Method: matched §8 row 6 (devtools **performance trace**, `performance_start_trace` reload; `lighthouse_audit` still excludes performance). Emulation: **390×844 DPR 3, mobile+touch, 4× CPU, Slow 4G**, `boot.mjs?v=19` / `site.css?v=3.27`, single clean tab, hard reload. This is the viewport the new portrait branch targets (the §8 baseline used 412×823 DPR 1.75 — LCP/bytes are localhost-relative levers, not absolute field truth; byte weight is viewport-independent).
+
+| Metric | §8 Task-1 baseline | v32n re-measure | Δ |
+|---|---|---|---|
+| LCP | 492 ms | **247 ms** | −245 ms (faster; keys on boot overlay — relative) |
+| CLS | 0.35 | **0.23** | −0.12 |
+| encoded byte weight | ~1353 KB / 34 req | **~1447 KB / 36 req** | +94 KB (see attribution) |
+| — script | 867 KB | 882.4 KB | +15 KB (three.js unchanged; accumulated scene JS Tasks 2–13 + ~0.6 KB Task 14) |
+| — images (13 thumbs) | 299 KB | 299.1 KB | ±0 (unchanged) |
+| — fonts | 164 KB | 180 KB | +16 KB (JP glyph subset grew with Task i Japanese headlines) |
+| — css | — | 54.4 KB | +0.3 KB Task 14 |
+
+**Attribution / gate verdict:** Task 14 ships **~2.1 KB uncompressed net across the 3 browser files** (`background.js` +557 B, `app.js` +1259 B, `site.css` +325 B; zero new assets/requests — the 2 extra requests + +94 KB are cumulative drift since the Task-1 baseline, dominated by the JP font subset and 12 tasks of scene JS, NOT this task). Task-14 contribution ≈ **0.15%** of total — far inside the ~5% gate; LCP/CLS improved. **PASS.**
