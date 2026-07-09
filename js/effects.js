@@ -4,6 +4,18 @@
    Exposes window.scramble() for text decrypt used by hero & locale swap. */
 (function () {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* Motion L3 — boxed state-word on section lock: one bracketed keyword snaps in then
+     holds/fades at the lower field. Transient (attaches to the one thing that changed),
+     reduced-gated, and skips 'home' so the hero cue is never covered. */
+  const stateFlashEl = document.querySelector('.state-flash');
+  function flashState(id) {
+    if (reduced || !stateFlashEl || id === 'home') return;
+    stateFlashEl.textContent = id;                 // section id; CSS upper-cases it
+    stateFlashEl.classList.remove('show');
+    void stateFlashEl.offsetWidth;                 // reflow → restart the snap-in
+    stateFlashEl.classList.add('show');
+  }
   const GLYPHS = 'ｱｲｳｴｵｶｷｸ01<>/\\#$%日本開発ABCDEF';
 
   /* ---- text scramble / decrypt ----
@@ -40,6 +52,14 @@
 
   /* ---- collect animated elements ---- */
   let reveals = [], counters = [], parallaxEls = [];
+
+  /* v3.2k — one-shot coordinate decrypt (spec 3.6, "hero coordinates only"):
+     the site's signature Tokyo coordinate readout (contact footer .coord)
+     resolves once, on first reveal. Real text ships in the HTML — noscript and
+     print stay truthful; scramble supplies the placeholder frames itself.
+     One element only (no signal storm); no idle loop; reduced-motion takes
+     scramble's instant path. */
+  let coordEl = document.querySelector('.footer .coord');
 
   function bind() {
     document.querySelectorAll('[data-stagger]').forEach(group => {
@@ -78,6 +98,10 @@
       const el = counters[i];
       if (el.getBoundingClientRect().top < vh * 0.85) { runCounter(el); counters.splice(i, 1); }
     }
+    if (coordEl && coordEl.getBoundingClientRect().top < vh * 0.92) {
+      const el = coordEl; coordEl = null;             // one-shot, never re-arms
+      window.scramble(el, el.textContent, { duration: 900 });
+    }
   }
 
   /* ---- nav + progress + section HUD + parallax ---- */
@@ -89,7 +113,7 @@
   document.querySelectorAll('.nav-link[data-sec]').forEach(a => { navLinks[a.getAttribute('data-sec')] = a; });
 
   let ticking = false;
-  let lastActive = 'home', lastPing = 0;
+  let lastActive = 'home';
   function frame() {
     const y = scrollY;
     const max = Math.max(1, document.body.scrollHeight - innerHeight);
@@ -116,13 +140,14 @@
     Object.entries(hudLinks).forEach(([k, a]) => a.classList.toggle('active', k === active));
     Object.entries(navLinks).forEach(([k, a]) => a.classList.toggle('active', k === active));
 
-    // entering a new section pings the scene (globe ripple + ring flash);
-    // cooldown keeps fast scrolling from strobing it
+    // entering a new section refocuses the scene story + flashes the state-word.
+    // v3.1 (one signal per section change): the amber __scenePing ring-flash was
+    // retired from this handler; v3.2d deleted the dead ping machinery outright
+    // (zero callers since v31c — the reserved "deck/reboot use" never landed).
     if (active !== lastActive) {
       lastActive = active;
-      const now = performance.now();
-      if (window.__scenePing && now - lastPing > 600) { lastPing = now; window.__scenePing(); }
       if (window.__sceneFocus) window.__sceneFocus(active);
+      flashState(active);
     }
     ticking = false;
   }

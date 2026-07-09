@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>og-board — daikieOS share-card art (capture source; not linked from the site)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@200;400&family=JetBrains+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  /* tokens mirrored from css/site.css :root — keep in sync by hand */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body { position: relative; background: #05060a; color: #e9f1f4; font-family: 'Hanken Grotesk', system-ui, sans-serif; }
+  .grid { position: absolute; inset: 0; opacity: 0.5; background-image:
+      linear-gradient(rgba(57,240,255,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(57,240,255,0.05) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(circle at 32% 46%, #000 10%, transparent 72%);
+    mask-image: radial-gradient(circle at 32% 46%, #000 10%, transparent 72%); }
+  .frame span { position: absolute; width: 30px; height: 30px; border: 1px solid rgba(57,240,255,0.36); }
+  .frame .tl { top: 34px; left: 34px; border-right: 0; border-bottom: 0; }
+  .frame .tr { top: 34px; right: 34px; border-left: 0; border-bottom: 0; }
+  .frame .bl { bottom: 34px; left: 34px; border-right: 0; border-top: 0; }
+  .frame .br { bottom: 34px; right: 34px; border-left: 0; border-top: 0; }
+  .board { position: absolute; left: 96px; top: 50%; transform: translateY(-50%); }
+  .kicker { font-family: 'JetBrains Mono', monospace; font-size: 15px; letter-spacing: 0.35em;
+    color: #39f0ff; text-transform: uppercase; text-shadow: 0 0 12px rgba(57,240,255,0.6); margin-bottom: 30px; }
+  h1 { font-weight: 200; letter-spacing: -0.035em; line-height: 0.85; font-size: 128px; color: #f4feff;
+    text-shadow: 0 0 30px rgba(57,240,255,0.35), 0 0 80px rgba(57,240,255,0.14); }
+  h1 .amberline { color: #fff6ec; text-shadow: 0 0 30px rgba(255,158,44,0.4); }
+  .jp { font-family: 'Zen Kaku Gothic New', sans-serif; font-weight: 500; font-size: 28px;
+    letter-spacing: 0.14em; color: #76858f; margin-top: 34px; }
+  .readout { font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #76858f; margin-top: 26px; }
+  .readout b { font-weight: 400; color: #39f0ff; }
+  .dia { position: absolute; right: 96px; bottom: 76px; font-size: 34px; color: #39f0ff;
+    text-shadow: 0 0 18px rgba(57,240,255,0.7); }
+  /* ?icon variant — 180x180 apple-touch-icon capture */
+  body.icon { width: 180px; height: 180px; }
+  body.icon .grid, body.icon .frame, body.icon .board { display: none; }
+  body.icon .dia { right: 50%; bottom: 50%; transform: translate(50%, 50%); font-size: 96px; }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="frame"><span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span></div>
+  <div class="board">
+    <div class="kicker">daikieOS // PORTFOLIO UPLINK</div>
+    <h1>Ishinuki<br /><span class="amberline">Daikie</span></h1>
+    <div class="jp" lang="ja">開発者 / 写真家 — 東京</div>
+    <div class="readout"><b>35.6762° N, 139.6503° E</b> — DEVELOPER &amp; PHOTOGRAPHER</div>
+  </div>
+  <div class="dia">◆</div>
+  <script>if (location.search.indexOf('icon') !== -1) document.body.classList.add('icon');</script>
+</body>
+</html>

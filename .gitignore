@@ -1,2 +1,11 @@
 .DS_Store
 .thumbnail
+
+# daikieOS v3 visual-study board — raw third-party reference frames (provenance lives in committed study entries)
+docs/superpowers/research/refs/
+
+# Personal Claude Code overrides (local, not shared)
+.claude/settings.local.json
+
+# v3.2 gate screenshots (owner end-of-pass review artifacts; heavy PNGs, not site assets)
+docs/superpowers/gates/v32/

@@ -1,0 +1,50 @@
+# Globe — Elevation Brief (2026-07-03)
+
+Source rules: design-language-v3 §1 (+ §0 Spine). Study: 2026-07-03-globe-visual-study.md.
+Target code: `js/background.js` (the TOKYO DATA-GLOBE scene). This is the *what/why* hand-off; the later per-surface plan→build turns each lever into a diff.
+
+## Current state
+
+All globe code lives in `js/background.js` (1534 lines, one IIFE scene). Where each piece sits today:
+
+- **Palette anchors** — `CYAN = 0x39f0ff`, `AMBER = 0xff9e2c` (`js/background.js:7`); `SCENE_COLORS` cyan/amber/softAmber `0xffd9a0`/alert/terminal (`:51`–`56`); instrument anchors `DL.instrumentField 0x0f394c`, `instrumentActive 0xb2f5fd` (`:857`–`859`).
+- **Quality tiers** — `globeParticles` 2600–7000, `haloLabels` 1/2/5, `haloTicks` 8/12/24, `haloRings` 1/1/2 (`:20`–`47`); globe radius `R = 3.2` (`:61`).
+- **Land particles + city emitters** — rejection-sampled land points with `phase`/`edge`/`city` attributes (`:190`–`212`). The coastline signal `gedge[i] = landEdgeAt(lon, lat)` is already computed (`:202`). City emitters are flagged **uniformly at random** — `gcity[i] = Math.random() < 0.11 ? 1 : 0` (`:203`) — i.e. ~11% of *every* land particle, no geography. The additive `ShaderMaterial` (`:213`–`259`) computes day/night `vNight` (`:235`), tints emitters warm amber `mix(col, vec3(1.0,0.72,0.35), vCity*vNight*0.85)` gated to the night side (`:251`), and adds a warm dusk band at the terminator (`:252`–`253`). Points object `earth-land-particles` (`:260`).
+- **Terminator / day-night** — `updateSunDir()` computes real solar declination + UTC time into `uSunDir` in the globe's geographic frame (`:262`–`274`); refreshed every 120 s in the loop (`:1441`–`1442`). This is real and correct today.
+- **Graticule** — one merged additive `LineSegments`, `CYAN`, `opacity 0.07`, 3 rings LITE / 5 rings + 6 meridians HIGH (`:276`–`299`). Faint substrate already present.
+- **Place nodes + labels** — `PLACES` Dallas (softAmber, non-primary) + Tokyo (AMBER, primary) (`:301`–`322`); `TOKYO_HALO_LABELS` five districts with angle/priority (`:326`–`332`); additive point nodes (`:341`–`360`). Tokyo holographic halo — rings/ticks/glow/labels/transit-loop (`:475`–`572`); `drawHudLabel` canvas labels (`:713`–`743`). Per-label facing gate so only 1–2 labels read at once (`:1195`–`1201`).
+- **Coordinate callout** — canvas sprite with four stroked corner brackets `rgba(57,240,255,0.42)` (`:759`–`766`), amber heading `東京 / TOKYO` + cyan coordinate/status strings (`:767`–`781`); floated off the subject at `focusedVector × 1.22 + calloutOffset` (`:1472`), opacity gated by `focusedFacing²` (`:1473`). No drawn leader line ties the tag back to its node.
+- **Atmosphere halo** — a single camera-facing `Sprite` with a radial CYAN gradient (`0.5→0.12→0`), `opacity 0.13`, additive, `scale 7.5` (`:838`–`855`); breathes `0.10 + 0.05*sin` (`:1483`). **Uniform** — same brightness all the way round the silhouette.
+- **Holo-scan shell** — a thin `RingGeometry(R*0.99, R*1.012, 96)` band (2.2% of R wide), `MeshBasicMaterial` `instrumentActive #b2f5fd`, additive, `DoubleSide`, `depthWrite:false`, `opacity 0.1` (`:861`–`871`); sweeps latitude `scanY = sin(t*0.55)*R*0.9` with a cross-section scale + shimmer (`:1436`–`1440`). Code comment already states "solograms, not atmosphere… realistic rim rejected" (`:862`–`863`). **There is no fresnel/hard-rim shader anywhere in the file** (grep `fresnel` = 0).
+
+## Target intent
+
+The feel the v3 rules call for (each traces to a pinned study ref):
+
+- A **near-black sphere where lit cities are scarce and clustered** on real coastlines/rivers — lit area well under ~5%, never an even 11% dusting (ref: globe/005).
+- A **thin, edge-weighted cool limb** — a blue-scatter rim ~1–2% of the radius that is **brightest toward the terminator** and fades to nothing on the deep-night limb, not a uniform ring of glow (ref: globe/004).
+- A **rimless holo-scan shell** whose edges **dissolve into additive cyan scatter and bloom** — legibility from internal density, never an outline (ref: globe/006); the shell composites **additively and stays translucent**, adding light, never occluding (ref: globe/012).
+- **Focus-only labelling** — one active focus tagged with an **offset corner-bracket + condensed-mono coordinate string**, bridged to its subject by a **leader gap** so the tag never overlaps what it names (ref: globe/008); the rest of the globe stays quiet, **overlays seated on the faint graticule with radial leaders from one reticle** (ref: globe/002).
+- The **cool-shell / warm-emitter split held strictly** — cyan is the instrument shell/graticule/limb, amber is the city + data signal; neither bleeds into the other (ref: globe/008); and the whole thing obeys the spine — light is an additive event on a near-black field, the accent is a budget (ref: §0 globe/006, globe/008).
+
+## Concrete code levers
+
+- **City emitters — cluster + thin them (`js/background.js:203`).** Replace the uniform `Math.random() < 0.11` flag with a **geographic/clustered mask**: weight emitter probability by the already-computed coastline signal `gedge` (`:202`) plus a low-frequency cluster field, and drop the hit rate so lit night-side area sits well under ~5% of the sphere. Coastal/edge land lights up; deep interiors stay dark. (ref: globe/005) *(the clustering source is new; `gedge` already exists.)*
+- **Atmosphere halo — make it an edge-weighted cool limb (`js/background.js:838`–`855`, drive `:1483`).** The uniform radial `Sprite` cannot know where the terminator is. Add (or replace it with) a **back-side limb shell** whose rim alpha peaks at the silhouette and is **biased toward `uSunDir`** — reuse the exact `vNight`/dusk math already in the particle shader (`:235`, `:252`–`253`) so the limb brightens on the day/terminator side and dies on the night limb. Keep it ~1–2% of R. (ref: globe/004) *(new — no edge-weighting or sun-bias exists today.)*
+- **Holo-scan shell — dissolve the band's own edges into scatter (`js/background.js:865`–`867`).** The shell is already additive and rimless in the fresnel sense — **the "replace fresnel hard rim" clause of globe/006 has no counterpart to replace** (grep `fresnel` = 0; comment `:862`–`863` already rejects a realistic rim). The remaining hard edge is the `RingGeometry`'s crisp inner/outer radius at flat `opacity 0.1`. Give the ring material a **radial alpha falloff** (a small `ShaderMaterial` or per-vertex alpha across `R*0.99→R*1.012`) so the sweeping band's leading/trailing edges bleed into additive scatter + bloom instead of ending at a geometry line. (ref: globe/006) *(falloff shader is new; additive/translucent compositing already satisfies globe/012 at `:865`–`866`.)*
+- **Coordinate callout — add the missing leader (`js/background.js:759`–`766` + placement `:1472`).** The corner-bracket tag and offset already exist; what's missing is the **leader**. Draw a thin/dotted cyan leader line from the focus reticle/place-node to the offset callout so the "framed beside the subject with a leader gap" grammar completes. Optionally open the four-corner box to two opposing brackets to match HUD "never a closed box." (ref: globe/008) *(leader line is new.)*
+- **Graticule + reticle leaders — seat overlays, lead from one reticle (`js/background.js:276`–`299`, halo `:475`–`572`).** The faint `0.07` graticule and the per-label facing gate (`:1195`–`1201`) already deliver "label the focus only." Extend by drawing **radial leader lines from the central Tokyo reticle out to the active district labels** (the halo currently rings labels at radius 0.94/1.08 without connecting lines, `:511`). Keep everything on the graticule substrate. (ref: globe/002)
+- **Cool/warm split — hold the line (audit, `js/background.js:249`–`251`, `:298`, `:844`, `:865`).** Mostly already correct: shell/graticule/limb are cyan, emitters/nodes/callout-heading are amber. When the limb becomes sun-weighted (above), ensure its scatter stays cyan and the emitter amber never tints the shell; keep the deliberate warm dusk band (`:252`–`253`) as the one sanctioned cyan→warm transition. (ref: globe/008)
+
+## Before / after
+
+- **Before:** an evenly-freckled globe (cities sprinkled at 11% everywhere), a uniform cyan glow ring, a holo band with a faintly crisp edge, and a coordinate tag floating unconnected near Tokyo.
+- **After:** cities **cluster on coastlines** against a darker sphere; the atmosphere reads as a **thin limb that lights up along the day/terminator edge** and vanishes into the night side; the scan shell's edges **melt into scatter** so it reads as a projection, not a mesh; and the focus tag is **tied to its target by a leader**, with faint radial leaders reaching the live district labels. Same performance envelope, distinctly more "instrumented sologram," less "textured sphere."
+
+## Out of scope / risks
+
+- **Not a re-geometry.** Levers stay within the existing particle/shader/sprite architecture (additive, `depthWrite:false`, one uniform upload) — no render targets, no new passes, LITE budget preserved. The clustered-emitter mask must not raise particle count; it only *re-weights* which existing land points are cities.
+- **globe/006's "replace fresnel" clause is a no-op here** — there is no hard rim to remove; the real work is the edge-falloff on the already-rimless band. Don't add a rim just to "elevate" it.
+- **Terminator is already real (`:262`–`274`)** — don't rebuild it; the limb lever should *reuse* `uSunDir`/`vNight`, not introduce a second sun model.
+- **Risk: additive stacking.** A sun-weighted limb + scatter-bloom + emitters all blend additively over near-black; watch that the terminator edge doesn't blow out to white (spine §0.7 "no neutral-white state") — cap limb peak alpha and keep it cyan-tinted.
+- **Measurement debt (from the study):** edge-falloff %, scatter width, and emitter cluster density are `[EXTRACTED]`/`[WORKING]`, not `[DATA]` — the build should tune them by eye against the reference board, and a later `[DATA]` pixel pass on a holo edge would firm up the falloff number.

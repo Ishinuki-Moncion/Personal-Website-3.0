@@ -6,11 +6,38 @@
 <title>Ishinuki Daikie — Developer &amp; Photographer</title>
 <meta name="description" content="Ishinuki Daikie — software developer and photographer based in Tokyo, Japan." />
 <meta name="theme-color" content="#05060a" />
+<link rel="canonical" href="https://ishinuki-moncion.github.io/Personal-Website-3.0/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="daikieOS" />
+<meta property="og:title" content="Ishinuki Daikie — Developer &amp; Photographer" />
+<meta property="og:description" content="Ishinuki Daikie — software developer and photographer based in Tokyo, Japan." />
+<meta property="og:url" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/" />
+<meta property="og:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="daikieOS — Ishinuki Daikie, developer and photographer, Tokyo" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Ishinuki Daikie — Developer &amp; Photographer" />
+<meta name="twitter:description" content="Software developer and photographer based in Tokyo, Japan." />
+<meta name="twitter:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png" />
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@200;400&family=JetBrains+Mono:wght@400;500&family=M+PLUS+Rounded+1c:wght@400;500&family=Rajdhani:wght@500;600&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/site.css?v=3.7" />
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/site.css?v=3.28" />
+<noscript>
+  <style>
+    /* No-JS truth: kill the boot screen and reveal everything the engine would */
+    .boot, .cursor, .cursor-dot, .cursor-label, .typ-caret, .scene-atmosphere { display: none !important; }
+    body[data-booting] { overflow: auto; }
+    body { cursor: auto; }
+    [data-reveal], .sec-label { opacity: 1 !important; transform: none !important; }
+    .clip-reveal::after { display: none; }
+    .clip-reveal .media { transform: none; }
+    .hero-sub-text::before { content: attr(data-text); }
+  </style>
+</noscript>
 </head>
 <body data-booting>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -35,6 +62,8 @@
   <canvas class="scene-droplets"></canvas>
 </div>
 <div class="frame-hud" aria-hidden="true"><span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span></div>
+<div class="state-flash" aria-hidden="true"></div>
+
 
 <!-- custom cursor -->
 <div class="cursor" aria-hidden="true"><div class="cursor-ring"></div></div>
@@ -58,7 +87,7 @@
     </div>
     <div class="nav-meta">
       <span class="clock" data-clock aria-hidden="true">JST --:--:--</span>
-      <span>TOKYO // 東京</span>
+      <span>TOKYO // <span lang="ja">東京</span></span>
     </div>
     <button class="hud-btn lang-btn" aria-label="Toggle language" data-cursor="toggle"><span class="swap">EN / 日本</span></button>
     <button class="nav-burger" aria-label="Open menu" aria-expanded="false" data-cursor="menu"><span></span><span></span><span></span></button>
@@ -73,27 +102,27 @@
     <button class="mm-close" aria-label="Close menu" data-cursor="close">CLOSE ✕</button>
   </div>
   <nav class="mm-links">
-    <a href="#home" data-mm><span class="mm-idx">00</span><span class="mm-label">Home</span><span class="mm-ja">ホーム</span></a>
-    <a href="#about" data-mm><span class="mm-idx">01</span><span class="mm-label">About</span><span class="mm-ja">概要</span></a>
-    <a href="#work" data-mm><span class="mm-idx">02</span><span class="mm-label">Work</span><span class="mm-ja">経歴</span></a>
-    <a href="#gallery" data-mm><span class="mm-idx">03</span><span class="mm-label">Gallery</span><span class="mm-ja">写真</span></a>
-    <a href="#projects" data-mm><span class="mm-idx">04</span><span class="mm-label">Projects</span><span class="mm-ja">制作</span></a>
-    <a href="#contact" data-mm><span class="mm-idx">05</span><span class="mm-label">Contact</span><span class="mm-ja">連絡</span></a>
+    <a href="#home" data-mm><span class="mm-idx">00</span><span class="mm-label">Home</span><span class="mm-ja" lang="ja">ホーム</span></a>
+    <a href="#about" data-mm><span class="mm-idx">01</span><span class="mm-label">About</span><span class="mm-ja" lang="ja">概要</span></a>
+    <a href="#work" data-mm><span class="mm-idx">02</span><span class="mm-label">Work</span><span class="mm-ja" lang="ja">経歴</span></a>
+    <a href="#gallery" data-mm><span class="mm-idx">03</span><span class="mm-label">Gallery</span><span class="mm-ja" lang="ja">写真</span></a>
+    <a href="#projects" data-mm><span class="mm-idx">04</span><span class="mm-label">Projects</span><span class="mm-ja" lang="ja">制作</span></a>
+    <a href="#contact" data-mm><span class="mm-idx">05</span><span class="mm-label">Contact</span><span class="mm-ja" lang="ja">連絡</span></a>
   </nav>
   <div class="mm-foot">
     <span class="clock" data-clock aria-hidden="true">JST --:--:--</span>
-    <span class="mm-coord" translate="no">35.6762° N, 139.6503° E — TOKYO // 東京</span>
+    <span class="mm-coord" translate="no">35.6762° N, 139.6503° E — TOKYO // <span lang="ja">東京</span></span>
   </div>
 </div>
 
 <!-- ============ SCROLL HUD ============ -->
 <div class="scroll-hud" aria-hidden="true">
-  <a href="#home" data-sec="home"><span class="lbl">Home</span><span class="tick"></span></a>
-  <a href="#about" data-sec="about"><span class="lbl">About</span><span class="tick"></span></a>
-  <a href="#work" data-sec="work"><span class="lbl">Work</span><span class="tick"></span></a>
-  <a href="#gallery" data-sec="gallery"><span class="lbl">Gallery</span><span class="tick"></span></a>
-  <a href="#projects" data-sec="projects"><span class="lbl">Projects</span><span class="tick"></span></a>
-  <a href="#contact" data-sec="contact"><span class="lbl">Contact</span><span class="tick"></span></a>
+  <a href="#home" data-sec="home" tabindex="-1"><span class="lbl">Home</span><span class="tick"></span></a>
+  <a href="#about" data-sec="about" tabindex="-1"><span class="lbl">About</span><span class="tick"></span></a>
+  <a href="#work" data-sec="work" tabindex="-1"><span class="lbl">Work</span><span class="tick"></span></a>
+  <a href="#gallery" data-sec="gallery" tabindex="-1"><span class="lbl">Gallery</span><span class="tick"></span></a>
+  <a href="#projects" data-sec="projects" tabindex="-1"><span class="lbl">Projects</span><span class="tick"></span></a>
+  <a href="#contact" data-sec="contact" tabindex="-1"><span class="lbl">Contact</span><span class="tick"></span></a>
 </div>
 
 <main id="main">
@@ -101,7 +130,7 @@
   <section class="hero" id="home">
     <div class="hero-kicker">
       <span class="bar"></span>
-      <span data-en="開発者 / 写真家 — Tokyo, Japan" data-ja="開発者 / 写真家 — 東京, 日本">開発者 / 写真家 — Tokyo, Japan</span>
+      <span lang="ja" data-en="開発者 / 写真家 — Tokyo, Japan" data-ja="開発者 / 写真家 — 東京, 日本">開発者 / 写真家 — Tokyo, Japan</span>
     </div>
     <h1>
       <span class="sr-only">Ishinuki Daikie — developer and photographer in Tokyo</span>
@@ -133,9 +162,9 @@
             <span class="geo-copy">The globe traces the same move in the background: UTD and Dallas as the origin point, Tokyo as the current base for development, production, and photography.</span>
           </div>
           <div class="stat-row">
-            <div class="stat" data-reveal data-reveal-delay="0.18s"><div class="n"><span data-count="100" data-suffix="+" aria-hidden="true">0+</span><span class="sr-only">100+</span></div><div class="l" data-en="Campaigns shipped" data-ja="キャンペーン">Campaigns shipped</div></div>
+            <div class="stat" data-reveal data-reveal-delay="0.18s"><div class="n readout"><span data-count="100" aria-hidden="true">88</span><span class="readout-unit" aria-hidden="true">+</span><span class="sr-only">100+</span></div><div class="l" data-en="Campaigns shipped" data-ja="キャンペーン">Campaigns shipped</div></div>
             <div class="stat" data-reveal data-reveal-delay="0.24s"><div class="n">N3</div><div class="l" data-en="JLPT Japanese" data-ja="日本語能力">JLPT Japanese</div></div>
-            <div class="stat" data-reveal data-reveal-delay="0.30s"><div class="n">東京</div><div class="l" data-en="Based in Tokyo" data-ja="東京在住">Based in Tokyo</div></div>
+            <div class="stat" data-reveal data-reveal-delay="0.30s"><div class="n" lang="ja">東京</div><div class="l" data-en="Based in Tokyo" data-ja="東京在住">Based in Tokyo</div></div>
           </div>
         </div>
         <div class="about-portrait clip-reveal" data-parallax="0.06">
@@ -153,7 +182,7 @@
   <section class="work" id="work">
     <div class="shell">
       <div class="sec-label"><span class="idx">[ 02 ]</span><span class="txt" data-en="Work / Experience" data-ja="作品 / 経歴">Work / Experience</span><span class="rule"></span></div>
-      <h2 class="heading-xl" data-reveal>Work</h2>
+      <h2 class="heading-xl" data-reveal data-en="Work" data-ja="作品">Work</h2>
       <div data-stagger>
         <article class="row" data-reveal data-cursor="">
           <div class="work-grid">
@@ -204,24 +233,24 @@
     <div class="shell">
       <div class="sec-label"><span class="idx">[ 03 ]</span><span class="txt" data-en="Gallery / Photography" data-ja="写真 / 撮影">Gallery / Photography</span><span class="rule"></span></div>
       <div class="gallery-head">
-        <h2 class="heading-xl" data-reveal style="margin-bottom:0">Through the lens</h2>
+        <h2 class="heading-xl" data-reveal style="margin-bottom:0" data-en="Through the lens" data-ja="レンズ越しに">Through the lens</h2>
         <span class="gallery-count" data-reveal>12 FRAMES // SELECTED 2021–2025</span>
       </div>
     </div>
     <div class="shell">
       <div class="gallery-grid" data-stagger>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-07.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-07.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_01</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-03.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-03.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_02</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-08.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-08.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_03</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-16.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-16.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_04</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-04.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-04.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_05</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-13.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-13.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_06</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-01.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-01.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_07</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-02.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-02.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_08</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-05.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-05.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_09</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-09.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-09.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_10</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-10.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-10.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_11</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-11.jpg" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-11.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_12</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot feature" data-reveal="scale" data-src="images/gallery-07.jpg" data-title="NAGANO // 長野" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-07.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_01</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-03.jpg" data-title="KAMAKURA // 鎌倉" data-meta="ƒ/16 · 1/50s · ISO 100 · 50mm" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-03.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_02</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-08.jpg" data-title="FUJI // 富士" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-08.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_03</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-16.jpg" data-title="SENDAI // 仙台" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-16.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_04</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-04.jpg" data-title="OSAKA // 大阪" data-meta="ƒ/10 · 1/50s · ISO 1600 · 50mm" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-04.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_05</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-13.jpg" data-title="FUKUOKA // 福岡" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-13.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_06</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-01.jpg" data-title="HOKKAIDO // 北海道" data-meta="ƒ/10 · 1/160s · ISO 100 · 35mm" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-01.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_07</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-02.jpg" data-title="SHIBUYA // 渋谷" data-meta="ƒ/1.8 · 1s · ISO 100 · 50mm" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-02.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_08</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-05.jpg" data-title="KYOTO // 京都" data-meta="ƒ/1.8 · 1/100s · ISO 320 · 35mm" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-05.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_09</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-09.jpg" data-title="DALLAS // ダラス" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-09.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_10</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-10.jpg" data-title="ASAKUSA // 浅草" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-10.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_11</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-11.jpg" data-title="OKINAWA // 沖縄" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-11.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_12</span><span class="plus" aria-hidden="true">＋</span></button>
       </div>
     </div>
   </section>
@@ -230,7 +259,7 @@
   <section class="projects" id="projects">
     <div class="shell">
       <div class="sec-label"><span class="idx">[ 04 ]</span><span class="txt" data-en="Projects / Selected" data-ja="制作 / 選抜">Projects / Selected</span><span class="rule"></span></div>
-      <h2 class="heading-xl" data-reveal>Selected Work</h2>
+      <h2 class="heading-xl" data-reveal data-en="Selected Work" data-ja="代表作">Selected Work</h2>
       <div data-stagger>
         <a class="row" href="https://github.com/Ishinuki-Moncion" target="_blank" rel="noopener" data-reveal data-cursor="open ↗">
           <div class="proj-grid">
@@ -272,6 +301,12 @@
     <div class="shell">
       <div class="sec-label"><span class="idx">[ 05 ]</span><span class="txt" data-en="Contact" data-ja="連絡">Contact</span><span class="rule"></span></div>
       <h2 data-reveal data-en="Let’s make something." data-ja="一緒に作りましょう。">Let’s make <em>something.</em></h2>
+      <button class="signal-row" type="button" data-reveal data-reveal-delay="0.05s" data-cursor="copy" aria-label="Copy email address to clipboard" translate="no">
+        <span class="signal-k">SIGNAL //</span>
+        <span class="signal-addr" data-addr>KEY//STANDBY</span>
+        <span class="signal-tick" aria-hidden="true">✓ COPIED</span>
+        <span class="sr-only" role="status" data-copy-status></span>
+      </button>
       <div class="pills" data-reveal data-reveal-delay="0.1s">
         <a class="pill" href="https://github.com/Ishinuki-Moncion" target="_blank" rel="noopener" data-magnetic data-cursor="open ↗"><span>GitHub ↗</span></a>
         <a class="pill" href="https://www.linkedin.com/in/daikie-moncion-6a637b71/" target="_blank" rel="noopener" data-magnetic data-cursor="open ↗"><span>LinkedIn ↗</span></a>
@@ -279,15 +314,15 @@
       </div>
       <div class="footer">
         <span>© <span id="year"></span> Ishinuki Daikie — daikieOS</span>
-        <span class="coord" translate="no">35.6762° N, 139.6503° E — 東京</span>
+        <span class="coord" translate="no" lang="ja">35.6762° N, 139.6503° E — 東京</span>
       </div>
     </div>
   </section>
 </main>
 
 <!-- ============ LIGHTBOX ============ -->
-<div class="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer" aria-hidden="true">
-  <div class="lb-meta" translate="no"><span class="lb-id">IMG_01</span><br />ƒ/2.8 · 1/250s<br />SELECTED ARCHIVE</div>
+<div class="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer" aria-hidden="true" inert>
+  <div class="lb-meta" translate="no"><span class="lb-id">IMG_01</span><br /><span class="lb-exif">EXIF//REDACTED</span><br />SELECTED ARCHIVE</div>
   <button class="lb-close" data-cursor="close">CLOSE ✕</button>
   <div class="lb-stage">
     <span class="lb-corner" style="top:0;left:0;border-right:0;border-bottom:0"></span>
@@ -298,17 +333,17 @@
   </div>
   <div class="lb-nav">
     <button class="lb-prev" data-cursor="prev">← PREV</button>
-    <span class="pos lb-pos">01 / 12</span>
+    <span class="pos lb-pos">01/12</span>
     <button class="lb-next" data-cursor="next">NEXT →</button>
   </div>
   <div class="lb-strip"></div>
 </div>
 
 <!-- ============ CONTROL DECK ============ -->
-<button class="deck-toggle" aria-label="Open control deck" aria-expanded="false" data-cursor="tweak">
+<button class="deck-toggle" aria-controls="deck" aria-label="Open control deck" aria-expanded="false" data-cursor="tweak">
   <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round"><g class="gear"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></g></svg>
 </button>
-<div class="deck" role="dialog" aria-modal="true" aria-label="Control deck" aria-hidden="true">
+<div class="deck" id="deck" role="group" aria-label="Control deck" aria-hidden="true" inert>
   <h4>Control Deck</h4>
   <div class="grp">
     <label>Hero entrance</label>
@@ -322,7 +357,7 @@
     <label>Language</label>
     <div class="seg" data-seg="lang">
       <button data-val="en" data-cursor="set">EN</button>
-      <button data-val="ja" data-cursor="set">日本語</button>
+      <button data-val="ja" data-cursor="set" lang="ja">日本語</button>
     </div>
   </div>
   <div class="grp">
@@ -334,12 +369,72 @@
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#05060a"/><text x="50" y="60" font-family="monospace" font-size="38" fill="#39f0ff" text-anchor="middle">◆</text></svg>
 </template>
 
-<script src="js/vendor/three.global.min.js?v=158.0.1"></script>
-<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-<script src="js/background.js?v=3.8"></script>
-<script src="js/boot.js?v=3.1"></script>
-<script src="js/cursor.js?v=3.1"></script>
-<script src="js/effects.js?v=3.3"></script>
-<script src="js/app.js?v=3.4"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Through the lens — selected photography by Ishinuki Daikie",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "item": { "@type": "ImageObject", "name": "NAGANO // 長野 — IMG_01", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-07.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 2, "item": { "@type": "ImageObject", "name": "KAMAKURA // 鎌倉 — IMG_02", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-03.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 3, "item": { "@type": "ImageObject", "name": "FUJI // 富士 — IMG_03", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-08.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 4, "item": { "@type": "ImageObject", "name": "SENDAI // 仙台 — IMG_04", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-16.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 5, "item": { "@type": "ImageObject", "name": "OSAKA // 大阪 — IMG_05", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-04.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 6, "item": { "@type": "ImageObject", "name": "FUKUOKA // 福岡 — IMG_06", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-13.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 7, "item": { "@type": "ImageObject", "name": "HOKKAIDO // 北海道 — IMG_07", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-01.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 8, "item": { "@type": "ImageObject", "name": "SHIBUYA // 渋谷 — IMG_08", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-02.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 9, "item": { "@type": "ImageObject", "name": "KYOTO // 京都 — IMG_09", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-05.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 10, "item": { "@type": "ImageObject", "name": "DALLAS // ダラス — IMG_10", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-09.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 11, "item": { "@type": "ImageObject", "name": "ASAKUSA // 浅草 — IMG_11", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-10.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 12, "item": { "@type": "ImageObject", "name": "OKINAWA // 沖縄 — IMG_12", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-11.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } }
+  ]
+}
+</script>
+
+<!-- Import-map fallback for Safari <16.4 / Firefox <108. Loads async; no-ops on
+     engines with native import-map + module support. Self-hosted, CSP-clean. -->
+<script async src="js/vendor/es-module-shims-1.10.0.min.js?v=1"></script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./js/vendor/three-0.158.0/three.module.min.js",
+    "three/addons/": "./js/vendor/three-0.158.0/examples/jsm/"
+  }
+}
+</script>
+
+<script>
+document.getElementById('year').textContent = new Date().getFullYear();
+/* v3.2j boot watchdog — deliberately OUTSIDE the module chain: if any vendor/
+   module import 404s, boot.js never runs and the opaque boot screen would sit
+   forever. On any script error (capture phase catches resource failures) or
+   after 10s, force-reveal the DOM content. No-ops when boot.js finished. */
+(function () {
+  var fired = false;
+  function reveal() {
+    if (!document.body.hasAttribute('data-booting')) return;
+    fired = true;
+    var b = document.getElementById('boot');
+    if (b && b.parentNode) b.parentNode.removeChild(b);
+    document.body.removeAttribute('data-booting');
+    document.body.classList.add('revealed');
+    document.dispatchEvent(new Event('boot:done'));
+  }
+  window.addEventListener('error', function (e) {
+    var t = e.target;
+    if (t && t.tagName === 'SCRIPT') setTimeout(reveal, 0);
+  }, true);
+  setTimeout(reveal, 10000);
+  /* boot.js's finish() also adds .revealed — on a NORMAL boot drop it, so the
+     css force-reveal (body.revealed [data-reveal]) can't blank the scroll
+     choreography. The class means "watchdog force-revealed", nothing else. */
+  document.addEventListener('boot:done', function () {
+    if (!fired) document.body.classList.remove('revealed');
+  });
+})();
+</script>
+
+<script type="module" src="js/boot.mjs?v=20"></script>
 </body>
 </html>

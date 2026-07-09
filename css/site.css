@@ -3,11 +3,29 @@
    Design system + motion primitives
    ============================================================ */
 
+/* v3.2j — self-hosted Latin instrument faces (Google Fonts CDN retired for
+   Latin). css2 serves one variable woff2 per family for both requested weights;
+   the font-weight descriptor selects the instance. JP faces (Zen Kaku Gothic
+   New, M PLUS Rounded 1c) stay on the CDN — JP glyph subsetting impractical
+   to self-host (recorded exception, law addendum). */
+@font-face { font-family: 'Hanken Grotesk'; font-style: normal; font-weight: 200; font-display: swap;
+  src: url('../fonts/hanken-grotesk-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Hanken Grotesk'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('../fonts/hanken-grotesk-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('../fonts/jetbrains-mono-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('../fonts/jetbrains-mono-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
 :root {
-  --void: #05060a;
+  --void: #05060a;    /* v3.1 deep-black floor: owner-directed revert to deep space black; matches scene fog 0x05060a */
   --void-2: #080a10;
-  --panel: rgba(8, 10, 16, 0.55);
-  --panel-solid: rgba(7, 9, 14, 0.92);
+  --void-deep: #030407;  /* v3.1: deepest overlay-scrim floor (near-black, cool-neutral) */
+  --panel-solid: rgba(7, 9, 14, 0.92);  /* v3.1: deep-black chrome panel bed */
   --cyan: #39f0ff;
   --cyan-dim: #1c6f7a;
   --amber: #ff9e2c;
@@ -28,8 +46,33 @@
   --font-display: 'Hanken Grotesk', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-jp: 'M PLUS Rounded 1c', 'Hanken Grotesk', sans-serif;
+  --font-ja-hero: 'Zen Kaku Gothic New', var(--font-jp);  /* L5: JP-as-content display face (angular signage authority, distinct from the rounded --font-jp accent) */
+
+  /* L3: size→tracking scale — tracking as a monotonic function of smallness.
+     Generic tracked-caps data-labels reference these. Deliberate signatures stay
+     ad-hoc on purpose: hero-kicker 0.35, boot-title 0.5, sys-online 0.25,
+     mm-tag 0.24, sec-label 0.22, geo-kicker 0.2, seg button 0.08 (layout-tight),
+     state-flash 0.28 (deliberately wider than --track-11 — it is a signal, not a label). */
+  --track-9: 0.16em;
+  --track-10: 0.14em;
+  --track-11: 0.12em;
+  --track-12: 0.1em;
+  --track-13: 0.04em;
 
   --shell: min(1440px, 100%);
+
+  /* v3.2h — tokenized z-ladder (fixed stack law). Values preserve the working
+     order except boot, which now outranks the lightbox (confirmed defect: deck
+     "Reboot sequence" fired under an open lightbox played the boot underneath).
+     Cursor (9998/9999) and skip-link (9999) deliberately stay topmost, hardcoded. */
+  --z-scene: 0;
+  --z-content: 1;
+  --z-scrollhud: 95;
+  --z-nav: 100;
+  --z-deck: 200;
+  --z-menu: 9300;
+  --z-lightbox: 9500;
+  --z-boot: 9600;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -70,15 +113,17 @@ button { font: inherit; color: inherit; background: none; border: none; }
 .muted { color: var(--muted); }
 
 /* hide-until-boot — the boot overlay is opaque and covers everything, so we
-   only need to lock scrolling; content sits underneath at full opacity and is
-   revealed by the boot wipe. Content is NEVER opacity-hidden by JS/animation. */
+   only need to lock scrolling; content sits underneath and is revealed by the
+   boot wipe. Below-the-fold [data-reveal] content DOES sit at opacity 0 until
+   app.js's observer lands .seen; if the module chain dies, the body.revealed
+   watchdog override (see "reveal primitives") force-shows it. */
 body[data-booting] { overflow: hidden; }
 
 /* ============================================================
    Layered scene roots
    ============================================================ */
 #scene-root {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  position: fixed; inset: 0; z-index: var(--z-scene); pointer-events: none;
   transition: opacity 1.2s var(--ease-out);
 }
 .scene-debug {
@@ -95,7 +140,7 @@ body[data-booting] { overflow: hidden; }
 .scene-atmosphere {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: var(--z-scene);
   pointer-events: none;
   overflow: hidden;
   opacity: 1;
@@ -112,8 +157,7 @@ body[data-booting] { overflow: hidden; }
   opacity: var(--scene-glass-base);
   background:
     linear-gradient(105deg, transparent 0 42%, rgba(233, 241, 244, 0.07) 46%, transparent 52%),
-    radial-gradient(circle at 74% 34%, rgba(57, 240, 255, 0.12), transparent 30%),
-    radial-gradient(circle at 18% 76%, rgba(255, 158, 44, 0.10), transparent 28%);
+    radial-gradient(circle at 74% 34%, rgba(57, 240, 255, 0.12), transparent 30%);
 }
 @media (hover: none), (pointer: coarse) {
   :root {
@@ -155,14 +199,14 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
   background: var(--cyan); border-radius: 50%; transform: translate(-50%, -50%);
   pointer-events: none; will-change: transform; box-shadow: 0 0 8px var(--cyan);
 }
-.cursor.is-hot .cursor-ring { width: 56px; height: 56px; border-color: var(--amber); }
+.cursor.is-hot .cursor-ring { width: 28px; height: 28px; border-color: var(--cyan); }
 .cursor.is-hot .cursor-ring::before,
 .cursor.is-hot .cursor-ring::after {
-  content: ''; position: absolute; width: 7px; height: 7px;
-  border-color: var(--amber); border-style: solid;
+  content: ''; position: absolute; width: 8px; height: 8px;
+  border-color: var(--cyan); border-style: solid;
 }
-.cursor.is-hot .cursor-ring::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
-.cursor.is-hot .cursor-ring::after { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
+.cursor.is-hot .cursor-ring::before { top: 2px; left: 2px; border-width: 1px 0 0 1px; }
+.cursor.is-hot .cursor-ring::after { bottom: 2px; right: 2px; border-width: 0 1px 1px 0; }
 .cursor.is-text .cursor-ring { width: 3px; height: 26px; border-radius: 1px; border-color: var(--cyan); }
 .cursor.is-down .cursor-ring { transform: scale(0.8); }
 .cursor-label {
@@ -181,7 +225,7 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
    BOOT sequence
    ============================================================ */
 .boot {
-  position: fixed; inset: 0; z-index: 9000; background: #030407;
+  position: fixed; inset: 0; z-index: var(--z-boot); background: var(--void-deep);
   display: flex; flex-direction: column; justify-content: center;
   padding: clamp(20px, 6vw, 90px); overflow: hidden;
   font-family: var(--font-mono);
@@ -228,7 +272,7 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
    NAV
    ============================================================ */
 .nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  position: fixed; top: 0; left: 0; right: 0; z-index: var(--z-nav);
   padding: 18px clamp(20px, 4vw, 40px);
   display: flex; align-items: center; justify-content: space-between;
   transition: opacity 1s var(--ease-out), background .4s, backdrop-filter .4s, padding .4s;
@@ -242,7 +286,7 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
 .brand .dia { color: var(--cyan); font-size: 13px; text-shadow: 0 0 10px rgba(57,240,255,0.7);
   animation: spinDia 6s linear infinite; display: inline-block; }
 @keyframes spinDia { to { transform: rotate(360deg); } }
-.brand .name { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.04em; color: var(--fg); }
+.brand .name { font-family: var(--font-mono); font-size: 13px; letter-spacing: var(--track-13); color: var(--fg); }
 .nav-right { display: flex; align-items: center; gap: clamp(14px, 2vw, 28px); }
 .nav-links { display: flex; align-items: center; gap: clamp(14px, 2vw, 28px); }
 .nav-link {
@@ -253,10 +297,10 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
   margin-right: 4px; transform: translateX(6px); display: inline-block; transition: .3s; }
 .nav-link::after { content: ']'; color: var(--amber); opacity: 0;
   margin-left: 4px; transform: translateX(-6px); display: inline-block; transition: .3s; }
-.nav-link:hover, .nav-link.active { color: var(--cyan); }
-.nav-link:hover::before, .nav-link.active::before,
-.nav-link:hover::after, .nav-link.active::after { opacity: 0.8; transform: translateX(0); }
-.nav-meta { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; color: var(--muted);
+.nav-link:hover, .nav-link:focus-visible, .nav-link.active { color: var(--cyan); }
+.nav-link:hover::before, .nav-link:focus-visible::before, .nav-link.active::before,
+.nav-link:hover::after, .nav-link:focus-visible::after, .nav-link.active::after { opacity: 0.8; transform: translateX(0); }
+.nav-meta { font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--track-10); color: var(--muted);
   display: flex; flex-direction: column; align-items: flex-end; line-height: 1.5; white-space: nowrap; }
 .nav-meta span { white-space: nowrap; }
 .nav-meta .clock { color: var(--cyan); }
@@ -286,7 +330,7 @@ body.menu-open .nav-burger span:nth-child(3) { transform: translateY(-6.5px) rot
 /* ============================================================
    MOBILE MENU overlay
    ============================================================ */
-.mobile-menu { position: fixed; inset: 0; z-index: 9300; background: rgba(3,4,7,0.97);
+.mobile-menu { position: fixed; inset: 0; z-index: var(--z-menu); background: rgba(3,4,7,0.97);
   backdrop-filter: blur(10px); display: flex; flex-direction: column;
   padding: clamp(20px, 6vw, 40px); opacity: 0; visibility: hidden; pointer-events: none;
   transform: translateY(-10px);
@@ -316,7 +360,7 @@ body.menu-open .mm-links a:nth-child(3) { transition-delay: .24s; }
 body.menu-open .mm-links a:nth-child(4) { transition-delay: .30s; }
 body.menu-open .mm-links a:nth-child(5) { transition-delay: .36s; }
 body.menu-open .mm-links a:nth-child(6) { transition-delay: .42s; }
-.mm-idx { font-family: var(--font-mono); font-size: 12px; color: var(--amber); letter-spacing: 0.1em;
+.mm-idx { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: var(--track-12);
   min-width: 28px; }
 .mm-label { font-weight: 200; letter-spacing: -0.02em; line-height: 1; color: var(--fg);
   font-size: clamp(38px, 11vw, 76px); transition: color .3s, text-shadow .3s; }
@@ -326,7 +370,7 @@ body.menu-open .mm-links a:nth-child(6) { transition-delay: .42s; }
 .mm-links a:hover .mm-label { color: var(--cyan); text-shadow: 0 0 26px rgba(57,240,255,0.4); }
 .mm-links a:hover .mm-ja { color: var(--cyan); }
 .mm-foot { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px;
-  position: relative; z-index: 1; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
+  position: relative; z-index: 1; font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--track-10);
   text-transform: uppercase; color: var(--muted); padding-top: 14px; }
 .mm-foot .clock { color: var(--cyan); }
 .mm-coord { color: var(--cyan); }
@@ -337,12 +381,12 @@ body.menu-open .mm-links a:nth-child(6) { transition-delay: .42s; }
 
 /* scroll progress + section HUD (right rail) */
 .scroll-hud {
-  position: fixed; top: 50%; right: 18px; transform: translateY(-50%); z-index: 95;
+  position: fixed; top: 50%; right: 18px; transform: translateY(-50%); z-index: var(--z-scrollhud);
   display: flex; flex-direction: column; gap: 14px; align-items: flex-end;
   transition: opacity 1s var(--ease-out); mix-blend-mode: difference;
 }
 .scroll-hud a { display: flex; align-items: center; gap: 9px; font-family: var(--font-mono);
-  font-size: 9px; letter-spacing: 0.16em; color: var(--muted); text-transform: uppercase; }
+  font-size: 9px; letter-spacing: var(--track-9); color: var(--muted); text-transform: uppercase; }
 .scroll-hud .tick { width: 18px; height: 1px; background: var(--muted); transition: .35s; }
 .scroll-hud .lbl { opacity: 0; transform: translateX(6px); transition: .35s; }
 .scroll-hud a:hover .lbl, .scroll-hud a.active .lbl { opacity: 1; transform: translateX(0); color: var(--cyan); }
@@ -358,13 +402,13 @@ body.menu-open .mm-links a:nth-child(6) { transition-delay: .42s; }
 /* ============================================================
    Layout shells + section labels
    ============================================================ */
-main { position: relative; z-index: 1; transition: opacity 1s var(--ease-out); }
+main { position: relative; z-index: var(--z-content); transition: opacity 1s var(--ease-out); }
 section { position: relative; }
 .shell { width: var(--shell); margin: 0 auto; padding-inline: clamp(20px, 4vw, 40px); }
 
 .sec-label { display: flex; align-items: center; gap: 16px; font-family: var(--font-mono);
   font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: clamp(32px, 5vw, 56px); }
-.sec-label .idx { color: var(--amber); text-shadow: 0 0 10px rgba(255,158,44,0.5); }
+.sec-label .idx { color: var(--muted); }
 .sec-label .txt { color: var(--cyan); }
 .sec-label .rule { flex: 1; height: 1px; background: var(--line); position: relative; overflow: hidden; }
 .sec-label .rule::after { content: ''; position: absolute; inset: 0; width: 40%;
@@ -389,6 +433,11 @@ section { position: relative; }
   transform: translateY(0); transition: transform 1s var(--ease-io); z-index: 2; }
 .clip-reveal.seen::after { transform: translateY(-101%); }
 .clip-reveal.seen img, .clip-reveal.seen .media { transform: scale(1); }
+
+/* watchdog force-reveal path (index.html) — app.js may never load, so .seen never arrives; a normal boot drops .revealed on boot:done */
+body.revealed [data-reveal] { opacity: 1 !important; transform: none !important; }
+body.revealed .clip-reveal::after { display: none; }
+body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important;
@@ -459,13 +508,13 @@ section { position: relative; }
 /* ============================================================
    ABOUT
    ============================================================ */
-.about { padding-block: clamp(96px, 16vw, 200px); }
+.about { padding-block: clamp(88px, 12vw, 150px); }  /* v3.2o: −50px top/bottom at desktop — scarcity should look chosen, not leftover */
 .about-lead { font-weight: 200; letter-spacing: -0.02em; line-height: 1.06;
   font-size: clamp(30px, 5.2vw, 72px); max-width: 17ch; color: var(--fg);
   text-shadow: 0 0 40px rgba(57,240,255,0.1); }
 .about-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(36px, 6vw, 80px);
   margin-top: clamp(48px, 8vw, 96px); align-items: start; }
-.about-bio { display: grid; gap: 28px; }
+.about-bio { display: grid; gap: 28px; align-self: stretch; align-content: space-between; }  /* v3.2o: stat row bottom-aligns with the portrait's bottom edge — closes the dead bottom-left quadrant */
 .about-bio p { font-size: clamp(15px, 1.3vw, 18px); line-height: 1.7; color: var(--fg); }
 .about-bio p + p { color: var(--muted); }
 .geo-trail {
@@ -474,7 +523,7 @@ section { position: relative; }
 }
 .geo-kicker {
   font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em;
-  color: var(--amber); text-transform: uppercase;
+  color: var(--muted); text-transform: uppercase;
 }
 .geo-line {
   font-family: var(--font-mono); font-size: clamp(18px, 2vw, 28px);
@@ -483,10 +532,14 @@ section { position: relative; }
 }
 .geo-copy { color: var(--muted); font-size: clamp(14px, 1.1vw, 16px); line-height: 1.65; max-width: 68ch; }
 .about-portrait { position: relative; aspect-ratio: 3 / 4; }
+/* v3.1 — same dim-at-rest treatment as the gallery tiles (duotone layer stays);
+   hover restores the photograph. */
 .about-portrait .media { width: 100%; height: 100%; background-size: cover; background-position: center;
-  filter: grayscale(40%) contrast(1.05) brightness(0.92); }
+  filter: brightness(.58) saturate(.45) contrast(1.05); /* v3.1f: rest grade one notch deeper for the black floor */
+  transition: filter .45s var(--ease-out); }
+.about-portrait:hover .media { filter: none; }
 .about-portrait .duo { position: absolute; inset: 0; mix-blend-mode: color;
-  background: linear-gradient(160deg, rgba(57,240,255,0.28), rgba(255,158,44,0.12)); pointer-events: none; }
+  background: linear-gradient(160deg, rgba(57,240,255,0.28), rgba(57,240,255,0.06)); pointer-events: none; }
 .about-portrait .scanmask { position: absolute; inset: 0; pointer-events: none;
   background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,0.18) 3px 4px); }
 .about-portrait .pcorner { position: absolute; width: 18px; height: 18px; border: 1px solid var(--cyan); }
@@ -495,10 +548,25 @@ section { position: relative; }
 .about-portrait .ptag { position: absolute; bottom: 10px; left: 12px; font-family: var(--font-mono);
   font-size: 10px; letter-spacing: 0.1em; color: var(--cyan); text-shadow: 0 0 8px rgba(57,240,255,0.6); }
 .stat-row { display: flex; gap: clamp(20px, 4vw, 48px); margin-top: 36px; flex-wrap: wrap; }
+
+/* P5 — persistent oscilloscope graticule substrate behind data-dense regions
+   (reuses the .boot-grid gradient recipe, dimmed to ~0.04α — well below --line 0.16
+   and the data, near-black-preserving; painted as a background so it stays under all
+   content with zero z-index risk). The graticule the whole HUD grammar descends from. */
+.stat-row, .gallery-grid, .lb-stage {
+  background-image:
+    linear-gradient(rgba(57, 240, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57, 240, 255, 0.04) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
 .stat { font-family: var(--font-mono); }
-.stat .n { font-family: var(--font-display); font-weight: 200; font-size: clamp(34px, 4vw, 56px);
-  color: var(--cyan); line-height: 1; text-shadow: 0 0 24px rgba(57,240,255,0.3); }
-.stat .l { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
+.stat .n { font-weight: 400; font-size: clamp(34px, 4vw, 56px);
+  color: var(--cyan); line-height: 1; } /* composition L1: resting glow removed — mono stats read as crisp instrument output, one fewer bloom competing for the eye */
+.stat .l { font-size: 10px; letter-spacing: var(--track-10); text-transform: uppercase; color: var(--muted); margin-top: 8px; }
+/* v3.2k — sanctioned .readout pattern (P3 unit-triad deferral, first unit born):
+   value + typographically-demoted unit; the unit never glows. */
+.readout { display: inline-flex; align-items: baseline; }
+.readout-unit { color: var(--muted); font-size: 0.5em; margin-left: 2px; letter-spacing: 0.04em; }
 @media (max-width: 800px) { .about-grid { grid-template-columns: 1fr; } .about-portrait { max-width: 420px; } }
 
 /* ============================================================
@@ -514,23 +582,24 @@ section { position: relative; }
   background: linear-gradient(90deg, var(--cyan), transparent); box-shadow: 0 0 10px var(--cyan);
   transform: scaleX(0); transform-origin: left;
   transition: transform .6s var(--ease-out); }
-.row:hover::before { transform: scaleX(1); }
-.row:hover { background: linear-gradient(90deg, rgba(57,240,255,0.04), transparent 70%); }
+.row:hover::before, .row:focus-visible::before { transform: scaleX(1); }
+.row:hover, .row:focus-visible { background: linear-gradient(90deg, rgba(57,240,255,0.04), transparent 70%); }
 .work-grid { display: grid; grid-template-columns: 7fr 5fr; gap: clamp(16px, 3vw, 44px); align-items: baseline; }
 .proj-grid { display: grid; grid-template-columns: auto 7fr 4fr; gap: clamp(12px, 2.5vw, 44px); align-items: baseline; }
 .row-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.row-date { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.1em; }
+.row-date { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: var(--track-11); }
 .live-tag { font-family: var(--font-mono); font-size: 10px; color: var(--amber);
-  text-shadow: 0 0 10px rgba(255,158,44,0.7); display: inline-flex; align-items: center; gap: 5px; }
+  text-shadow: 0 0 10px rgba(255,158,44,0.7); display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid var(--amber); border-radius: 2px; padding: 2px 7px; }
 .live-tag .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber);
   box-shadow: 0 0 8px var(--amber); animation: pulse 2s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
 .row-title { font-weight: 200; letter-spacing: -0.02em; line-height: 1.02;
   font-size: clamp(26px, 4.4vw, 56px); color: var(--fg); transition: color .35s, text-shadow .35s; }
-.row:hover .row-title { color: var(--cyan); text-shadow: 0 0 24px rgba(57,240,255,0.4); }
+.row:hover .row-title, .row:focus-visible .row-title { color: var(--cyan); text-shadow: 0 0 24px rgba(57,240,255,0.4); }
 .row-sub { margin-top: 8px; font-size: clamp(14px, 1.2vw, 18px); color: var(--muted); }
 .row-desc { font-size: clamp(15px, 1.2vw, 18px); line-height: 1.55; color: var(--fg); max-width: 42ch; }
-.proj-idx { font-family: var(--font-mono); font-size: 12px; color: var(--amber); letter-spacing: 0.1em;
+.proj-idx { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: var(--track-12);
   padding-top: 6px; }
 .proj-end { display: flex; justify-content: space-between; gap: 10px; flex-direction: column; }
 @media (min-width: 760px) { .proj-end { flex-direction: row; } }
@@ -539,11 +608,11 @@ section { position: relative; }
 .tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
 .tag { font-family: var(--font-mono); font-size: 10px; color: var(--cyan); border: 1px solid var(--line);
   padding: 3px 8px; transition: .25s; }
-.row:hover .tag { border-color: var(--line-strong); }
-.tag:hover { background: rgba(57,240,255,0.1); border-color: var(--cyan); }
+.row:hover .tag, .row:focus-visible .tag { border-color: var(--line-strong); }
+.tag:hover { border-color: var(--cyan); }
 .row-arrow { font-family: var(--font-mono); color: var(--cyan); display: inline-block;
   transition: transform .35s var(--ease-out); }
-.row:hover .row-arrow { transform: translate(4px, -4px); }
+.row:hover .row-arrow, .row:focus-visible .row-arrow { transform: translate(4px, -4px); }
 .row-end-rule { border-top: 1px solid var(--line); }
 @media (max-width: 720px) {
   .work-grid, .proj-grid { grid-template-columns: 1fr; }
@@ -556,46 +625,101 @@ section { position: relative; }
 .gallery { padding-block: clamp(72px, 11vw, 150px); }
 .gallery-head { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px;
   margin-bottom: clamp(28px, 4vw, 48px); }
-.gallery-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.14em; }
+/* v3.1f: the count gets its own clear line — at ~1440px it fit the headline's row with
+   almost no slack and sat tight against the headline's right end. Basis-100% forces the
+   wrap at every width; right-aligned to keep the HUD right-rail grammar. */
+.gallery-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: var(--track-11);
+  flex-basis: 100%; text-align: right; }
 .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(10px, 1.4vw, 18px); }
+/* Composition lever 6+7: one cinematic letterbox break in the otherwise-uniform field —
+   the first tile spans two columns at a wide ~8:5 aspect so one image anchors the eye
+   and the rest read as deliberate repetition. 8:5 keeps its height ≈ its row-mate so
+   row one stays even. */
+.shot.feature { grid-column: span 2; aspect-ratio: 8 / 5; }
+/* v3.1 audit fix 2 (orphan tile): 13 cells in 3 columns ended on a lone tile — the
+   LAST tile mirrors the feature so the grid closes on a second cinematic band
+   (2+3+3+3+2, symmetric bookends). At the 2-col breakpoint it reads as a clean
+   full-width closing row. */
+.gallery-grid .shot:last-child { grid-column: span 2; aspect-ratio: 8 / 5; }
 @media (max-width: 880px) { .gallery-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 400px) { .gallery-grid { grid-template-columns: 1fr; } }
+/* v3.1 audit fix 1 (CONFIRMED mobile bug): a span-2 tile in the 1-col grid forced an
+   implicit ~2px second track that collapsed alternating tiles. Both spanning tiles
+   drop to auto/4:5 here so no implicit tracks exist at phone width. These overrides
+   sit AFTER the span rules in source order — cascade order is load-bearing. */
+@media (max-width: 400px) {
+  .gallery-grid { grid-template-columns: 1fr; }
+  .shot.feature, .gallery-grid .shot:last-child { grid-column: auto; aspect-ratio: 4 / 5; }
+}
+
+/* Motion L3 — boxed state-word: at each section lock one bracketed keyword snaps in at
+   the lower field, holds, then fades. Reuses the boot OK/LIVE keyword grammar at runtime
+   as an outline box (the outline is the signal, never a filled chip). Transient, not idle;
+   fired reduced-gated from effects.js (home excluded), so the field otherwise holds still. */
+.state-flash {
+  position: fixed; left: 50%; bottom: 42px; transform: translateX(-50%);
+  z-index: 180; pointer-events: none;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--cyan); border: 1px solid var(--cyan); border-radius: 2px; padding: 6px 16px;
+  box-shadow: 0 0 20px rgba(57, 240, 255, 0.18); opacity: 0; visibility: hidden;
+}
+.state-flash.show { animation: stateFlash 1.9s var(--ease-out) forwards; }
+@keyframes stateFlash {
+  0%   { opacity: 0; visibility: visible; transform: translateX(-50%) translateY(7px); letter-spacing: 0.5em; }
+  12%  { opacity: 1; transform: translateX(-50%) translateY(0); letter-spacing: 0.28em; }
+  70%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(0); }
+}
 .shot { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border: 1px solid var(--line);
   cursor: none; transition: border-color .4s, box-shadow .4s; background: var(--void-2); }
-.shot:hover { border-color: var(--cyan); box-shadow: 0 0 30px rgba(57,240,255,0.22); }
+.shot:hover, .shot:focus-visible { border-color: var(--cyan); box-shadow: 0 0 30px rgba(57,240,255,0.22); }
+/* v3.1 — photos join the world: dim-at-rest (sunk into the noir frame),
+   full-on-demand (hover/keyboard focus lifts the filter entirely; the lightbox
+   is the full-color payoff). Transition covered by the reduced-motion kill-switch. */
 .shot .media { position: absolute; inset: 0; background-size: cover; background-position: center;
-  filter: grayscale(60%) brightness(0.82) contrast(1.06);
-  transition: transform .9s cubic-bezier(0.22,1,0.36,1), filter .6s; transform: scale(1.04); }
-.shot:hover .media { transform: scale(1.12); filter: grayscale(0%) brightness(1) contrast(1.05); }
+  filter: brightness(.58) saturate(.45) contrast(1.05); /* v3.1f: rest grade one notch deeper for the black floor */
+  transition: transform .9s cubic-bezier(0.22,1,0.36,1), filter .45s var(--ease-out); transform: scale(1.04); }
+.shot:hover .media, .shot:focus-visible .media { transform: scale(1.12); filter: none; }
 .shot .sweep { position: absolute; inset: 0; pointer-events: none; opacity: 0;
   background: linear-gradient(180deg, transparent, rgba(57,240,255,0.12), transparent);
   transition: opacity .3s; }
-.shot:hover .sweep { opacity: 1; animation: shotScan 1.4s linear infinite; }
+.shot:hover .sweep, .shot:focus-visible .sweep { opacity: 1; animation: shotScan 1.4s linear infinite; }
 @keyframes shotScan { from { transform: translateY(-100%); } to { transform: translateY(100%); } }
 .shot .id { position: absolute; top: 8px; left: 10px; font-family: var(--font-mono); font-size: 10px;
   color: var(--cyan); opacity: 0; transform: translateY(-4px); transition: .35s; text-shadow: 0 0 8px rgba(57,240,255,0.6); }
 .shot .plus { position: absolute; bottom: 8px; right: 10px; font-family: var(--font-mono); font-size: 13px;
   color: var(--cyan); opacity: 0; transition: .35s; }
-.shot:hover .id, .shot:hover .plus { opacity: 0.95; transform: translateY(0); }
+.shot:hover .id, .shot:focus-visible .id, .shot:hover .plus, .shot:focus-visible .plus { opacity: 0.95; transform: translateY(0); }
+/* v3.2n — touch parity: the scroll-centred tile wears the focus grade (JS adds
+   .lit on coarse pointers only). Filter lift only, NO transform — a scale on
+   scroll would read as motion; the grade change IS the payoff, one at a time. */
+.shot.lit { border-color: var(--cyan); }
+.shot.lit .media { filter: none; }
 
 /* lightbox */
-.lightbox { position: fixed; inset: 0; z-index: 9500; background: rgba(2,3,6,0.96);
+.lightbox { position: fixed; inset: 0; z-index: var(--z-lightbox); background: rgba(2,3,6,0.985); /* v3.2o: the photograph is the ONLY light event — scrim sinks a notch shy of solid so the blur still reads as glass */
   backdrop-filter: blur(8px); display: flex; flex-direction: column; opacity: 0; pointer-events: none;
-  transition: opacity .4s var(--ease-out); }
-.lightbox.open { opacity: 1; pointer-events: auto; }
+  visibility: hidden;
+  transition: opacity .4s var(--ease-out), visibility 0s linear .4s; }
+.lightbox.open { opacity: 1; pointer-events: auto; visibility: visible;
+  transition: opacity .4s var(--ease-out), visibility 0s; }
 .lb-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: clamp(40px,6vw,90px) 20px 20px; position: relative; }
 .lb-img { max-height: 80vh; max-width: 92vw; object-fit: contain; border: 1px solid var(--line);
   box-shadow: 0 0 60px rgba(0,0,0,0.7); transition: opacity .35s, transform .5s var(--ease-out); }
 .lb-img.swapping { opacity: 0; transform: scale(0.98); }
 .lb-corner { position: absolute; width: 30px; height: 30px; border: 1px solid var(--line-strong); }
 .lb-meta { position: absolute; top: clamp(24px,4vw,48px); left: clamp(24px,4vw,48px); font-family: var(--font-mono);
-  font-size: 10px; letter-spacing: 0.14em; color: var(--cyan); line-height: 1.7; }
+  font-size: 10px; letter-spacing: var(--track-10); color: var(--cyan); line-height: 1.7; }
 .lb-close { position: absolute; top: clamp(20px,3vw,40px); right: clamp(20px,3vw,40px); font-family: var(--font-mono);
   font-size: 11px; letter-spacing: 0.18em; color: var(--muted); border: 1px solid var(--line); padding: 7px 13px;
   cursor: none; transition: .25s; }
 .lb-close:hover { color: var(--amber); border-color: var(--amber); }
 .lb-strip { display: flex; gap: 8px; padding: 14px clamp(20px,4vw,48px) clamp(20px,4vw,40px); overflow-x: auto;
-  justify-content: center; }
+  justify-content: flex-start; }
+/* v3.2o safe-centre: auto margins centre the strip when it FITS and yield to
+   scrolling when it doesn't (the justify-content:center + overflow-x:auto
+   combination clipped the leading thumbs below ~800px — confirmed defect). */
+.lb-thumb:first-child { margin-left: auto; }
+.lb-thumb:last-child { margin-right: auto; }
 .lb-thumb { width: 54px; height: 68px; flex: 0 0 auto; background-size: cover; background-position: center;
   border: 1px solid transparent; opacity: 0.4; filter: grayscale(80%); transition: .3s; cursor: none; }
 .lb-thumb.active { opacity: 1; border-color: var(--cyan); filter: grayscale(0%); box-shadow: 0 0 14px rgba(57,240,255,0.4); }
@@ -612,16 +736,44 @@ section { position: relative; }
 .contact h2 { font-weight: 200; letter-spacing: -0.03em; line-height: 0.9;
   font-size: clamp(44px, 9.5vw, 150px); max-width: 13ch; color: var(--fg); text-shadow: 0 0 50px rgba(57,240,255,0.18); }
 .contact h2 em { font-style: normal; color: var(--cyan); }
+
+/* v3.2f — contact return path: one instrument row in the ledger grammar. The
+   address is JS-assembled (never in source); the copy tick is the amber event. */
+.signal-row { display: inline-flex; align-items: baseline; gap: 14px; margin-top: clamp(30px, 4vw, 48px);
+  font-family: var(--font-mono); border: 1px solid var(--line); padding: 13px 20px; cursor: none;
+  transition: border-color .3s var(--ease-out), box-shadow .3s var(--ease-out); }
+.signal-row:hover, .signal-row:focus-visible { border-color: var(--cyan); box-shadow: 0 0 18px rgba(57,240,255,0.25); }
+.signal-row .signal-k { font-size: 10px; letter-spacing: var(--track-10); color: var(--muted); text-transform: uppercase; }
+.signal-row .signal-addr { font-size: clamp(13px, 1.5vw, 16px); letter-spacing: var(--track-13); color: var(--cyan); }
+.signal-row .signal-tick { font-size: 10px; letter-spacing: var(--track-10); color: var(--amber);
+  opacity: 0; transition: opacity .25s; }
+.signal-row.copied .signal-tick { opacity: 1; text-shadow: 0 0 10px rgba(255,158,44,0.6); }
+
+/* L5 — JP-as-content: in Japanese mode the headline moments own the frame in the
+   Zen Kaku Gothic display face, with JP metrics (positive tracking, looser leading)
+   replacing the tight Latin recipe — and lifted off the ugly Hanken system-fallback.
+   Pure CSS reacting to the existing html[lang="ja"] state (js/app.js:129).
+   L6 vertical kanji index deferred: it would duplicate the existing [ 0X ] section
+   indices — the brief's "one signal at a time / don't over-Japanese". */
+html[lang="ja"] .about-lead {
+  font-family: var(--font-ja-hero); font-weight: 500;
+  letter-spacing: 0.01em; line-height: 1.28;
+}
+html[lang="ja"] .contact h2 {
+  font-family: var(--font-ja-hero); font-weight: 700;
+  letter-spacing: 0.02em; line-height: 1.15;
+}
+html[lang="ja"] .heading-xl {
+  font-family: var(--font-ja-hero); font-weight: 700;
+  letter-spacing: 0.02em; line-height: 1.1;
+}
+html[lang="ja"] .hero-kicker span { letter-spacing: 0.14em; }
 .pills { display: flex; flex-wrap: wrap; gap: 14px; margin-top: clamp(36px, 5vw, 64px); }
-.pill { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.04em; color: var(--cyan);
+.pill { font-family: var(--font-mono); font-size: 13px; letter-spacing: var(--track-13); color: var(--cyan);
   border: 1px solid var(--line); border-radius: 75px; padding: 11px 24px;
   transition: color .3s var(--ease-out), border-color .3s var(--ease-out), box-shadow .3s var(--ease-out);
-  position: relative; overflow: hidden; cursor: none; }
-.pill span { position: relative; z-index: 1; }
-.pill::before { content: ''; position: absolute; inset: 0; background: var(--cyan);
-  transform: translateY(101%); transition: transform .4s var(--ease-out); }
-.pill:hover { color: var(--void); border-color: var(--cyan); box-shadow: 0 0 28px rgba(57,240,255,0.4); }
-.pill:hover::before { transform: translateY(0); }
+  position: relative; cursor: none; }
+.pill:hover { color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 28px rgba(57,240,255,0.4); }
 .footer { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px;
   margin-top: clamp(72px, 12vw, 150px); border-top: 1px solid var(--line); padding-top: 22px;
   font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
@@ -630,31 +782,45 @@ section { position: relative; }
 /* ============================================================
    CONTROL DECK (HUD settings panel)
    ============================================================ */
-.deck-toggle { position: fixed; bottom: 22px; left: 22px; z-index: 200; width: 42px; height: 42px;
+.deck-toggle { position: fixed; bottom: 22px; left: 22px; z-index: var(--z-deck); width: 42px; height: 42px;
   border: 1px solid var(--line); background: var(--panel-solid); backdrop-filter: blur(8px);
   display: grid; place-items: center; cursor: none; transition: .25s; }
 .deck-toggle:hover { border-color: var(--cyan); box-shadow: 0 0 16px rgba(57,240,255,0.3); }
 .deck-toggle svg { width: 18px; height: 18px; stroke: var(--cyan); }
 .deck-toggle .gear { transition: transform .6s var(--ease-out); }
 .deck-toggle:hover .gear { transform: rotate(90deg); }
-.deck { position: fixed; bottom: 74px; left: 22px; z-index: 200; width: 250px;
+.deck { position: fixed; bottom: 74px; left: 22px; z-index: var(--z-deck); width: 250px;
   background: var(--panel-solid); backdrop-filter: blur(12px); border: 1px solid var(--line-strong);
   padding: 16px; transform: translateY(12px) scale(0.96); opacity: 0; pointer-events: none;
-  transition: .3s var(--ease-out); }
-.deck.open { transform: none; opacity: 1; pointer-events: auto; }
+  visibility: hidden;
+  transition: opacity .3s var(--ease-out), transform .3s var(--ease-out), visibility 0s linear .3s; }
+.deck.open { transform: none; opacity: 1; pointer-events: auto; visibility: visible;
+  transition: opacity .3s var(--ease-out), transform .3s var(--ease-out), visibility 0s; }
 .deck h4 { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
   color: var(--cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-.deck h4::before { content: '◆'; color: var(--amber); font-size: 8px; }
+.deck h4::before { content: '◆'; color: var(--muted); font-size: 8px; }
+/* P8 — worn-hardware read: demote the flat full border to a faint bezel + add crisp
+   L-corner brackets (two opposite corners) and a header model-rail, so the deck reads
+   as an instrument, not a card. The lightbox stage already wears its combiner frame
+   via .lb-corner. Chrome stays crisp; the content layer is untouched. */
+.deck { border-color: var(--line); }
+.deck::before, .deck::after {
+  content: ''; position: absolute; width: 13px; height: 13px;
+  border: 0 solid var(--line-strong); pointer-events: none;
+}
+.deck::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
+.deck::after { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
+.deck h4::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent); }
 .deck .grp { margin-bottom: 16px; }
 .deck .grp:last-child { margin-bottom: 0; }
-.deck .grp > label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em;
+.deck .grp > label { font-family: var(--font-mono); font-size: 9px; letter-spacing: var(--track-9);
   text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 8px; }
 .seg { display: flex; gap: 5px; }
 .seg button { flex: 1; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em;
   color: var(--muted); border: 1px solid var(--line); padding: 7px 4px; cursor: none; transition: .2s;
   text-transform: uppercase; }
 .seg button:hover { color: var(--cyan); border-color: var(--line-strong); }
-.seg button.on { color: var(--void); background: var(--cyan); border-color: var(--cyan); }
+.seg button.on { color: var(--cyan); background: transparent; border-color: var(--cyan); box-shadow: 0 0 14px rgba(57,240,255,0.22); }
 .deck .toggle-row { display: flex; justify-content: space-between; align-items: center; }
 .switch { width: 38px; height: 20px; border: 1px solid var(--line-strong); border-radius: 20px;
   position: relative; cursor: none; transition: .25s; }
@@ -694,9 +860,9 @@ section[id] { scroll-margin-top: clamp(64px, 10vh, 96px); }
 .lightbox, .mobile-menu { overscroll-behavior: contain; }
 .lb-strip { overscroll-behavior-x: contain; }
 
-/* numeric readouts hold width (clock, counters, positions, dates) */
-.clock, .stat .n, .lb-pos, .gallery-count, .proj-year, .row-date,
-.coord, .mm-coord { font-variant-numeric: tabular-nums; }
+/* numeric readouts: hold width + disambiguated (slashed) zero — instrument figures */
+.clock, .stat .n, .geo-line, .lb-pos, .gallery-count, .proj-year, .row-date,
+.coord, .mm-coord, .boot-pct { font-variant-numeric: tabular-nums slashed-zero; }
 
 /* headline rag + prose orphan control (no-ops where unsupported) */
 .hero h1, .heading-xl, .about-lead, .contact h2 { text-wrap: balance; }
@@ -721,3 +887,42 @@ section[id] { scroll-margin-top: clamp(64px, 10vh, 96px); }
 .deck-toggle { bottom: calc(22px + env(safe-area-inset-bottom)); left: calc(22px + env(safe-area-inset-left)); }
 .deck { bottom: calc(74px + env(safe-area-inset-bottom)); left: calc(22px + env(safe-area-inset-left)); }
 .mobile-menu { padding-bottom: max(clamp(20px, 6vw, 40px), env(safe-area-inset-bottom)); }
+
+/* ============================================================
+   v3.2j — print: the ledger on paper. Scene/HUD chrome dies, light-on-white,
+   work/projects/contact remain a readable dossier.
+   ============================================================ */
+@media print {
+  #scene-root, .scene-atmosphere, .scene-debug, .frame-hud, .state-flash,
+  .cursor, .cursor-dot, .cursor-label, .scroll-progress, .scroll-hud,
+  .boot, .mobile-menu, .lightbox, .deck, .deck-toggle, .nav-burger,
+  .lang-btn, .skip-link, .scroll-cue, .typ-caret, .shot .sweep, .signal-tick { display: none !important; }
+  html, body { background: #fff !important; color: #111 !important; cursor: auto; }
+  .nav { position: static; background: none; }
+  .hero { height: auto; min-height: 0; padding-block: 24pt; }
+  [data-reveal], .sec-label { opacity: 1 !important; transform: none !important; }
+  .clip-reveal::after { display: none; }
+  .hero h1, .hero h1 .amberline, .heading-xl, .about-lead, .contact h2, .contact h2 em,
+  .row-title, .about-bio p, .row-desc, .geo-copy { color: #111 !important; text-shadow: none !important; }
+  .sec-label .txt, .geo-line, .proj-tech, .stat .n, .brand .name, .nav-meta .clock,
+  .footer .coord, .signal-row .signal-addr, .pill, .tag, .row-arrow, .mm-coord { color: #333 !important; text-shadow: none !important; }
+  .hero-kicker, .sys-online, .row-date, .row-sub, .proj-year, .gallery-count, .stat .l,
+  .geo-kicker, .footer { color: #555 !important; text-shadow: none !important; }
+  .stat-row, .gallery-grid, .lb-stage { background-image: none; }
+  .shot .media, .about-portrait .media { filter: none; }
+  .about-portrait .duo, .about-portrait .scanmask { display: none; }
+  .row, .row-end-rule, .footer, .geo-trail, .signal-row, .pill, .tag { border-color: #ccc !important; box-shadow: none !important; }
+  .row::before { display: none; }
+}
+
+/* v3.2o — lightbox morph timing (progressive enhancement; no-op elsewhere).
+   The JS assigns view-transition-name only for the one open gesture. */
+@supports (view-transition-name: lb-photo) {
+  ::view-transition-group(lb-photo) { animation-duration: .45s; animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+  ::view-transition-old(lb-photo), ::view-transition-new(lb-photo) { height: 100%; object-fit: contain; }
+}
+
+/* v3.2o GATED (.proj-rail via RAIL_GATE, app.js) — stack readouts as one
+   aligned right-hand column, no drawn rule. */
+body.proj-rail .proj-end { flex-direction: column; align-items: flex-end; gap: 6px; }
+body.proj-rail .proj-tech { text-align: right; max-width: none; min-width: 30ch; }
