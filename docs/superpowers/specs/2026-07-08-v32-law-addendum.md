@@ -91,3 +91,59 @@ Six pins in `tools/verify-site-hardening.js` (harness total: 27):
 ## v32n re-measure (2026-07-10, remediation redo, working tree on e6c654e)
 Method (same shape as §8 row 6): devtools `performance_start_trace` (reload:true), emulation 412×823 DPR 1.75 mobile+touch, 4× CPU, Slow 4G, single tab, localhost python http.server. Same-session **A/B vs HEAD e6c654e via git stash/pop**, ≥3 runs per build, medians.
 **Finding: LCP under this harness is bimodal by HTTP-cache regime, on BOTH builds** — fast regime (document ~55 ms latency): new-build LCP **254/257/259 ms (median 257)** vs old-build 258 ms; slow regime (document re-download ~595 ms under Slow 4G; LCP keys on a different node, 123 vs 93): old 754/755/1071/1628, new 1304/1317/1317. The regime switch tracks session time / file-mtime cache invalidation (stash/pop touches mtimes; python http.server always re-serves HTML 200), not the build — the old build drifts 754→1628 monotonically within its own block. **The only clean like-for-like is the warm fast regime: new 257 vs old 258 ms — parity, no regression.** No cross-regime or cross-session comparison is claimed; §8 row 6's LCP 492 ms (2026-07-08) is a different session and is not directly comparable. Static payload delta of v32n (exact, `wc -c` vs HEAD): background.js +3020 B, app.js +1488 B, site.css +320 B = **+4828 B, zero new assets/requests**.
+
+## v3.2r close-out measurements (2026-07-10, Task 16R, branch v32-remediation, HEAD 2fd4734, tree clean)
+
+**Build:** bg 5.5 / app 4.1 / `site.css?v=3.28` / `boot.mjs?v=22` (cache-busts confirmed loading on the measured page). Harness **41/41, exit 0**. This section supersedes the reverted Opus close-out (52b167a) in full; every number below is fresh and reproducible with `node tools/frame-luminance.mjs`.
+
+**Method (per §8b, deviations noted):** `http://127.0.0.1:8765/index.html`, all stale QA tabs closed first, ONE tab for the whole session. Viewport **1440×743 CSS px @ DPR 2** via device-metrics emulation (native `resize_page(1440,900)` yielded 749 inner on this window chrome; emulation pins the exact §8b frame geometry — captures are 2880×1486 px, byte-geometry-identical to the §8b set). **Fresh hard-reload (`ignoreCache`) before EVERY capture** (a stricter regime than §8b's one-reload/five-frames — each frame is an independent boot), 11 s settle after boot and 11 s after each section scroll. Scroll landing verified per capture: hero `scrollTo(0,0)` → scrollY 0 (verified === 0 before all 5 hero captures); `#gallery` scrollIntoView → scrollY 3310, top 74.25 px; `#projects` → scrollY 6707.5, top 74.09 px (§8b recorded 3410/6807.5 — the v32o About padding reclaim shortened the page by ~100 px; the 74 px `scroll-margin-top` anchor is identical). Statistic = per-metric **median of 5**, spreads reported. Frames (git-ignored): `docs/superpowers/gates/v32/closeout-r-{hero,projects,gallery}-{1..5}.png`. **Zero console messages across every session** (close-out captures, rain A/B, mobile sweep, desktop sweep, reduced-motion).
+
+### Luminance vs §8b (baseline of record)
+
+| Section | mean (median) | mean spread | p50 (median) | p50 spread | p95 (median) | p95 spread | warmShare (median) | warmShare spread |
+|---|---|---|---|---|---|---|---|---|
+| hero | **18.54** | 18.50–18.78 | **8** | 8–8 | **77** | 77–80 | **0.0086** | 0.0084–0.0093 |
+| projects | **21.96** | 18.89–22.03 | **7** | 7–7 | **114** | 91–115 | **0.0028** | 0.0027–0.0030 |
+| gallery | **38.21** | 37.50–38.23 | **9** | 9–9 | **120** | 120–120 | **0.0015** | 0.0013–0.0015 |
+
+### Verdict vs the plan Step-2 letter criterion (mean AND warmShare ≤ §8b)
+
+- **FAILS the letter criterion at hero:** mean 18.54 vs 18.43 (+0.11 — below variance resolution, inside the §8b per-frame spread 15.90–18.99, not citable as a real change); **warmShare 0.0086 vs 0.0027 — 3.2× as medians, but see the matched-phase check:** §8b's own 11 s frame (`rebase-hero-1`, HEAD 8474267, pre-v32m) read warm **0.0090**, and the Opus-era build's 11 s frame (`closeout-hero-1`, 0365883) read **0.0090** — at the 11 s phase the hero warm beat is UNCHANGED across three builds (10/10 frames ≈ 0.009 across four sessions). The median rise is the fresh-reload-per-capture regime sampling that phase 5/5 where §8b sampled it 1/5. The letter fail stands as written; the warm beat itself predates v32m.
+- **FAILS the letter criterion at projects:** mean 21.96 vs 20.61 (+1.35 — above the §8b per-frame σ ≈ 1.17 and consistent across 4/5 frames at 21.93–22.03, so likely a real rise; still inside the baseline's own per-frame spread 19.59–22.89); warmShare 0.0028 vs 0.0089 **passes decisively** (−69%).
+- **FAILS the letter criterion at gallery, on its face only:** mean 38.21 vs 37.76 (+0.45 — below the §8b per-frame σ ≈ 0.72 and inside the baseline spread 37.10–38.94; NOT resolvable as a real change, reported because the criterion compares medians as written); warmShare 0.0015 vs 0.0020 passes.
+- **The deep-black floor held everywhere: p50 = 8 / 7 / 9, identical to the §8b medians, zero spread across all 15 frames.** The rises live in the emissive tail (p95 hero 77 vs 70, projects 114 vs 101, both inside baseline spreads; gallery saturated at 120 = 120), not the floor.
+- All three failures are routed to the owner as **GATE-PILE item 11**. Causal attribution, per section: the HERO warm fail is a sampling-phase artifact of the measurement regime, not a build change (matched-phase parity above — pre-v32m baseline already carried the 11 s warm beat); the PROJECTS mean rise is consistent with the v32m acquire holding the lit Dallas nearside through the settle window (a post-baseline owner-commissioned add); the GALLERY fail is below resolution. Interpretations flagged as such; the failures are the measured fact. No criterion was renamed or averaged away.
+
+### Hero rain isolation A/B (the sanctioned method; binding T12 note honored)
+
+Same page, same session, matched settle (post-11 s), **5 interleaved pairs**: the 3 `rain-layer-*` children of the `depth-rain` group toggled `visible=false/true` per pair via a captured scene reference (render-loop writes `group.visible` and `material.opacity` each frame, so child-visibility is the loop-proof lever; `sceneState` itself is module-scoped with no setter — deviation from the note's literal `sceneState.rain=0`, same rendered effect: zero rain particles drawn; the 2D droplet glass overlay, also rain-keyed, stayed live in BOTH arms). Frames: `closeout-r-rainAB-{on,off}-{1..5}.png` (1440×743 @ DPR2).
+
+| pair | on mean | off mean | Δ (on−off) |
+|---|---|---|---|
+| 1 | 18.88 | 18.66 | +0.22 |
+| 2 | 18.84 | 19.03 | −0.19 |
+| 3 | 18.59 | 18.93 | −0.34 |
+| 4 | 18.93 | 18.94 | −0.01 |
+| 5 | 19.19 | 19.10 | +0.09 |
+
+Medians: on **18.88**, off **18.94**, pairwise Δ median **−0.01** (range −0.34…+0.22). **Result: the hero depth-rain rest contribution to frame mean is below measurement resolution — indistinguishable from zero at N=5 interleaved pairs**, dominated by event-phase variance (warmShare swung 0.0021–0.0086 across these frames combined — on-arm 0.0021–0.0086, off-arm 0.0021–0.0081 — confirming the warm events are halo/beat pulses, not rain). Consistent with T12's finding (rest contribution ≈ 0.1 < per-frame σ). Accordingly, NO hero rain delta — including the reverted close-out's sub-resolution claims — is cited as fact anywhere in this close-out.
+
+### Mobile close-out
+
+- **Sweep at 390×844 @ DPR2 mobile+touch (hard reload, 11 s settle):** hero composed (globe in-frame below the header, name legible on the dim limb — `closeout-r-mobile-hero.png`); About callout clear of the 80 px band (band clean while gated; facing-open panel top ~85–88 CSS px, mid-fade under the v32n header gate — `closeout-r-mobile-callout{,-2}.png`); touch photo parity live (exactly one `.lit` tile, nearest-centre d=52 px, filter `none` vs rest grade `brightness(0.58) saturate(0.45) contrast(1.05)`); lightbox opened the lit tile's own image (gallery-03, complete=true, focus → `.lb-close`, aria-hidden=false/inert=false) and closed clean (aria-hidden=true, inert=true) — `closeout-r-mobile-lightbox.png`. Zero console messages.
+- **Perf:** the claim of record is the **v32n re-measure block above** (T14R's method-stated warm-regime A/B: new 257 vs old 258 ms — parity). One fresh confirmation trace at its stated emulation (412×823 @ DPR 1.75 mobile+touch, 4× CPU, Slow 4G, warm cache): **LCP 464 ms** on LCP node 93 (the warm-regime node; TTFB 0.8 ms, document latency ~61 ms = fast/warm regime marker) — same order as the 257/258 ms parity pair (sub-half-second warm regime, nowhere near the ~1300 ms slow regime); single-trace spread within a regime was already documented at ±hundreds of ms in the v32n block, so no tighter claim is made from one run. **CLS 0.21** (measured; inside T14R's observed 0.04–0.32 band across both builds).
+
+### Full sweep (desktop 1440×900 @ DPR2 + mobile + reduced-motion)
+
+- Section walk home→about→work→gallery→projects→contact: the boxed **state-word fired exactly once per section change** (about / work / gallery / projects / contact; home excluded), observed via a class MutationObserver on `.state-flash` — one signal per lock.
+- **Contact downlink:** LOS-gated as designed — on entry Tokyo sat at the limb (downlink armed, not fired); ~25 s later Tokyo rotated into facing with focus ring + amber hub bloom (`closeout-r-contact-downlink.png` → `closeout-r-contact-downlink-2.png`). The full 東京/TOKYO "SIGNAL ONLINE" callout-text verification of record is T13R's.
+- **Story beat:** DALLAS callout observed live (mid-fade, limb-adjacent) on a random projects entry (`closeout-r-projects-beat.png`); the engineered nearside/farside pair of record is `m2-projects-dallas-{nearside,farside}.png` (T13R).
+- **Lightbox desktop:** VT-path open/close clean (gallery-07, focus → `.lb-close`, aria/inert correct both ways).
+- **Reduced-motion (matchMedia initScript override, `?sceneDebug=1` page):** SCENE=REDUCED, spinY constant over 1.5 s (static frame), page revealed, zero console — `closeout-r-reduced-static.png`.
+- Zero console errors/warnings in every state.
+
+### Pointers to amended criteria (already of record, restated for the close-out)
+
+1. **Focus-bias cap:** the plan-pinned `BIAS_MAX_RADS_PER_SEC = 0.12` was a spec defect (measured −0.054 rad/s reverse). Amended spec (task-13r-report, "Plan-amendment note"): cap MUST be < 0.066 (shipped 0.055), forward-only by construction, slew-limited (≤0.005 rad/s per frame), cap value harness-pinned.
+2. **Lightbox luminance (plan Step 9g):** "frame mean < §8b hero baseline" superseded — unmeetable with the law-protected unfiltered photograph. Amended proof: same-frame scrim A/B (0.985 → 51.35 vs 0.96 → 51.53, Δ −0.18) + p50 floor (15 < 18.43). Recorded in task-15r-report and GATE-PILE item 6.
+3. **Step-2 net-light letter criterion:** NOT amended — it fails as written at hero (warmShare, resolvable), projects (mean, likely real), gallery (mean, below resolution), and the failures are routed to the owner as GATE-PILE item 11.
