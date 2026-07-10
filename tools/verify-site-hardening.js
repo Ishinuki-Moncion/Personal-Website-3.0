@@ -363,6 +363,19 @@ check('v3.2o — lightbox is the one light event (deep scrim, safe-centred strip
     /startViewTransition/.test(app) && /shift: \[-1\.2, -2\.0\]/.test(background),
   'scrim sinks toward true black, strip safe-centres, halo/rail ship OFF behind gates, view-transition morph present, work globe eases left/deeper');
 
+// v3.2r — the scene consumes SCRUBBED scroll (one-pole low-pass), never raw
+// per-event scrollY: direct coupling made camera.z / spin / grid step visibly
+// under load (owner-reported). Pins the filter shape, its anchored-load seed,
+// and the scrubbed consumers; the raw spin coupling must stay retired.
+check('v3.2r — scroll scrub: scene consumes low-passed scrollNS, not raw scrollN',
+  /scrollNS \+= \(scrollN - scrollNS\) \* Math\.min\(1, dt \* 8\)/.test(background) &&
+    /if \(scrollNS < 0\) scrollNS = scrollN;/.test(background) &&
+    /spinBase = t \* 0\.22 \+ scrollNS \* 2\.4/.test(background) &&
+    /camera\.position\.z = 10 - scrollNS \* 4/.test(background) &&
+    /camera\.lookAt\(0, scrollNS \* 1\.5, 0\)/.test(background) &&
+    !/spinBase = t \* 0\.22 \+ scrollN \* 2\.4/.test(background),
+  'one-pole scrub (tau ~0.125s) sits between scrollY and every scene consumer — spin, camera dolly, lookAt');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';

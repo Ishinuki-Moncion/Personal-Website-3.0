@@ -1481,7 +1481,7 @@
      value, so the rate can never overshoot the cap. Invariant: total y-rate
      = autonomous 0.066 (0.22 spinBase * 0.3 t-scale) + focusBiasRate, always
      in [0.066, 0.121] rad/s (absent user scroll — spinBase also carries the
-     absolute scrollN * 2.4 term) — never frozen, never reversed. Cap derivation:
+     absolute, scrubbed scrollNS * 2.4 term) — never frozen, never reversed. Cap derivation:
      safety is structural for any cap < 0.066, so the cap trades margin for
      beat coverage — 0.055 keeps 0.011 rad/s (17%) margin, peaks at 1.83x
      autonomous (below the ~2x subliminal ceiling), and covers cap * window
@@ -2034,6 +2034,7 @@
      speed as 60Hz: 0.005/frame @60fps = 0.3/s. Clamped so a stalled tab can't
      jump time on resume. */
   let raf, running = true, t = 0, last = performance.now(), debugTick = 0;
+  let scrollNS = -1;   // scrubbed scroll (one-pole low-pass of scrollN); -1 = unseeded, first frame snaps to scrollN so anchored loads don't swoop
   let revealT = 0;   // SP2 boot reveal: real-time accumulator (pauses with the loop when hidden)
   function loop(now) {
     if (!running) return;
@@ -2047,6 +2048,8 @@
       globeMat.uniforms.uReveal.value = 1.0 - Math.pow(1.0 - rr, 3.0);
     }
     const scrollN = Math.min(1, Math.max(0, scrollY / maxScroll));
+    if (scrollNS < 0) scrollNS = scrollN;
+    scrollNS += (scrollN - scrollNS) * Math.min(1, dt * 8);   // scroll scrub: raw per-event scrollY steps the camera/spin under load; tau ~0.125s
     const f = dt * 60;   // per-frame speeds scale to real elapsed time
 
     // Section story state — eased toward the active story's targets each frame
@@ -2088,13 +2091,14 @@
     fieldCyan.rotation.y -= 0.0004 * f * drift;
     fieldAmber.rotation.x += 0.0005 * f * drift;
     fieldDeep.rotation.y += 0.0002 * f;
-    grid.position.z = ((t * 6 + scrollN * 70) % 4) - 2;
+    grid.position.z = ((t * 6 + scrollNS * 70) % 4) - 2;
     grid.material.opacity = 0.2 * sceneState.grid;   // v3.2d: story-driven — near-0 in gallery
 
     /* Globe motion — autonomous spin (t term keeps phones alive without
-       pointermove) + scroll-advanced rotation, ABSOLUTE so smooth-scroll can't
-       make it jumpy. Gyro tilt eases on coreGroup; spin owns the y-rotation. */
-    const spinBase = t * 0.22 + scrollN * 2.4;
+       pointermove) + scroll-advanced rotation on the SCRUBBED scroll: absolute
+       in scrollNS (no drift), low-passed so per-event scroll steps can't make
+       it jumpy. Gyro tilt eases on coreGroup; spin owns the y-rotation. */
+    const spinBase = t * 0.22 + scrollNS * 2.4;
     let biasTarget = 0;            // regime target for the ADDED rate, rad/s — in [0, cap] always
     if (focusBiasT > 0) {          // chase: forward-only P-controller (eases as it closes)
       focusBiasT = Math.max(0, focusBiasT - dt);
@@ -2177,9 +2181,9 @@
     if (warp > 0.001) warp *= 0.92; else warp = 0;
     if (debugEl && ++debugTick % 20 === 0) updateDebugText();
     camera.position.x += (mouse.x * 1.5 - camera.position.x) * 0.04;
-    camera.position.y += (-mouse.y * 1.0 + scrollN * 3 + sceneState.camera - camera.position.y) * 0.04;
-    camera.position.z = 10 - scrollN * 4 - warp * 6 - idleK * 1.6;   // idle cinematic dolly-in
-    camera.lookAt(0, scrollN * 1.5, 0);
+    camera.position.y += (-mouse.y * 1.0 + scrollNS * 3 + sceneState.camera - camera.position.y) * 0.04;
+    camera.position.z = 10 - scrollNS * 4 - warp * 6 - idleK * 1.6;   // idle cinematic dolly-in
+    camera.lookAt(0, scrollNS * 1.5, 0);
     render();
     if (droplets) droplets.update(dt);   // after render: droplet lenses sample THIS frame's buffer
     if (!coarse) interrogate(dt);          // SP3: pointer interrogation (touch uses tap-select)
