@@ -201,6 +201,40 @@
   addEventListener('resize', onTileScroll, { passive: true });
   checkTiles();
 
+  /* v3.2n — touch photo parity: hover doesn't exist on coarse pointers, so the
+     tile nearest viewport centre wears the EXISTING focus grade (.lit lifts the
+     rest filter) — exactly ONE at a time (one-signal rule): remove-before-add.
+     Same rAF+rect pattern as checkTiles (IO misbehaves in scaled/preview
+     iframes), and registered for BOTH scroll and resize like onTileScroll — an
+     orientation flip without a scroll re-picks instead of leaving a stale lit
+     tile. Filter transition is covered by the reduced-motion kill-switch. */
+  if (matchMedia('(pointer: coarse)').matches && shots.length) {
+    let litShot = null, litTick = false;
+    function checkLit() {
+      const mid = innerHeight / 2;
+      let best = null, bestD = Infinity;
+      for (const s of shots) {
+        const r = s.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > innerHeight) continue;
+        const d = Math.abs(r.top + r.height / 2 - mid);
+        if (d < bestD) { bestD = d; best = s; }
+      }
+      if (best !== litShot) {
+        if (litShot) litShot.classList.remove('lit');
+        litShot = best;
+        if (litShot) litShot.classList.add('lit');
+      }
+    }
+    function onLitScroll() {
+      if (litTick) return;
+      litTick = true;
+      requestAnimationFrame(() => { litTick = false; checkLit(); });
+    }
+    addEventListener('scroll', onLitScroll, { passive: true });
+    addEventListener('resize', onLitScroll, { passive: true });
+    checkLit();
+  }
+
   function show(i) {
     lbIndex = (i + sources.length) % sources.length;
     if (lbImg) {

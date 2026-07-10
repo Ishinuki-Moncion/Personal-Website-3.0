@@ -689,6 +689,11 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
 .shot .plus { position: absolute; bottom: 8px; right: 10px; font-family: var(--font-mono); font-size: 13px;
   color: var(--cyan); opacity: 0; transition: .35s; }
 .shot:hover .id, .shot:focus-visible .id, .shot:hover .plus, .shot:focus-visible .plus { opacity: 0.95; transform: translateY(0); }
+/* v3.2n — touch parity: the scroll-centred tile wears the focus grade (JS adds
+   .lit on coarse pointers only). Filter lift only, NO transform — a scale on
+   scroll would read as motion; the grade change IS the payoff, one at a time. */
+.shot.lit { border-color: var(--cyan); }
+.shot.lit .media { filter: none; }
 
 /* lightbox */
 .lightbox { position: fixed; inset: 0; z-index: var(--z-lightbox); background: rgba(2,3,6,0.96);

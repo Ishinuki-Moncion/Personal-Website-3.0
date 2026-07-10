@@ -327,6 +327,35 @@ check('v3.2m — story beats are guaranteed: arc-arrival sync, subliminal focus-
     /focusBias \+= focusBiasRate \* dt;/.test(background),
   'sequence beat keys to arc arrival (no 650ms timer); focus-bias cap ' + biasCap + ' must be in (0, 0.066) — strictly below the autonomous spin rate; the applied added-rate must be the forward-only slewed form (target clamp -> rate slew -> rate*dt integration); contact fires the LOS downlink');
 
+// v3.2n — pins REAL code shapes (not comments): the portrait offset branch with
+// its literal triple, the resize-handler re-aim (OFF = offsetFor()), the coarse-
+// pointer .lit picker wired to scroll AND resize (an orientation flip without a
+// scroll must re-pick, never leave a stale lit tile), and the .lit CSS grade.
+// Deleting the portrait branch, the re-aim, or the touch-parity code fails this.
+check('v3.2n — portrait globe branch + touch photo parity',
+  /const offsetFor = /.test(background) && /0\.4, 3\.4, -7\.5/.test(background) &&
+    /OFF = offsetFor\(\);/.test(background) &&
+    /smoothstep\(topCss, 80, 100\)/.test(background) &&
+    /pointer: coarse/.test(app) && /classList\.add\('lit'\)/.test(app) &&
+    /classList\.remove\('lit'\)/.test(app) &&
+    /addEventListener\('scroll', onLitScroll, \{ passive: true \}\);/.test(app) &&
+    /addEventListener\('resize', onLitScroll, \{ passive: true \}\);/.test(app) &&
+    /\.shot\.lit \.media/.test(css),
+  'aspect-aware globe offset (sphere high behind the name, name on the dim limb) + portrait header gate (callout fades before entering the 80px nav band); one-at-a-time .lit focus grade, remove-before-add, re-checked on scroll AND resize/orientation');
+
+// v3.2n — the SP3 global tap-select must yield to real UI: bail while the
+// lightbox or mobile menu is open, and when the tap landed on an interactive
+// element (else a phone tap on a tile/hero name both activates it AND fires a
+// city-select — double-activation / navigation hijack / focus-restore breakage).
+// The h1 arm is TOUCH-ONLY: a mouse arm would kill desktop click-select across
+// the whole node region (the h1 block box invisibly spans it).
+check('v3.2n — global tap-select yields to real UI (seam guard)',
+  /lbGuard && lbGuard\.classList\.contains\('open'\)/.test(background) &&
+    /classList\.contains\('menu-open'\)/.test(background) &&
+    /e\.target\.closest\('a, button, input, \.shot, \.lightbox, \.mobile-menu, \.scroll-hud, nav, \.deck'\)/.test(background) &&
+    /e\.pointerType !== 'mouse' && e\.target && e\.target\.closest && e\.target\.closest\('h1'\)/.test(background),
+  'pointerup tap-select early-returns on open lightbox/menu and on taps over interactive or overlay DOM; h1 arm touch-only so desktop click-select survives');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';

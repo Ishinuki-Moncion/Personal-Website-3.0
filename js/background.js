@@ -153,8 +153,23 @@
   const coreGroup = new THREE.Group();
   // host page may reposition the globe (the lab centres it); the portfolio's
   // hero layout is the default
-  const DEFAULT_OFFSET = LITE ? [5.8, 0.35, -4.5] : [3, 0.4, -2];
-  const OFF = window.__SCENE_OFFSET || DEFAULT_OFFSET;
+  /* v3.2n — the globe survives the phone: below ~0.7 aspect (or <700px) the
+     sphere sits smaller (deeper, z -7.5) and HIGH behind the hero name, so the
+     name overlaps only the facing-dimmed lower limb (point alpha floors at 0.18
+     via vFacing — luminance-under-text discipline, zero added GPU work).
+     Retune from the brief's [0.8, 4.5]: at y 4.5 the Tokyo callout (sprite at
+     TOKYO*1.22 + 0.45y = +2.73 world above centre) projected INSIDE the fixed
+     80px header band at 390x844 and collided with the wordmark/lang toggle; the
+     panel is ~190px wide on a 390px screen, so no x-shift can clear the fully-
+     occupied header row. y 3.4 puts the facing-open panel below the nav at the
+     normal camera (measured, not modelled); the portrait header gate in the
+     render loop covers every camera state the offset can't (warp, idle dolly).
+     x 0.4 recentres the disc off the right frame edge. */
+  const isPortrait = () => (w / h) < 0.7 || w < 700;
+  const offsetFor = () => isPortrait()
+    ? [0.4, 3.4, -7.5]
+    : LITE ? [5.8, 0.35, -4.5] : [3, 0.4, -2];
+  let OFF = window.__SCENE_OFFSET || offsetFor();
   coreGroup.position.set(OFF[0], OFF[1], OFF[2]);
   scene.add(coreGroup);
   const spin = new THREE.Group();
@@ -851,6 +866,7 @@
     return { sprite: sp, draw };
   })();
   const calloutOffset = new THREE.Vector3(0, 0.45, 0);
+  const _calloutV = new THREE.Vector3();   // v3.2n scratch — portrait header gate projection
 
   // v3.2k — the callout bakes "BASE: JST HH:MM" into its texture at draw()
   // time; with no periodic redraw it reads stale within a minute. Wake exactly
@@ -1587,8 +1603,24 @@
   // SP3 select: tap (not drag/parallax) -> content. gallery photo -> lightbox; tokyo/dallas -> #about.
   let _downX = 0, _downY = 0;
   addEventListener('pointerdown', e => { _downX = e.clientX; _downY = e.clientY; });
+  /* v3.2n — seam guard: the global tap-select must yield to real UI. On phones
+     the globe disc sits behind the hero name and the gallery tiles, so an
+     unguarded pick DOUBLE-ACTIVATES (tile tap = lightbox AND city-select; hero-
+     name tap = surprise scroll to #about; lightbox-scrim tap = close AND
+     re-select, breaking the focus-restore contract). Bail while an overlay owns
+     the screen, and when the tap landed on interactive/overlay DOM. */
+  const lbGuard = document.querySelector('.lightbox');
   addEventListener('pointerup', e => {
     if (Math.hypot(e.clientX - _downX, e.clientY - _downY) > 8) return;   // drag/parallax, not a tap
+    if (lbGuard && lbGuard.classList.contains('open')) return;
+    if (document.body.classList.contains('menu-open')) return;
+    if (e.target && e.target.closest &&
+        e.target.closest('a, button, input, .shot, .lightbox, .mobile-menu, .scroll-hud, nav, .deck')) return;
+    /* h1 guards TOUCH only: on phones the hero name overlays the disc (tap =
+       surprise scroll), but on desktop the h1 block box invisibly spans the
+       whole node region — a mouse arm here would kill click-select that the
+       hover HUD just advertised. Mouse clicks pass through to the pick. */
+    if (e.pointerType !== 'mouse' && e.target && e.target.closest && e.target.closest('h1')) return;
     ptr.x = (e.clientX / innerWidth) * 2 - 1; ptr.y = -(e.clientY / innerHeight) * 2 + 1; ptr.inside = true;
     const r = pickPlace(); if (r && r.place) selectPlace(r.place);
   });
@@ -1933,6 +1965,10 @@
       }
       camera.aspect = w / h; camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      if (!window.__SCENE_OFFSET) {          // v3.2n: portrait<->landscape re-aim
+        OFF = offsetFor();
+        coreGroup.position.set(OFF[0], OFF[1], OFF[2]);
+      }
       if (bloomComposer) { bloomComposer.setSize(w, h); finalComposer.setSize(w, h); }
       maxScroll = Math.max(1, document.body.scrollHeight - innerHeight);
     }, 150);
@@ -2085,7 +2121,22 @@
     // curve left a half-faded panel drifting off the limb as a grey rectangle;
     // now it fades out completely before the node detaches from the disc.
     const calloutGate = THREE.MathUtils.smoothstep(focusedFacing, 0.35, 0.72);
-    callout.sprite.material.opacity = calloutGate * sceneState.callout * (focusedPlace.primary ? 0.9 : 0.55);
+    let calloutOp = calloutGate * sceneState.callout * (focusedPlace.primary ? 0.9 : 0.55);
+    /* v3.2n — portrait header gate: at phone aspect the panel rides just under
+       the fixed 80px nav band, and the boot warp / idle dolly-in push it higher
+       still; fade it out BEFORE its top edge enters the band — same grammar as
+       the facing gate above (the panel never half-collides with chrome).
+       Allocation-free: one projection of last frame's sprite matrix. Desktop
+       composition never projects the panel that high — gate is portrait-only. */
+    if (isPortrait()) {
+      _calloutV.setFromMatrixPosition(callout.sprite.matrixWorld);
+      const calloutDist = camera.position.distanceTo(_calloutV);
+      _calloutV.project(camera);
+      const halfHCss = 0.36 * (h * 0.5) / (Math.tan(camera.fov * Math.PI / 360) * calloutDist);
+      const topCss = (1 - _calloutV.y) * 0.5 * h - halfHCss;
+      calloutOp *= THREE.MathUtils.smoothstep(topCss, 80, 100);
+    }
+    callout.sprite.material.opacity = calloutOp;
     if (focusFlash > 0.01) focusFlash *= Math.pow(0.9, f);
     else focusFlash = 0;
     for (const id in placeNodesById) {
