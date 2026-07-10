@@ -1449,17 +1449,35 @@
                        // boot IS the home entry (effects.js never emits an initial section focus)
   };
   let storyCooldown = 0;                       // seconds; guards re-arming on scroll jitter
-  /* v3.2m — eased focus-bias: while a story window is open the spin drifts
-     toward the focused place so the callout's facing gate (:1930) is met when
-     the beat fires; afterwards it decays back to pure autonomous drift.
-     SUBLIMINAL-SLOW constraint: BIAS_MAX_RADS_PER_SEC caps the ADDED angular
-     velocity at ~2× the autonomous 0.066 rad/s — below a conscious "gesture".
-     ONE-SIGNAL RULE: the boxed state-word remains the section's one signal;
-     this bias must never read as a second one. It cannot cover >~0.7 rad in a
-     window by design — partial facing is accepted over a perceptible lurch. */
-  let focusBias = 0, focusBiasT = 0;
-  const BIAS_MAX_RADS_PER_SEC = 0.12;
+  /* v3.2r — forward-only focus-bias: while a story window is open the spin
+     carries a small ADDED forward rate so the callout's facing gate is met
+     when the beat fires. ONE-SIGNAL RULE, held by construction, not tuning:
+     the per-frame regime target biasTarget is clamped to [0, cap] — a place
+     BEHIND the current facing (e <= 0) is never chased, so the added rate is
+     never negative — and the APPLIED rate (focusBiasRate) is the only thing
+     integrated into the angle. What is ramped: focusBiasRate slews toward
+     biasTarget at BIAS_SLEW_RADS_PER_S2, so EVERY regime edge — onset, the
+     seqArrival mid-window flip, window expiry, re-arm mid-decay — moves the
+     applied rate by at most 0.15 * dt <= 0.005 rad/s per frame (dt clamps at
+     0.033, see loop()); the slew approaches a clamped target from the current
+     value, so the rate can never overshoot the cap. Invariant: total y-rate
+     = autonomous 0.066 (0.22 spinBase * 0.3 t-scale) + focusBiasRate, always
+     in [0.066, 0.121] rad/s (absent user scroll — spinBase also carries the
+     absolute scrollN * 2.4 term) — never frozen, never reversed. Cap derivation:
+     safety is structural for any cap < 0.066, so the cap trades margin for
+     beat coverage — 0.055 keeps 0.011 rad/s (17%) margin, peaks at 1.83x
+     autonomous (below the ~2x subliminal ceiling), and covers cap * window
+     ~= 0.33 rad added (~0.72 rad ahead-geometry with the autonomous 0.40) —
+     places further behind stay partially faced; accepted over a perceptible
+     steer. SUPERSEDES the plan-pinned 0.12 (2026-07-08 plan :2593): 0.12
+     exceeds the autonomous rate — a spec defect, measured live at 5a4480e as
+     a -0.054 rad/s visible reverse during the state-word. The accumulated
+     phase offset is KEPT after the window (unwinding it would need a negative
+     added rate); it is bounded per window and spinBase is unbounded anyway. */
+  let focusBias = 0, focusBiasT = 0, focusBiasRate = 0;
+  const BIAS_MAX_RADS_PER_SEC = 0.055;   // added-rate cap — MUST stay < autonomous 0.066 (harness pins this)
   const BIAS_WINDOW_S = 6;
+  const BIAS_SLEW_RADS_PER_S2 = 0.15;    // applied-rate slew: 0 -> cap in ~0.37s; bounds every regime edge
   window.__sceneFocus = sectionId => {
     const story = sectionStories[sectionId] || sectionStories.home;
     const id = sectionStories[sectionId] ? sectionId : 'home';
@@ -1515,6 +1533,12 @@
       focusedPlaceId,
       arcHead: Math.floor(arcN),
       arcSegments: ARC_SEG,
+      // v3.2r probe surface — raw (unrounded): rad/s deltas are ~1e-3/frame
+      spinY: spin.rotation.y,
+      focusedA0,
+      focusBias,
+      focusBiasRate,
+      focusBiasT,
     };
   }
   function updateDebugText() {
@@ -2028,16 +2052,18 @@
        pointermove) + scroll-advanced rotation, ABSOLUTE so smooth-scroll can't
        make it jumpy. Gyro tilt eases on coreGroup; spin owns the y-rotation. */
     const spinBase = t * 0.22 + scrollN * 2.4;
-    if (focusBiasT > 0) {          // chase: rate-capped P-controller (eases as it closes)
+    let biasTarget = 0;            // regime target for the ADDED rate, rad/s — in [0, cap] always
+    if (focusBiasT > 0) {          // chase: forward-only P-controller (eases as it closes)
       focusBiasT = Math.max(0, focusBiasT - dt);
       let e = (focusedA0 - Math.PI / 2 - (spinBase + focusBias)) % (Math.PI * 2);
       if (e > Math.PI) e -= Math.PI * 2; else if (e < -Math.PI) e += Math.PI * 2;
-      focusBias += Math.sign(e) * Math.min(BIAS_MAX_RADS_PER_SEC * dt, Math.abs(e) * 0.9 * dt);
-    } else if (focusBias !== 0) {  // decay home at the same subliminal cap
-      const back = Math.min(BIAS_MAX_RADS_PER_SEC * dt, Math.abs(focusBias) * 0.4 * dt);
-      focusBias -= Math.sign(focusBias) * back;
-      if (Math.abs(focusBias) < 1e-4) focusBias = 0;
+      if (e > 0) biasTarget = Math.min(BIAS_MAX_RADS_PER_SEC, e * 0.9);   // behind (e <= 0) is never chased
     }
+    // slew the applied rate toward the target — sole writer of focusBiasRate,
+    // so every regime edge is a bounded ramp (<= 0.15 * dt per frame), never a step
+    const biasDr = biasTarget - focusBiasRate;
+    focusBiasRate += Math.sign(biasDr) * Math.min(Math.abs(biasDr), BIAS_SLEW_RADS_PER_S2 * dt);
+    focusBias += focusBiasRate * dt;
     spin.rotation.y = spinBase + focusBias;
     coreGroup.rotation.x += ((-mouse.y * 0.26) - coreGroup.rotation.x) * 0.03;
     coreGroup.rotation.z += ((mouse.x * 0.12) - coreGroup.rotation.z) * 0.03;

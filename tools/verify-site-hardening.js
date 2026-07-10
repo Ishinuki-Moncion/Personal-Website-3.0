@@ -311,11 +311,21 @@ check('v3.2l — rain is motivated light, not a flat veil',
     !/rain: 0\.6,/.test(background),
   'per-plane motivation term (rain brief Lever A), worn-glass droplet filter, and the retired flat hero veil');
 
+// v3.2r — the focus-bias safety invariant is pinned by VALUE, not just by name:
+// the added-rate cap must stay strictly below the autonomous spin rate (0.066
+// rad/s), or the bias can freeze/reverse the globe during the state-word (the
+// v3.2m 0.12 defect). A revert of the cap alone must fail this check.
+const biasCapMatch = background.match(/const BIAS_MAX_RADS_PER_SEC = ([0-9.]+)/);
+const biasCap = biasCapMatch ? Number(biasCapMatch[1]) : NaN;
 check('v3.2m — story beats are guaranteed: arc-arrival sync, subliminal focus-bias, contact downlink',
   /BIAS_MAX_RADS_PER_SEC/.test(background) && /seqArrival/.test(background) &&
     !/storyTimer/.test(background) &&
-    /celestial\.nextLink = 0/.test(background),
-  'sequence beat keys to arc arrival (no 650ms timer), spin carries a rate-capped focus bias, contact fires the LOS downlink');
+    /celestial\.nextLink = 0/.test(background) &&
+    biasCap > 0 && biasCap < 0.066 &&
+    /if \(e > 0\) biasTarget = Math\.min\(BIAS_MAX_RADS_PER_SEC, e \* 0\.9\);/.test(background) &&
+    /focusBiasRate \+= Math\.sign\(biasDr\) \* Math\.min\(Math\.abs\(biasDr\), BIAS_SLEW_RADS_PER_S2 \* dt\);/.test(background) &&
+    /focusBias \+= focusBiasRate \* dt;/.test(background),
+  'sequence beat keys to arc arrival (no 650ms timer); focus-bias cap ' + biasCap + ' must be in (0, 0.066) — strictly below the autonomous spin rate; the applied added-rate must be the forward-only slewed form (target clamp -> rate slew -> rate*dt integration); contact fires the LOS downlink');
 
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {

@@ -31,7 +31,7 @@
 - No hero coordinate readout exists — the decrypt-on-reveal applies to the signature footer `.coord`, one-shot, real text kept in HTML.
 - The stale clock is the canvas coordinate-callout JST bake (`background.js:807`), not the DOM `[data-clock]` (already live per-second).
 - `__scenePing` is defined in `js/background.js:1374` (effects.js holds only a stale comment), zero callers.
-- `storyCooldown` is 0.6s — too short for a subliminal bias; Task 13 uses a dedicated 6s window (`BIAS_WINDOW_S = 6`, cap `BIAS_MAX_RADS_PER_SEC = 0.12`).
+- `storyCooldown` is 0.6s — too short for a subliminal bias; Task 13 uses a dedicated 6s window (`BIAS_WINDOW_S = 6`, cap `BIAS_MAX_RADS_PER_SEC = 0.12`). **[AMENDED 2026-07-10: 0.12 was a spec defect (> autonomous 0.066 — measured live globe reverse); shipped cap 0.055, forward-only + slew-limited on all regime edges — see the amendment at Task 13 Step 4.]**
 - JP faces Zen Kaku Gothic New AND M PLUS Rounded 1c both stay on the Google CDN (variable-font subsetting impractical); only Latin faces self-host. Addendum records both.
 - Absolute URLs (canonical/OG/JSON-LD/404) use the verified GitHub Pages base `https://ishinuki-moncion.github.io/Personal-Website-3.0/`; a future custom domain needs a one-sweep update.
 - `SCENE_COLORS.terminal` is also dead but stays (spec ruled only on `alert`); flagged for a future ruling.
@@ -2593,6 +2593,9 @@ new_string:
   const BIAS_MAX_RADS_PER_SEC = 0.12;
   const BIAS_WINDOW_S = 6;
 ```
+
+> **AMENDMENT 2026-07-10 (v3.2r):** the pinned `BIAS_MAX_RADS_PER_SEC = 0.12` above was a **spec defect** — 0.12 exceeds the autonomous 0.066 rad/s, letting the signed controller freeze or visibly reverse the globe during the state-word (measured −0.054 rad/s live at 5a4480e; `.superpowers/sdd/v32/task-13-report.md:48–84`), a one-signal violation. Superseded spec: the cap MUST be < 0.066 (shipped **0.055**), the regime MUST be forward-only by construction (per-frame target ∈ [0, cap]; behind-targets never chased), and the applied rate MUST be slew-limited (0.15 rad/s², ≤ 0.005 rad/s per frame at the dt clamp) across ALL regime edges — onset, seqArrival flip, window expiry, re-arm. The harness pins the cap by parsed value so a revert fails red. Step 6's "previous count +1" expectation is superseded by "same count, check hardened in place", and the comment block above is intentionally replaced in code. (The Opus fix c7d2dd2 had diverged from this plan silently and shipped un-ramped regime edges; it was reverted and redone on Fable — `.superpowers/sdd/v32r/task-13r-report.md`.)
+
 Arm the window where the cooldown arms. Edit old_string:
 ```js
     storyCooldown = 0.6;
