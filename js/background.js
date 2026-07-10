@@ -1428,6 +1428,7 @@
     setCometAt(0);
   }
   let seqArrival = null;   // v3.2m: pending sequence payload — fires on arc ARRIVAL (arcN >= ARC_SEG), not wall-clock
+  const ZERO_SHIFT = [0, 0];
   const sectionStories = {
     home: {
       place: 'tokyo', sequence: null, intensity: 1.2, route: 'replay',
@@ -1439,7 +1440,7 @@
     },
     work: {
       place: 'tokyo', sequence: null, intensity: 0.85, route: 'hold',
-      halo: 1.15, rain: 1, labels: 1, callout: 0.9, camera: 0, grid: 1,
+      halo: 1.15, rain: 1, labels: 1, callout: 0.9, camera: 0, grid: 1, shift: [-1.2, -2.0],   // v3.2o: globe eases left+deeper — row titles never sit on the bright disc
     },
     gallery: {
       place: 'tokyo', sequence: null, intensity: 0.45, route: 'hold',
@@ -1461,6 +1462,7 @@
     camera: sectionStories.home.camera,
     grid: sectionStories.home.grid,
     haloPulse: 0,
+    shiftX: 0, shiftZ: 0,   // v3.2o: eased per-section globe offset (only work sets a target)
     lockT: 1,          // signal-lock timer (1 → 0), drives ring sweep + glow bloom; starts armed —
                        // boot IS the home entry (effects.js never emits an initial section focus)
   };
@@ -2056,6 +2058,11 @@
     sceneState.callout += (sceneState.story.callout - sceneState.callout) * Math.min(1, 0.08 * f);
     sceneState.grid    += (sceneState.story.grid    - sceneState.grid)    * Math.min(1, 0.08 * f);
     sceneState.camera  += (sceneState.story.camera  - sceneState.camera)  * Math.min(1, 0.06 * f);
+    const _sh = sceneState.story.shift || ZERO_SHIFT;                      // v3.2o work shift
+    sceneState.shiftX += (_sh[0] - sceneState.shiftX) * Math.min(1, 0.05 * f);
+    sceneState.shiftZ += (_sh[1] - sceneState.shiftZ) * Math.min(1, 0.05 * f);
+    coreGroup.position.x = OFF[0] + sceneState.shiftX;
+    coreGroup.position.z = OFF[2] + sceneState.shiftZ;
     if (sceneState.haloPulse > 0.01) sceneState.haloPulse *= Math.pow(0.92, f); else sceneState.haloPulse = 0;
     idleT += dt;
     idleK += ((idleT > 20 ? 1 : 0) - idleK) * Math.min(1, 0.02 * f);   // idle cinematic ease

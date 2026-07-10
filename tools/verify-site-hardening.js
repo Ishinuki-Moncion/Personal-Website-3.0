@@ -356,6 +356,13 @@ check('v3.2n — global tap-select yields to real UI (seam guard)',
     /e\.pointerType !== 'mouse' && e\.target && e\.target\.closest && e\.target\.closest\('h1'\)/.test(background),
   'pointerup tap-select early-returns on open lightbox/menu and on taps over interactive or overlay DOM; h1 arm touch-only so desktop click-select survives');
 
+check('v3.2o — lightbox is the one light event (deep scrim, safe-centred strip, gated halo/rail, work shift)',
+  /rgba\(2,3,6,0\.985\)/.test(css) && /justify-content: flex-start/.test(css) &&
+    /\.lb-thumb:first-child \{ margin-left: auto/.test(css) &&
+    /const HALO_GATE = false/.test(app) && /const RAIL_GATE = false/.test(app) &&
+    /startViewTransition/.test(app) && /shift: \[-1\.2, -2\.0\]/.test(background),
+  'scrim sinks toward true black, strip safe-centres, halo/rail ship OFF behind gates, view-transition morph present, work globe eases left/deeper');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';

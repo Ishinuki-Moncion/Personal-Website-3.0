@@ -269,12 +269,40 @@
   function openLb(i) {
     if (!lb) return;
     lbReturnFocus = document.activeElement;
-    show(i);
-    lb.inert = false;                       // un-inert BEFORE moving focus in
-    lb.classList.add('open');
-    lb.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    focusWhenFocusable($('.lb-close'));
+    const openNow = () => {
+      show(i);
+      lb.inert = false;                       // un-inert BEFORE moving focus in
+      lb.classList.add('open');
+      lb.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      focusWhenFocusable($('.lb-close'));
+    };
+    /* v3.2o — progressive enhancement: shared-element morph tile→stage where
+       View Transitions exist; everywhere else (and under reduced motion) the
+       original fade runs untouched. Name lives on the tile in the OLD state
+       and moves to the stage image in the NEW state — never both at once.
+       The full-res frame is decoded FIRST (bounded at 250ms so a cold cache
+       cannot stall the open) and set synchronously inside the update callback
+       — otherwise the NEW snapshot catches the stale/blank stage mid-swap. */
+    const srcTile = shots[(i + shots.length) % shots.length];
+    const media = srcTile && srcTile.querySelector('.media');
+    if (!reduced && typeof document.startViewTransition === 'function' && media && lbImg) {
+      const pre = new Image();
+      pre.src = sources[(i + sources.length) % sources.length];
+      Promise.race([pre.decode().catch(() => {}), new Promise(r => setTimeout(r, 250))]).then(() => {
+        media.style.viewTransitionName = 'lb-photo';
+        const vt = document.startViewTransition(() => {
+          media.style.viewTransitionName = '';
+          lbImg.style.viewTransitionName = 'lb-photo';
+          openNow();
+          lbImg.src = pre.src;                 // already decoded — snapshot gets the real photograph
+          lbImg.classList.remove('swapping');  // skip the fade show() armed; the morph IS the entrance
+        });
+        vt.finished.finally(() => { lbImg.style.viewTransitionName = ''; });
+      });
+    } else {
+      openNow();
+    }
   }
   function closeLb() {
     if (!lb) return;
@@ -285,6 +313,34 @@
     if (lbReturnFocus && lbReturnFocus.focus) lbReturnFocus.focus();
     lbReturnFocus = null;
   }
+
+  /* v3.2o GATED — photo ambient halo: average-colour DOM glow behind the
+     lightbox image. The pass's ONLY new-emissive-layer candidate; ships OFF —
+     it FAILED its net-luminance-down gate in the original campaign (on 52.23
+     > off 51.29). Everything (canvas, listener, style) sits behind the const:
+     with HALO_GATE false, NOTHING is allocated, bound, or drawn. Flip to true
+     ONLY for an owner-requested gate capture. */
+  const HALO_GATE = false;
+  if (HALO_GATE && lbImg) {
+    const av = document.createElement('canvas'); av.width = av.height = 1;
+    const avx = av.getContext('2d', { willReadFrequently: true });
+    lbImg.addEventListener('load', () => {
+      try {
+        avx.drawImage(lbImg, 0, 0, 1, 1);
+        const d = avx.getImageData(0, 0, 1, 1).data;
+        lbImg.style.boxShadow =
+          '0 0 60px rgba(0,0,0,0.7), 0 0 110px 8px rgba(' + d[0] + ',' + d[1] + ',' + d[2] + ',0.20)';
+      } catch (e) { /* tainted canvas — halo silently off */ }
+    });
+  }
+
+  /* v3.2o GATED — minimal typographic stack rail: per-row tech readouts align
+     as ONE column; the alignment IS the rail, nothing is drawn (the L3
+     deferral's over-framing warning stands). Ships OFF pending owner A/B:
+     gates/v32/o2-rail-on.png vs o2-rail-off.png — the body class is the only
+     hook, so with RAIL_GATE false the CSS never matches anything. */
+  const RAIL_GATE = false;
+  if (RAIL_GATE) document.body.classList.add('proj-rail');
 
   shots.forEach((s, i) => s.addEventListener('click', () => openLb(i)));
   $('.lb-close') && $('.lb-close').addEventListener('click', closeLb);
