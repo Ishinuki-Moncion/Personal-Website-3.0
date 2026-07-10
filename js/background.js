@@ -153,14 +153,8 @@
   const coreGroup = new THREE.Group();
   // host page may reposition the globe (the lab centres it); the portfolio's
   // hero layout is the default
-  /* v3.2n — the globe survives the phone: below ~0.7 aspect (or <700px) the
-     sphere sits smaller (deeper, z -7.5) and HIGH (y 4.5) behind the hero name,
-     so the name overlaps only the facing-dimmed lower limb (alpha floors at
-     0.18 via vFacing — luminance-under-text discipline, zero added GPU work). */
-  const offsetFor = () => ((w / h) < 0.7 || w < 700)
-    ? [0.8, 4.5, -7.5]
-    : LITE ? [5.8, 0.35, -4.5] : [3, 0.4, -2];
-  let OFF = window.__SCENE_OFFSET || offsetFor();
+  const DEFAULT_OFFSET = LITE ? [5.8, 0.35, -4.5] : [3, 0.4, -2];
+  const OFF = window.__SCENE_OFFSET || DEFAULT_OFFSET;
   coreGroup.position.set(OFF[0], OFF[1], OFF[2]);
   scene.add(coreGroup);
   const spin = new THREE.Group();
@@ -1418,7 +1412,6 @@
     setCometAt(0);
   }
   let seqArrival = null;   // v3.2m: pending sequence payload — fires on arc ARRIVAL (arcN >= ARC_SEG), not wall-clock
-  const ZERO_SHIFT = [0, 0];
   const sectionStories = {
     home: {
       place: 'tokyo', sequence: null, intensity: 1.2, route: 'replay',
@@ -1430,7 +1423,7 @@
     },
     work: {
       place: 'tokyo', sequence: null, intensity: 0.85, route: 'hold',
-      halo: 1.15, rain: 1, labels: 1, callout: 0.9, camera: 0, grid: 1, shift: [-1.2, -2.0],   // v3.2o: globe eases left+deeper — row titles never sit on the bright disc
+      halo: 1.15, rain: 1, labels: 1, callout: 0.9, camera: 0, grid: 1,
     },
     gallery: {
       place: 'tokyo', sequence: null, intensity: 0.45, route: 'hold',
@@ -1452,7 +1445,6 @@
     camera: sectionStories.home.camera,
     grid: sectionStories.home.grid,
     haloPulse: 0,
-    shiftX: 0, shiftZ: 0,   // v3.2o: eased per-section globe offset (only work sets a target)
     lockT: 1,          // signal-lock timer (1 → 0), drives ring sweep + glow bloom; starts armed —
                        // boot IS the home entry (effects.js never emits an initial section focus)
   };
@@ -1460,21 +1452,14 @@
   /* v3.2m — eased focus-bias: while a story window is open the spin drifts
      toward the focused place so the callout's facing gate (:1930) is met when
      the beat fires; afterwards it decays back to pure autonomous drift.
-     ONE-SIGNAL RULE (v3.2m retune): the boxed state-word is the section's ONE
-     signal; the bias must never read as a second one. The ADDED angular velocity
-     cap is held STRICTLY BELOW the autonomous spin rate (0.22·0.3 = 0.066 rad/s,
-     see spinBase at :2030) so total y-velocity = 0.066 ± cap stays strictly
-     POSITIVE — the globe only ever speeds up or gently slows the forward drift,
-     it can never null, freeze, or reverse (any of which the eye reads as a
-     second beat). At 0.045 the far-side worst case still floors at 0.021 rad/s
-     forward while catch-up runs 0.111 rad/s (~1.7×); max deflection ≈ cap·window
-     ≈ 0.27 rad — partial facing accepted over a perceptible steer. A ~0.3s
-     smoothstep onset ramps the added velocity in (matching the decay's ease-out)
-     so neither edge is a velocity step. */
+     SUBLIMINAL-SLOW constraint: BIAS_MAX_RADS_PER_SEC caps the ADDED angular
+     velocity at ~2× the autonomous 0.066 rad/s — below a conscious "gesture".
+     ONE-SIGNAL RULE: the boxed state-word remains the section's one signal;
+     this bias must never read as a second one. It cannot cover >~0.7 rad in a
+     window by design — partial facing is accepted over a perceptible lurch. */
   let focusBias = 0, focusBiasT = 0;
-  const BIAS_MAX_RADS_PER_SEC = 0.045;   // < autonomous 0.066 by construction — forward-only
+  const BIAS_MAX_RADS_PER_SEC = 0.12;
   const BIAS_WINDOW_S = 6;
-  const BIAS_ONSET_S = 0.3;              // ease-in over the leading edge (no 0→cap velocity step)
   window.__sceneFocus = sectionId => {
     const story = sectionStories[sectionId] || sectionStories.home;
     const id = sectionStories[sectionId] ? sectionId : 'home';
@@ -1924,10 +1909,6 @@
       }
       camera.aspect = w / h; camera.updateProjectionMatrix();
       renderer.setSize(w, h);
-      if (!window.__SCENE_OFFSET) {          // v3.2n: portrait↔landscape re-aim
-        OFF = offsetFor();
-        coreGroup.position.set(OFF[0], OFF[1], OFF[2]);
-      }
       if (bloomComposer) { bloomComposer.setSize(w, h); finalComposer.setSize(w, h); }
       maxScroll = Math.max(1, document.body.scrollHeight - innerHeight);
     }, 150);
@@ -2015,11 +1996,6 @@
     sceneState.callout += (sceneState.story.callout - sceneState.callout) * Math.min(1, 0.08 * f);
     sceneState.grid    += (sceneState.story.grid    - sceneState.grid)    * Math.min(1, 0.08 * f);
     sceneState.camera  += (sceneState.story.camera  - sceneState.camera)  * Math.min(1, 0.06 * f);
-    const _sh = sceneState.story.shift || ZERO_SHIFT;                      // v3.2o work shift
-    sceneState.shiftX += (_sh[0] - sceneState.shiftX) * Math.min(1, 0.05 * f);
-    sceneState.shiftZ += (_sh[1] - sceneState.shiftZ) * Math.min(1, 0.05 * f);
-    coreGroup.position.x = OFF[0] + sceneState.shiftX;
-    coreGroup.position.z = OFF[2] + sceneState.shiftZ;
     if (sceneState.haloPulse > 0.01) sceneState.haloPulse *= Math.pow(0.92, f); else sceneState.haloPulse = 0;
     idleT += dt;
     idleK += ((idleT > 20 ? 1 : 0) - idleK) * Math.min(1, 0.02 * f);   // idle cinematic ease
@@ -2054,11 +2030,9 @@
     const spinBase = t * 0.22 + scrollN * 2.4;
     if (focusBiasT > 0) {          // chase: rate-capped P-controller (eases as it closes)
       focusBiasT = Math.max(0, focusBiasT - dt);
-      const os = Math.min(1, (BIAS_WINDOW_S - focusBiasT) / BIAS_ONSET_S);
-      const onset = os * os * (3 - 2 * os);      // smoothstep ease-in over the first BIAS_ONSET_S
       let e = (focusedA0 - Math.PI / 2 - (spinBase + focusBias)) % (Math.PI * 2);
       if (e > Math.PI) e -= Math.PI * 2; else if (e < -Math.PI) e += Math.PI * 2;
-      focusBias += Math.sign(e) * Math.min(BIAS_MAX_RADS_PER_SEC * onset * dt, Math.abs(e) * 0.9 * dt);
+      focusBias += Math.sign(e) * Math.min(BIAS_MAX_RADS_PER_SEC * dt, Math.abs(e) * 0.9 * dt);
     } else if (focusBias !== 0) {  // decay home at the same subliminal cap
       const back = Math.min(BIAS_MAX_RADS_PER_SEC * dt, Math.abs(focusBias) * 0.4 * dt);
       focusBias -= Math.sign(focusBias) * back;

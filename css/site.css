@@ -508,13 +508,13 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
 /* ============================================================
    ABOUT
    ============================================================ */
-.about { padding-block: clamp(88px, 12vw, 150px); }  /* v3.2o: −50px top/bottom at desktop — scarcity should look chosen, not leftover */
+.about { padding-block: clamp(96px, 16vw, 200px); }
 .about-lead { font-weight: 200; letter-spacing: -0.02em; line-height: 1.06;
   font-size: clamp(30px, 5.2vw, 72px); max-width: 17ch; color: var(--fg);
   text-shadow: 0 0 40px rgba(57,240,255,0.1); }
 .about-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(36px, 6vw, 80px);
   margin-top: clamp(48px, 8vw, 96px); align-items: start; }
-.about-bio { display: grid; gap: 28px; align-self: stretch; align-content: space-between; }  /* v3.2o: stat row bottom-aligns with the portrait's bottom edge — closes the dead bottom-left quadrant */
+.about-bio { display: grid; gap: 28px; }
 .about-bio p { font-size: clamp(15px, 1.3vw, 18px); line-height: 1.7; color: var(--fg); }
 .about-bio p + p { color: var(--muted); }
 .geo-trail {
@@ -689,14 +689,9 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
 .shot .plus { position: absolute; bottom: 8px; right: 10px; font-family: var(--font-mono); font-size: 13px;
   color: var(--cyan); opacity: 0; transition: .35s; }
 .shot:hover .id, .shot:focus-visible .id, .shot:hover .plus, .shot:focus-visible .plus { opacity: 0.95; transform: translateY(0); }
-/* v3.2n — touch parity: the scroll-centred tile wears the focus grade (JS adds
-   .lit on coarse pointers only). Filter lift only, NO transform — a scale on
-   scroll would read as motion; the grade change IS the payoff, one at a time. */
-.shot.lit { border-color: var(--cyan); }
-.shot.lit .media { filter: none; }
 
 /* lightbox */
-.lightbox { position: fixed; inset: 0; z-index: var(--z-lightbox); background: rgba(2,3,6,0.985); /* v3.2o: the photograph is the ONLY light event — scrim sinks a notch shy of solid so the blur still reads as glass */
+.lightbox { position: fixed; inset: 0; z-index: var(--z-lightbox); background: rgba(2,3,6,0.96);
   backdrop-filter: blur(8px); display: flex; flex-direction: column; opacity: 0; pointer-events: none;
   visibility: hidden;
   transition: opacity .4s var(--ease-out), visibility 0s linear .4s; }
@@ -714,12 +709,7 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
   cursor: none; transition: .25s; }
 .lb-close:hover { color: var(--amber); border-color: var(--amber); }
 .lb-strip { display: flex; gap: 8px; padding: 14px clamp(20px,4vw,48px) clamp(20px,4vw,40px); overflow-x: auto;
-  justify-content: flex-start; }
-/* v3.2o safe-centre: auto margins centre the strip when it FITS and yield to
-   scrolling when it doesn't (the justify-content:center + overflow-x:auto
-   combination clipped the leading thumbs below ~800px — confirmed defect). */
-.lb-thumb:first-child { margin-left: auto; }
-.lb-thumb:last-child { margin-right: auto; }
+  justify-content: center; }
 .lb-thumb { width: 54px; height: 68px; flex: 0 0 auto; background-size: cover; background-position: center;
   border: 1px solid transparent; opacity: 0.4; filter: grayscale(80%); transition: .3s; cursor: none; }
 .lb-thumb.active { opacity: 1; border-color: var(--cyan); filter: grayscale(0%); box-shadow: 0 0 14px rgba(57,240,255,0.4); }
@@ -914,15 +904,3 @@ section[id] { scroll-margin-top: clamp(64px, 10vh, 96px); }
   .row, .row-end-rule, .footer, .geo-trail, .signal-row, .pill, .tag { border-color: #ccc !important; box-shadow: none !important; }
   .row::before { display: none; }
 }
-
-/* v3.2o — lightbox morph timing (progressive enhancement; no-op elsewhere).
-   The JS assigns view-transition-name only for the one open gesture. */
-@supports (view-transition-name: lb-photo) {
-  ::view-transition-group(lb-photo) { animation-duration: .45s; animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
-  ::view-transition-old(lb-photo), ::view-transition-new(lb-photo) { height: 100%; object-fit: contain; }
-}
-
-/* v3.2o GATED (.proj-rail via RAIL_GATE, app.js) — stack readouts as one
-   aligned right-hand column, no drawn rule. */
-body.proj-rail .proj-end { flex-direction: column; align-items: flex-end; gap: 6px; }
-body.proj-rail .proj-tech { text-align: right; max-width: none; min-width: 30ch; }
