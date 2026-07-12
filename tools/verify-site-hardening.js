@@ -461,6 +461,24 @@ check('v3.3d — hero choreography is WAAPI with structural interruption safety'
     /dur \+ 400/.test(effects),
   'hero entrance is WAAPI (tracked anims[], cancel-before-start, fill-owned end states); ladders + settle timer gone; scramble token guard + wall-clock net survive in effects.js');
 
+// v3.3e — M6: parallax + progress ride the compositor behind @supports; effects.js
+// mirrors the identical CSS.supports check and stands down its per-frame writes
+// (never double-driven). The JS fallback formula is pinned POSITIVE — it stays the
+// truthful no-SDA path. Reduced-motion gets the explicit animation: none the
+// .001ms kill cannot provide (progress-driven playback ignores duration).
+check('v3.3e — scroll-driven animations behind @supports with a truthful JS fallback',
+  /@supports \(animation-timeline: view\(\)\)/.test(css) &&
+    /animation-timeline: view\(\);/.test(css) &&
+    /animation-timeline: scroll\(root\);/.test(css) &&
+    /@keyframes v33ParallaxDrift/.test(css) &&
+    /@keyframes v33ProgressGrow/.test(css) &&
+    /CSS\.supports\('animation-timeline: view\(\)'\)/.test(effects) &&
+    /if \(progress && !SDA\)/.test(effects) &&
+    /if \(!reduced && !SDA\)/.test(effects) &&
+    /\(-center \* speed\)\.toFixed\(1\)/.test(effects) &&
+    /\[data-parallax\], \.scroll-progress \{ animation: none !important; \}/.test(css),
+  'one @supports block owns SDA parallax (view()) + progress (scroll(root)); effects.js gates both writes on the mirrored boot-time check and keeps the fallback formula; migrated elements get animation:none under reduced-motion');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';

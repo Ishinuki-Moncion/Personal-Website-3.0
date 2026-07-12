@@ -5,6 +5,15 @@
 (function () {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /* v3.3e — scroll-driven animations (M6): when the engine has SDA, CSS owns the
+     parallax + progress transforms (site.css @supports block) and this file's
+     per-frame writes stand down. ONE boot-time check, mirrored exactly by
+     @supports (animation-timeline: view()) — the two sides never double-drive.
+     View reveals do NOT migrate: fire-once (.seen + splice below) is
+     unexpressible in bidirectional SDA — checkReveals stays the only reveal
+     driver on every engine (ruling of record, v3.3 spec §3.5). */
+  const SDA = !!(window.CSS && CSS.supports && CSS.supports('animation-timeline: view()'));
+
   /* Motion L3 — boxed state-word on section lock: one bracketed keyword snaps in then
      holds/fades at the lower field. Transient (attaches to the one thing that changed),
      reduced-gated, and skips 'home' so the hero cue is never covered. */
@@ -117,10 +126,10 @@
   function frame() {
     const y = scrollY;
     const max = Math.max(1, document.body.scrollHeight - innerHeight);
-    if (progress) progress.style.width = (y / max * 100) + '%';
+    if (progress && !SDA) progress.style.width = (y / max * 100) + '%';
     if (nav) nav.classList.toggle('scrolled', y > 40);
 
-    if (!reduced) {
+    if (!reduced && !SDA) {
       for (const el of parallaxEls) {
         const speed = parseFloat(el.getAttribute('data-parallax')) || 0.1;
         const rect = el.getBoundingClientRect();
