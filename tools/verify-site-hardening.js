@@ -411,6 +411,29 @@ check('v3.3a — rain is ONE instanced batch; the Points planes and the CPU loop
     !/p\[i \* 3 \+ 1\] < -ud\.halfH/.test(background),
   'one InstancedBufferGeometry mesh named rain-streaks with GPU mod-recycle, per-drop wells (uWells) and true-velocity lean (uWind/uWindT); dark-swap-safe base quad at z=-8 under the type-correct Mesh swap; rain absent from the bloom emitter set; WELL_XY_SIGMA ' + wellXY + ' in (0, 0.25]; the three Points layers, the rain sprite call site, and the ud.speeds CPU walk are deleted');
 
+// v3.3b — lightning is ONE event (spec §1.2/§3.2/§6): the whole-frame grade
+// lift is pinned by VALUE (0 < lift <= 0.10, the biasCap idiom) and suppressed
+// in its max(lockT, wordT) shape while the boxed state-word or the home/boot
+// lock owns the frame; wordT arms home-excluded inside __sceneFocus and decays
+// over the word's 1.9s CSS window; the limb catches the flash (uFlashLimb);
+// the glass glints capped at 0.32 over a NEVER-raised 0.22 lens body (Toy Shop
+// translucency law); LITE's surviving flat coupling is the named
+// LITE_FLASH_BEAT; the old shared flat literal is retired (MUST-NOT-MATCH).
+const gradeLiftMatch = background.match(/const LIGHTNING_GRADE_LIFT = ([0-9.]+)/);
+const gradeLift = gradeLiftMatch ? Number(gradeLiftMatch[1]) : NaN;
+check('v3.3b — the scene answers its lightning as ONE event',
+  gradeLift > 0 && gradeLift <= 0.10 &&
+    /1 - Math\.max\(sceneState\.lockT, sceneState\.wordT\)/.test(background) &&
+    /if \(id === 'home'\) sceneState\.lockT = 1;[^\n]*\n\s*else sceneState\.wordT = 1;/.test(background) &&
+    /sceneState\.wordT - dt \/ 1\.9/.test(background) &&
+    /uFlashLimb/.test(background) &&
+    /globalAlpha = 0\.22 \* a/.test(background) &&
+    /Math\.min\(0\.32, 0\.2 \* a \* \(1 \+ glintFlash \* 0\.6\)\)/.test(background) &&
+    /const LITE_FLASH_BEAT = 1\.3/.test(background) &&
+    /LITE \? \(flash \|\| 0\) \* LITE_FLASH_BEAT : 0/.test(background) &&
+    !/\(flash \|\| 0\) \* 1\.3/.test(background),
+  'grade lift ' + gradeLift + ' must sit in (0, 0.10] and be word/lock-suppressed; wordT arms home-excluded in __sceneFocus and decays dt/1.9; limb catch present; glint hard-capped 0.32 over an unraised 0.22 lens body; LITE flash beat named; the old shared flat literal retired');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';

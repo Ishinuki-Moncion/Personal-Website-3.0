@@ -499,6 +499,7 @@
   const MOTIV_FLOOR = 0.16;      // rain never fully dies while a section calls for weather (0.22→0.16: hero mean read +0.3 over baseline at 0.22 — retuned per the luminance gate)
   const MOTIV_CAP   = 0.80;      // motivated rain always sits BELOW the retired flat-veil peaks
   const RAIN_LITE_VEIL = 0.55;   // LITE: single flat veil ≤ every old per-section value
+  const LITE_FLASH_BEAT = 1.3;   // v3.3b C2: LITE's flat flash coupling (no wells compiled on phones); high tier answers lightning directionally via well 3
   const WELL_DEPTH_SIGMA = 6.0;  // camera-Z reach of an emitter's light, world units
   const WELL_XY_SIGMA = 0.25;    // v3.3a: screen-xy reach of a well, NDC units — the ONE new tunable (tune DOWN only, under the luminance A/B gate)
   /* Depth rain — v3.3a: ONE instanced velocity-stretched streak batch (R1).
@@ -784,7 +785,7 @@
     resizeDroplets();
     window.addEventListener('resize', resizeDroplets);
     const drops = [];
-    let spawnIn = 1.4, skip = 0, fadeOut = 0;
+    let spawnIn = 1.4, skip = 0, fadeOut = 0, glintFlash = 0;
     function spawn() {
       drops.push({
         x: 20 + Math.random() * (W - 40), y: 10 + Math.random() * H * 0.75,
@@ -824,13 +825,18 @@
       g.addColorStop(1, 'rgba(0, 8, 12, 0)');
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, 6.2832); ctx.fill();
-      ctx.fillStyle = 'rgba(235, 250, 255, ' + (0.2 * a).toFixed(3) + ')';   // v3.1f: highlight 0.55 -> 0.2 (whisper, not signal)
+      /* v3.3b C4: the specular dot glints with lightning, hard-capped at 0.32
+         (0.2 * 1.6 exactly). Toy Shop translucency law: the 0.22 body/lens sample
+         cap above NEVER rises — drops go more transparent under lightning, never
+         brighter-bodied. (v3.1f: highlight 0.55 -> 0.2, whisper not signal.) */
+      ctx.fillStyle = 'rgba(235, 250, 255, ' + Math.min(0.32, 0.2 * a * (1 + glintFlash * 0.6)).toFixed(3) + ')';
       ctx.beginPath();
       ctx.ellipse(d.x - d.r * 0.34, d.y - d.r * 0.42, d.r * 0.2, d.r * 0.12, -0.6, 0, 6.2832);
       ctx.fill();
       ctx.restore();
     }
-    function update(dt) {
+    function update(dt, flash) {
+      glintFlash = flash || 0;                       // v3.3b C4: the frame's lightning envelope — drives the specular dot ONLY, never body alpha
       if ((skip = 1 - skip)) return;                 // ~30fps is plenty for glass
       dt = Math.min(dt * 2, 0.1);
       spawnIn -= dt * (0.4 + sceneState.rain * 0.6);   // v3.2l: rain is presence (≈1) now — rescaled to the old veil-era spawn rate
@@ -1076,12 +1082,13 @@
      back-side Fresnel scatter shell (rim brightest toward the sun, dying on the night
      limb). Parented to `spin` so normalize(position) shares uSunDir's geographic frame.
      Additive + depthWrite:false → cannot fill undrawn pixels (canvas stays transparent). */
+  const uFlashLimb = { value: 0 };   // v3.3b C3: lightning limb catch — loop-driven, 0 at rest (event-gated, decays with env)
   if (GLOBE_ELEV) {
     halo.visible = false;                                  // sprite off; shell is the atmosphere now
     const segW = LITE ? 24 : 48, segH = LITE ? 16 : 32;
     const limbMat = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide,
-      uniforms: { uSunDir: globeMat.uniforms.uSunDir, uReveal: globeMat.uniforms.uReveal },
+      uniforms: { uSunDir: globeMat.uniforms.uSunDir, uReveal: globeMat.uniforms.uReveal, uFlashLimb },
       vertexShader: `
         varying vec3 vNormalV;
         varying vec3 vViewDirV;
@@ -1095,7 +1102,7 @@
         }`,
       fragmentShader: `
         uniform vec3 uSunDir;
-        uniform float uReveal;
+        uniform float uReveal, uFlashLimb;
         varying vec3 vNormalV;
         varying vec3 vViewDirV;
         varying vec3 vSphereDir;
@@ -1106,7 +1113,10 @@
           float front = mix(-0.15, 1.15, uReveal);                     // boot sweep; 1.15 = fully lit at rest
           float reveal = 1.0 - smoothstep(front, front + 0.15, yN);
           float band = smoothstep(front - 0.12, front, yN) * (1.0 - smoothstep(front, front + 0.12, yN));
-          float a = min(rim * mix(0.05, 1.0, day) * reveal, 0.5) + band * 0.25 * day;
+          // v3.3b C3: the atmosphere catches the sheet flash (uFlashLimb = flash *
+          // 0.25 * tokyoFacing) — at rest the uniform is 0 => output unchanged; the
+          // existing 0.5 min-cap bounds the catch.
+          float a = min(rim * (mix(0.05, 1.0, day) + uFlashLimb) * reveal, 0.5) + band * 0.25 * day;
           gl_FragColor = vec4(vec3(0.224, 0.941, 1.0), a);             // cyan; additive scales RGB by a
         }`,
     });
@@ -1239,14 +1249,27 @@
   /* Sheet lightning — a rare decaying double-flicker behind the globe; the
      rain flares with it (dossier: motivated light — the flash is an emitter).
      Off under reduced motion. */
+  /* v3.3b — the scene answers its lightning (C-bundle, the Toy Shop parameter-
+     plumbing move): ONE event — every coupling consumes the single decaying env
+     returned by updateLightning(); zero new timers, zero new beats (§1.2).
+     LIGHTNING_GRADE_LIFT doubles as the C1 kill switch (set 0.0); law of record
+     0 < lift <= 0.10, harness-pinned by value. */
+  const LIGHTNING_GRADE_LIFT = 0.08;
   const lightning = (function () {
     if (reduced) return null;
     const cv = document.createElement('canvas'); cv.width = cv.height = 64;
     const g = cv.getContext('2d');
+    /* v3.3b C5 (rain brief Lever F pt 1): exponential falloff — 6 stops tracing
+       0.85 * exp(-r / 0.28), a near-white core dissolving into blue-black,
+       replacing the roughly-linear 3-stop ramp. Peak sprite opacity stays
+       env * 0.24 in updateLightning below. */
     const grd = g.createRadialGradient(32, 32, 2, 32, 32, 32);
-    grd.addColorStop(0, 'rgba(210,235,255,0.85)');
-    grd.addColorStop(0.55, 'rgba(140,190,230,0.25)');
-    grd.addColorStop(1, 'rgba(140,190,230,0)');
+    grd.addColorStop(0.00, 'rgba(235,245,255,0.85)');
+    grd.addColorStop(0.15, 'rgba(205,230,250,0.50)');
+    grd.addColorStop(0.30, 'rgba(170,210,240,0.29)');
+    grd.addColorStop(0.50, 'rgba(140,190,230,0.14)');
+    grd.addColorStop(0.70, 'rgba(120,170,215,0.07)');
+    grd.addColorStop(1.00, 'rgba(110,150,200,0)');
     g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
     const sp = nameObject(new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(cv), transparent: true, opacity: 0,
@@ -1256,9 +1279,26 @@
     camera.add(sp);
     return { sp, t: 0, next: 16 + Math.random() * 30 };
   })();
+  /* v3.3b §4.3 QA hook — sceneDebug-gated (the __sceneDebug/__scanPlace
+     precedent; inert & unallocated on the plain URL). __forceFlash(hold, lift, x):
+     hold truthy re-seeds L.t each frame so the dt*2.4 decay lands it at exactly
+     5/6 => env = sin(pi/2) * (1 - 0.7/6) ≈ 0.883 — the envelope's first peak,
+     held steady for the capture set. lift === false is the same-session control
+     arm (uFlash forced 0; sprite + rain response stay live). Numeric x pins the
+     strike's screen position for the directionality pair. */
+  let forceFlashHold = false, forceFlashLift = true;
+  if (sceneDebug) window.__forceFlash = (hold, lift, x) => {
+    forceFlashHold = !!hold;
+    forceFlashLift = lift !== false;
+    if (lightning) {
+      if (typeof x === 'number') lightning.sp.position.x = x;
+      if (!hold) { lightning.t = 0; lightning.next = 5 + Math.random() * 10; }   // release: end now, natural flash soon
+    }
+  };
   function updateLightning(dt) {
     if (!lightning) return 0;
     const L = lightning;
+    if (forceFlashHold) L.t = 5 / 6 + dt * 2.4;   // §4.3: decays to exactly 5/6 this frame — held first peak
     L.next -= dt;
     if (L.next <= 0 && L.t <= 0) {
       L.t = 1;
@@ -1464,7 +1504,12 @@
     rainSway += dt;
     const wind = 0.10 + Math.sin(rainSway * 0.6) * 0.05 + Math.max(-0.6, Math.min(0.6, rainShear));
     rainWindT += wind * dt;   // v3.3a: the shader's x-drift clock — GPU advection needs ∫wind dt, not wind
-    const beat = 0.85 + sceneState.haloPulse * 0.5 + sceneState.lockT * 0.45 + (flash || 0) * 1.3;
+    /* v3.3b C2: the shared flat flash literal is RETIRED — the high tier answers
+       lightning directionally through well 3 (uWells[2], strength flash * 0.9:
+       near-strike drops over-brighten via the per-drop falloff, the far field
+       barely reacts). LITE compiles no wells, so it keeps the flat coupling under
+       its named const — without it phone rain would stop answering lightning. */
+    const beat = 0.85 + sceneState.haloPulse * 0.5 + sceneState.lockT * 0.45 + (LITE ? (flash || 0) * LITE_FLASH_BEAT : 0);
     // v3.2d: tint keys to the projects ENTRY beat (armed in __sceneFocus) and
     // decays over ~2s — amber is an event, never section-residency wallpaper.
     if (rainTintK > 0) rainTintK = Math.max(0, rainTintK - dt * 0.5);
@@ -1577,6 +1622,8 @@
     shiftX: 0, shiftZ: 0,   // v3.2o: eased per-section globe offset (only work sets a target)
     lockT: 1,          // signal-lock timer (1 → 0), drives ring sweep + glow bloom; starts armed —
                        // boot IS the home entry (effects.js never emits an initial section focus)
+    wordT: 0,          // v3.3b: state-word suppression envelope (1 → 0 over the word's 1.9s CSS
+                       // window) — drives NOTHING but the uFlash gate (§1.2: pure suppression, never a beat)
   };
   let storyCooldown = 0;                       // seconds; guards re-arming on scroll jitter
   /* v3.2r — forward-only focus-bias: while a story window is open the spin
@@ -1625,6 +1672,7 @@
     focusBiasT = BIAS_WINDOW_S;   // v3.2m: open the subliminal facing window
     sceneState.haloPulse = Math.max(sceneState.haloPulse, story.intensity || 1);
     if (id === 'home') sceneState.lockT = 1;   // signal-lock beat (boot/home only)
+    else sceneState.wordT = 1;                 // v3.3b: the boxed state-word owns every OTHER section change (effects.js:13 skips home) — wordT gates ONLY the grade lift (§1.2)
     /* v3.2m — contact's own signature: fire the existing LOS-gated satellite
        downlink on section lock (the callout already reads SIGNAL ONLINE).
        REPLACES the duplicated home lockT copy — one signal per section-change
@@ -1659,6 +1707,8 @@
       labels: Number(sceneState.labels.toFixed(3)),
       callout: Number(sceneState.callout.toFixed(3)),
       lockT: Number(sceneState.lockT.toFixed(3)),
+      wordT: Number(sceneState.wordT.toFixed(3)),                                  // v3.3b: suppression-envelope probe (§4.3 gate)
+      uFlash: gradeUniforms ? Number(gradeUniforms.uFlash.value.toFixed(4)) : 0,   // v3.3b: grade-lift probe (§4.3 gate)
       fps: Math.round(fpsEMA),
       focusedPlaceId,
       arcHead: Math.floor(arcN),
@@ -1874,6 +1924,7 @@
   const bloomEnabled = quality.name === 'high' && !reduced &&
                        !!(window.POST && window.POST.EffectComposer);
   let bloomComposer = null, finalComposer = null, renderBloomThenFinal = null;
+  let gradeUniforms = null;   // v3.3b: loop-visible handle for the uFlash drive — stays null on LITE/reduced (no grade pass there)
 
   if (bloomEnabled) {
     const POST = window.POST;
@@ -1952,12 +2003,13 @@
         uTeal:    { value: new THREE.Vector3( 0.00, 0.020, 0.030) }, // shadow floor colour (inert at uTealAmt 0)
         uTealAmt: { value: 0.0 },
         uSat:     { value: 1.06 },                                   // keep cyan lead / amber pop
+        uFlash:   { value: 0.0 },                                    // v3.3b C1: lightning exposure lift (LIGHTNING_GRADE_LIFT * env, word/lock-suppressed)
       },
       vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} `,
       fragmentShader: `
         uniform sampler2D tDiffuse;
         uniform vec3 uLift, uGamma, uGain, uTeal;
-        uniform float uTealAmt, uSat;
+        uniform float uTealAmt, uSat, uFlash;
         varying vec2 vUv;
         const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
         void main(){
@@ -1975,6 +2027,11 @@
           float shadow = 1.0 - smoothstep(0.0, 0.35, luma);
           c = mix(c, max(c, uTeal), shadow * uTealAmt);
 
+          // (v3.3b C1) lightning exposure lift — the whole frame breathes with the
+          // strike, pre-saturation (Toy Shop's pre-tonemap add). 0 at rest; the
+          // final clamp below keeps the write in range.
+          c *= 1.0 + uFlash;
+
           // (3) gentle saturation
           c = mix(vec3(dot(c, LUMA)), c, uSat);
 
@@ -1983,6 +2040,7 @@
       `,
     }));
     gradePass.material.blending = THREE.NoBlending;
+    gradeUniforms = gradePass.material.uniforms;   // v3.3b: the loop drives uFlash per frame
 
     // (c3) caPass — radial chromatic aberration ("worn projected glass" fringe),
     //      display-space, LAST in the chain. R/B sampled at ±radial offset; G AND
@@ -2204,6 +2262,7 @@
     // Section story state — eased toward the active story's targets each frame
     if (storyCooldown > 0) storyCooldown = Math.max(0, storyCooldown - dt);
     if (sceneState.lockT > 0) sceneState.lockT = Math.max(0, sceneState.lockT - dt * 0.9);
+    if (sceneState.wordT > 0) sceneState.wordT = Math.max(0, sceneState.wordT - dt / 1.9);   // v3.3b: mirrors the word's 1.9s run (.state-flash.show, site.css:665)
     sceneState.halo    += (sceneState.story.halo    - sceneState.halo)    * Math.min(1, 0.08 * f);
     sceneState.rain    += (sceneState.story.rain    - sceneState.rain)    * Math.min(1, 0.08 * f);
     sceneState.labels  += (sceneState.story.labels  - sceneState.labels)  * Math.min(1, 0.08 * f);
@@ -2221,7 +2280,14 @@
     rainShear += ((scrollY - lastScrollY2) * 0.0025 - rainShear) * Math.min(1, 0.12 * f);
     if (shearHold !== null) rainShear = shearHold;   // v3.3a QA hold — always null outside ?sceneDebug=1
     lastScrollY2 = scrollY;
-    updateDepthRain(dt, updateLightning(dt));
+    const flash = updateLightning(dt);   // v3.3b: ONE event — every C-coupling consumes this single envelope (§1.2)
+    updateDepthRain(dt, flash);
+    /* C1 — the whole-frame grade lift, the only coupling with global reach:
+       suppressed while the boxed state-word (wordT) or the home/boot signal-lock
+       (lockT) owns the frame. forceFlashLift is the §4.3 sceneDebug control arm
+       (always true in production). gradeUniforms is null on LITE/reduced. */
+    if (gradeUniforms) gradeUniforms.uFlash.value = (forceFlashLift ? LIGHTNING_GRADE_LIFT : 0) *
+      flash * Math.max(0, 1 - Math.max(sceneState.lockT, sceneState.wordT));
     updateScanTag(dt);
     updateCelestial(dt);
     const scanY = Math.sin(t * 0.55) * R * 0.9;                       // holo shell sweeps the sphere
@@ -2276,6 +2342,7 @@
     const focusedAngle = Math.atan2(focusedVector.z, focusedVector.x);
     const focusedFacing = Math.max(0, Math.sin(focusedAngle - spin.rotation.y));
     const tokyoFacing = Math.max(0, Math.sin(tokyoA0 - spin.rotation.y));
+    uFlashLimb.value = flash * 0.25 * tokyoFacing;   // v3.3b C3: limb catch — rides the ONE flash envelope, 0 at rest
     updateTokyoHalo(f, focusedFacing, tokyoFacing);
     callout.sprite.position.copy(focusedVector).multiplyScalar(1.22).add(calloutOffset);
     // v3.1: hard facing gate (0 below 0.35, full above 0.72) — the old facing²
@@ -2335,7 +2402,7 @@
     camera.position.z = 10 - scrollNS * 4 - warp * 6 - idleK * 1.6;   // idle cinematic dolly-in
     camera.lookAt(0, scrollNS * 1.5, 0);
     render();
-    if (droplets) droplets.update(dt);   // after render: droplet lenses sample THIS frame's buffer
+    if (droplets) droplets.update(dt, flash);   // after render: lenses sample THIS frame's buffer; flash drives the C4 glint
     if (!coarse) interrogate(dt);          // SP3: pointer interrogation (touch uses tap-select)
   }
   raf = requestAnimationFrame(loop);
