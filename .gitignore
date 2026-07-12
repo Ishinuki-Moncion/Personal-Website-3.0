@@ -9,3 +9,6 @@ docs/superpowers/research/refs/
 
 # v3.2 gate screenshots (owner end-of-pass review artifacts; heavy PNGs, not site assets)
 docs/superpowers/gates/v32/
+
+# v3.3 gate screenshots (same class: owner review artifacts, git-ignored — spec §4)
+docs/superpowers/gates/v33/

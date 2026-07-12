@@ -492,10 +492,24 @@
     spin.add(m);
     return m;
   }
-  /* Depth rain — camera-space particle layers with per-drop speed jitter and
-     gusting wind (dossier: GITS solograms are particle systems of light in
-     Z-space; parallax + variation is what separates weather from "lines").
-     Hidden under reduced motion — a frozen rain frame reads as glitch. */
+  /* v3.2l motivation-law constants + the v3.3a well shape — hoisted above
+     makeDepthRain (the factory runs long before the rain-update block; the
+     shader uniforms initialize from these, TDZ otherwise). Values are LAW
+     (harness-pinned by value). */
+  const MOTIV_FLOOR = 0.16;      // rain never fully dies while a section calls for weather (0.22→0.16: hero mean read +0.3 over baseline at 0.22 — retuned per the luminance gate)
+  const MOTIV_CAP   = 0.80;      // motivated rain always sits BELOW the retired flat-veil peaks
+  const RAIN_LITE_VEIL = 0.55;   // LITE: single flat veil ≤ every old per-section value
+  const WELL_DEPTH_SIGMA = 6.0;  // camera-Z reach of an emitter's light, world units
+  const WELL_XY_SIGMA = 0.25;    // v3.3a: screen-xy reach of a well, NDC units — the ONE new tunable (tune DOWN only, under the luminance A/B gate)
+  /* Depth rain — v3.3a: ONE instanced velocity-stretched streak batch (R1).
+     470 quads high tier / 210 LITE in a single draw call, camera-parented so
+     the sheet rides the view (dossier: GITS solograms are particle systems
+     of light in Z-space). The three THREE.Points planes, their baked streak
+     sprites, and the per-frame CPU walk are RETIRED: fall + recycle are
+     closed-form in the vertex shader, the lean is the TRUE fall+wind vector
+     (streaks lean ~30° under full shear instead of sliding under a baked 10°
+     sprite), and the v3.2l motivation wells are evaluated PER DROP. Hidden
+     under reduced motion — a frozen rain frame reads as glitch. */
   function makeDepthRain() {
     const aspect = w / h;
     const defs = LITE
@@ -505,32 +519,142 @@
          { n: 150, size: 0.24, speed: [4.2, 7.5], op: 0.36, z: [-6, -11], len: 0.55, head: 0.8 },
          { n: 250, size: 0.15, speed: [2.2, 4.2], op: 0.24, z: [-9, -16], len: 0.35, head: 0.65 }];
     const group = new THREE.Group(); group.name = 'depth-rain';
-    const layers = defs.map((d, li) => {
+    const total = defs.reduce((sum, d) => sum + d.n, 0);   // 470 high / 210 LITE
+    const base = new THREE.PlaneGeometry(1, 1);
+    base.translate(0, 0, -8);   // dark-swap safety (v3.1g law): the bloom pass renders the RAW quads under MeshBasicMaterial (instance attrs ignored, all quads collapse onto the base geometry) — park them mid-band, never at the camera plane where w -> 0
+    const geo = new THREE.InstancedBufferGeometry();
+    geo.name = 'rain-streaks:geometry';
+    geo.setIndex(base.getIndex());
+    geo.setAttribute('position', base.getAttribute('position'));
+    geo.setAttribute('uv', base.getAttribute('uv'));
+    geo.instanceCount = total;
+    const seed = new Float32Array(total * 3);   // spawn x, spawn y, camera-space z (constant per drop)
+    const spd = new Float32Array(total);        // world units / s
+    const drop = new Float32Array(total * 4);   // streak len, streak width, baseOp, head alpha
+    const rect = new Float32Array(total * 2);   // layer band halfW, halfH — the mod-wrap range
+    const layer = new Float32Array(total);      // 0/1/2 — layer 0 takes the projects amber event tint
+    let k = 0;
+    defs.forEach((d, li) => {
       const halfH = Math.tan(31 * Math.PI / 180) * (-d.z[1]) + 1.5;
       const halfW = halfH * aspect + 1;
-      const geo = new THREE.BufferGeometry();
-      const pos = new Float32Array(d.n * 3);
-      const spd = new Float32Array(d.n);
-      for (let i = 0; i < d.n; i++) {
-        pos[i * 3] = (Math.random() * 2 - 1) * halfW;
-        pos[i * 3 + 1] = (Math.random() * 2 - 1) * halfH;
-        pos[i * 3 + 2] = d.z[0] + Math.random() * (d.z[1] - d.z[0]);
-        spd[i] = d.speed[0] + Math.random() * (d.speed[1] - d.speed[0]);
+      const spdMid = (d.speed[0] + d.speed[1]) / 2;
+      for (let i = 0; i < d.n; i++, k++) {
+        seed[k * 3] = (Math.random() * 2 - 1) * halfW;
+        seed[k * 3 + 1] = (Math.random() * 2 - 1) * halfH;
+        seed[k * 3 + 2] = d.z[0] + Math.random() * (d.z[1] - d.z[0]);
+        const s = d.speed[0] + Math.random() * (d.speed[1] - d.speed[0]);
+        spd[k] = s;
+        drop[k * 4] = d.size * d.len * (s / spdMid);   // streak length ∝ speed × layer len — equals the old d.size×d.len sprite streak at mid speed
+        drop[k * 4 + 1] = d.size * 0.085;              // ≈ the retired sprite's 9px/128px double-stroke footprint
+        drop[k * 4 + 2] = d.op;
+        drop[k * 4 + 3] = d.head;
+        rect[k * 2] = halfW; rect[k * 2 + 1] = halfH;
+        layer[k] = li;
       }
-      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      const pts = nameObject(new THREE.Points(geo, new THREE.PointsMaterial({
-        map: makeStreakTexture(d.len, d.head), size: d.size, sizeAttenuation: true,
-        transparent: true, opacity: 0, depthWrite: false,
-        blending: THREE.AdditiveBlending, color: 0xbfeaff,
-      })), 'rain-layer-' + li);
-      pts.userData = { speeds: spd, halfW, halfH, baseOp: d.op, zMid: (d.z[0] + d.z[1]) / 2 };  // v3.2l: camera-space mid-depth for the per-plane well falloff
-      pts.renderOrder = 3;
-      group.add(pts);
-      return pts;
     });
+    geo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seed, 3));
+    geo.setAttribute('aSpeed', new THREE.InstancedBufferAttribute(spd, 1));
+    geo.setAttribute('aDrop', new THREE.InstancedBufferAttribute(drop, 4));
+    geo.setAttribute('aRect', new THREE.InstancedBufferAttribute(rect, 2));
+    geo.setAttribute('aLayer', new THREE.InstancedBufferAttribute(layer, 1));
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uT: { value: 0 },       // rain-time (rainSway) — pauses with visibility, exactly like the retired CPU walk
+        uWind: { value: 0.1 },  // instantaneous wind+shear — the LEAN (spec §3.1: the one wind float)
+        uWindT: { value: 0 },   // ∫wind dt (rainWindT) — the x DRIFT clock; a wind change must not teleport drops
+        uBeat: { value: 0.85 }, uVis: { value: 0 }, uTint: { value: 0 },
+        uCyan: { value: new THREE.Color(0xbfeaff) },    // carried rain body color (old :521-527)
+        uAmber: { value: new THREE.Color(0xffd2a0) },   // layer-0 projects-entry event tint (RAIN_AMBER carried)
+        uWells: { value: [new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4()] },
+        uMotivFloor: { value: MOTIV_FLOOR },
+        uMotivCap: { value: MOTIV_CAP },
+        uLiteVeil: { value: RAIN_LITE_VEIL },
+        uWellXY: { value: WELL_XY_SIGMA },
+        uWellZ: { value: WELL_DEPTH_SIGMA },
+        uWellGain: { value: 1 },   // QA-only pools lever: the loop NEVER writes it, so an evaluate_script zero sticks (uWells itself is loop-written every frame)
+      },
+      vertexShader: `
+        attribute vec3 aSeed;
+        attribute float aSpeed;
+        attribute vec4 aDrop;
+        attribute vec2 aRect;
+        attribute float aLayer;
+        uniform float uT, uWind, uWindT, uBeat, uVis, uTint;
+        uniform vec3 uCyan, uAmber;
+        #ifdef WELLS
+        uniform vec4 uWells[3];
+        uniform float uMotivFloor, uMotivCap, uWellXY, uWellZ, uWellGain;
+        #else
+        uniform float uLiteVeil;
+        #endif
+        varying vec2 vQuad;
+        varying float vAlpha, vHead, vFogDepth;
+        varying vec3 vColor;
+        void main() {
+          // GPU recycle — the CPU per-drop walk is retired: fall + drift are
+          // closed-form in rain-time, mod-wrapped over the layer band.
+          float x = mod(aSeed.x - aSpeed * uWindT, 2.0 * aRect.x) - aRect.x;
+          float y = mod(aSeed.y - aSpeed * uT, 2.0 * aRect.y) - aRect.y;
+          vec4 mvC = modelViewMatrix * vec4(x, y, aSeed.z, 1.0);
+          vFogDepth = -mvC.z;
+          // velocity stretch: lean = atan(wind) off vertical, length rides |v|
+          // — the baked-10°-sprite cheapness tell is gone.
+          vec2 dir = normalize(vec2(-uWind, -1.0));
+          vec2 perp = vec2(dir.y, -dir.x);   // NOT vec2(-dir.y, dir.x): with dir pointing DOWN that basis has det = -1 (a reflection) — it flips the quad's CCW winding and FrontSide culling eats every streak (v33a live-debug find); this sign keeps det = +1, and the symmetric lateral profile makes the two mathematically mirrored widths visually identical
+          float stretch = length(vec2(uWind, 1.0));
+          vec2 off = perp * (position.x * aDrop.y) + dir * (position.y * aDrop.x * stretch);
+          gl_Position = projectionMatrix * vec4(mvC.xy + off, mvC.z, 1.0);
+          vQuad = vec2(position.x * 2.0, position.y + 0.5);   // x: -1..1 across the streak, y: 0 tail -> 1 head
+          #ifdef WELLS
+          vec4 pC = projectionMatrix * mvC;
+          vec2 ndc = pC.xy / max(pC.w, 1e-4);
+          float m = 0.0;
+          for (int i = 0; i < 3; i++) {   // per-DROP wells: v3.2l depth falloff carried × NEW screen-xy falloff
+            vec2 dxy = ndc - uWells[i].xy;
+            m += uWells[i].z * uWellGain
+               * exp(-abs(aSeed.z - uWells[i].w) / uWellZ)
+               * exp(-dot(dxy, dxy) / (uWellXY * uWellXY));
+          }
+          float motivation = min(uMotivCap, uMotivFloor + m);
+          #else
+          float motivation = uLiteVeil;   // LITE: flat veil — the well branch is not even compiled
+          #endif
+          vAlpha = aDrop.z * uVis * uBeat * motivation;   // the v3.2l terminal-opacity law (baseOp × vis × beat × motivation), per DROP now
+          vHead = aDrop.w;
+          vColor = mix(uCyan, uAmber, uTint * 0.85 * (1.0 - step(0.5, aLayer)));   // old :1345 tint carried — layer 0 only
+        }
+      `,
+      fragmentShader: `
+        varying vec2 vQuad;
+        varying float vAlpha, vHead, vFogDepth;
+        varying vec3 vColor;
+        void main() {
+          // head/tail profile — the retired makeStreakTexture ramp (:1035-1039),
+          // analytic: 0 at tail -> 0.45×head at 55% -> head at 90% -> 0 at the tip.
+          float t = vQuad.y;
+          float prof = t < 0.55 ? 0.45 * (t / 0.55)
+                     : (t < 0.9 ? mix(0.45, 1.0, (t - 0.55) / 0.35)
+                                : 1.0 - (t - 0.9) / 0.1);
+          float lateral = 1.0 - smoothstep(0.25, 1.0, abs(vQuad.x));   // soft edges ≈ the 4px core inside the 9px stroke
+          // FogExp2 carried: the retired PointsMaterial had fog:true, dimming far
+          // planes toward the #05060a void; additive contribution rides alpha,
+          // so the dim rides alpha. density 0.05 -> 0.05^2 = 0.0025.
+          float fog = exp(-0.0025 * vFogDepth * vFogDepth);
+          float a = vAlpha * vHead * prof * lateral * fog;
+          if (a < 0.003) discard;
+          gl_FragColor = vec4(vColor, a);
+        }
+      `,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      defines: LITE ? {} : { WELLS: '' },
+    });
+    const mesh = nameObject(new THREE.Mesh(geo, mat), 'rain-streaks');
+    mesh.renderOrder = 3;
+    mesh.frustumCulled = false;   // instances span the whole frustum band; the base quad's bounds are meaningless
+    group.add(mesh);
     scene.add(camera);
     camera.add(group);
-    return { group, layers };
+    return { group, mesh, mat };
   }
 
   const tokyoRing = tangentRing(0.16, 0.2, 0.8, 'tokyo-focus-ring');
@@ -1289,27 +1413,22 @@
     });
   }
 
-  let rainSway = 0, rainShear = 0, lastScrollY2 = 0, rainTintK = 0;
+  let rainSway = 0, rainShear = 0, lastScrollY2 = 0, rainTintK = 0, rainWindT = 0;   // v3.3a: rainWindT = ∫wind dt — the GPU x-drift clock
+  let shearHold = null;   // v3.3a QA lever (lean captures): forced-shear hold; settable ONLY via the sceneDebug hook below — null on every real page
+  if (sceneDebug) window.__rainShear = v => { shearHold = (typeof v === 'number') ? Math.max(-0.6, Math.min(0.6, v)) : null; return shearHold; };
   let idleT = 0, idleK = 0;                                   // idle cinematics state
   ['pointermove', 'pointerdown', 'wheel', 'keydown', 'touchstart', 'scroll'].forEach(ev =>
     window.addEventListener(ev, () => { idleT = 0; }, { passive: true }));
-  const RAIN_CYAN = new THREE.Color(0xbfeaff), RAIN_AMBER = new THREE.Color(0xffd2a0);
-  /* v3.2l — rain lever A (rain brief, the one never-built research surface):
-     rain is bright only where motivated light reaches it. ≤3 screen-space
-     falloff wells at projected emitter positions — Tokyo halo (the city IS
-     the lamp), the focused place node, and lightning while it flashes —
-     evaluated per PLANE, never per drop:
-        terminal opacity = baseOp × vis × beat × motivation
-     `vis` (sceneState.rain) is now a simple presence envelope (see
-     sectionStories); density/art-direction moved into the wells. LITE skips
-     all projection math: one flat veil (RAIN_LITE_VEIL). No new scene
-     objects/materials — the bloom dark-swap set is untouched. */
-  const MOTIV_FLOOR = 0.16;      // rain never fully dies while a section calls for weather (0.22→0.16: hero mean read +0.3 over baseline at 0.22 — retuned per the luminance gate)
-  const MOTIV_CAP   = 0.80;      // motivated rain always sits BELOW the retired flat-veil peaks
-  const RAIN_LITE_VEIL = 0.55;   // LITE: single flat veil ≤ every old per-section value
-  const WELL_DEPTH_SIGMA = 6.0;  // camera-Z reach of an emitter's light, world units
+  /* v3.2l — rain lever A, ELEVATED PER-DROP by v3.3a: rain is bright only
+     where motivated light reaches it. ≤3 screen-space falloff wells at
+     projected emitter positions — Tokyo halo (the city IS the lamp), the
+     focused place node, and lightning while it flashes — now evaluated per
+     DROP in the rain vertex shader (uWells); this block only projects the
+     wells and uploads uniforms. `vis` (sceneState.rain) stays the presence
+     envelope; LITE still skips all projection math (uLiteVeil, in-shader).
+     The law consts live above makeDepthRain now (uniform init reads them). */
   const TOKYO_HALO_LOCAL = TOKYO.clone().multiplyScalar(1.08);   // halo group's spin-local seat (:526)
-  const rainWells = [{ s: 0, z: 0 }, { s: 0, z: 0 }, { s: 0, z: 0 }];
+  const rainWells = [{ x: 0, y: 0, s: 0, z: 0 }, { x: 0, y: 0, s: 0, z: 0 }, { x: 0, y: 0, s: 0, z: 0 }];
   const _wellP = new THREE.Vector3(), _wellN = new THREE.Vector3(), _wellC = new THREE.Vector3();
   function setWell(well, worldV, strength) {
     // world→screen: the exact path the DOM HUD reticle uses (interrogate(), :1577-1580)
@@ -1320,12 +1439,14 @@
     const edge = Math.max(Math.abs(_wellN.x), Math.abs(_wellN.y));
     well.s = strength * (1 - THREE.MathUtils.smoothstep(edge, 0.9, 1.5)); // screen-space falloff as the emitter leaves frame
     well.z = _wellC.z;
+    well.x = _wellN.x; well.y = _wellN.y;   // v3.3a: the NDC seat rides to the GPU as uWells[i].xy
   }
   function updateDepthRain(dt, flash) {
     if (!depthRain) return;
     const vis = sceneState.rain;
     depthRain.group.visible = vis > 0.02;
     if (!depthRain.group.visible) return;
+    const U = depthRain.mat.uniforms;
     if (!LITE) {   // wells: 1 Tokyo halo, 2 focused place node, 3 lightning reach while active
       _wellP.copy(TOKYO_HALO_LOCAL); spin.localToWorld(_wellP);
       setWell(rainWells[0], _wellP, sceneState.halo * (0.30 + sceneState.haloPulse * 0.25 + sceneState.lockT * 0.20));
@@ -1335,39 +1456,30 @@
         _wellP.copy(lightning.sp.position); camera.localToWorld(_wellP);   // sprite is a camera child (:1093)
         setWell(rainWells[2], _wellP, (flash || 0) * 0.9);
       } else rainWells[2].s = 0;
+      for (let wi = 0; wi < 3; wi++) {   // v3.3a: wells ride to the GPU — per-DROP falloff in the vertex shader
+        const wl = rainWells[wi];
+        U.uWells.value[wi].set(wl.x, wl.y, wl.s, wl.z);
+      }
     }
     rainSway += dt;
     const wind = 0.10 + Math.sin(rainSway * 0.6) * 0.05 + Math.max(-0.6, Math.min(0.6, rainShear));
+    rainWindT += wind * dt;   // v3.3a: the shader's x-drift clock — GPU advection needs ∫wind dt, not wind
     const beat = 0.85 + sceneState.haloPulse * 0.5 + sceneState.lockT * 0.45 + (flash || 0) * 1.3;
     // v3.2d: tint keys to the projects ENTRY beat (armed in __sceneFocus) and
     // decays over ~2s — amber is an event, never section-residency wallpaper.
     if (rainTintK > 0) rainTintK = Math.max(0, rainTintK - dt * 0.5);
-    depthRain.layers[0].material.color.copy(RAIN_CYAN).lerp(RAIN_AMBER, rainTintK * 0.85);
-    depthRain.layers.forEach(pts => {
-      const p = pts.geometry.attributes.position.array;
-      const ud = pts.userData;
-      for (let i = 0; i < ud.speeds.length; i++) {
-        const s = ud.speeds[i] * dt;
-        p[i * 3 + 1] -= s;
-        p[i * 3] -= s * wind;
-        if (p[i * 3 + 1] < -ud.halfH) {
-          p[i * 3 + 1] += ud.halfH * 2;
-          p[i * 3] = (Math.random() * 2 - 1) * ud.halfW;
-        }
-      }
-      pts.geometry.attributes.position.needsUpdate = true;
-      // v3.2l terminal opacity = baseOp × vis × beat × motivation (per PLANE, not per drop)
-      let motivation = RAIN_LITE_VEIL;               // LITE: flat veil, zero projection math on phones
-      if (!LITE) {
-        let m = 0;
-        for (let wi = 0; wi < 3; wi++) {
-          const wl = rainWells[wi];
-          if (wl.s > 0) m += wl.s * Math.exp(-Math.abs(ud.zMid - wl.z) / WELL_DEPTH_SIGMA);
-        }
-        motivation = Math.min(MOTIV_CAP, MOTIV_FLOOR + m);
-      }
-      pts.material.opacity = ud.baseOp * vis * beat * motivation;
-    });
+    /* v3.3a: the per-drop CPU walk is RETIRED — advection, recycle, and the
+       v3.2l terminal opacity (baseOp × vis × beat × motivation) all live in
+       the rain shader. This loop's only remaining rain work is well
+       projection + these uniform writes. THE A/B LAW (§3.1): the loop writes
+       ONLY group.visible and uniforms — NEVER mesh.visible, which stays the
+       loop-proof isolation lever for every luminance gate. */
+    U.uT.value = rainSway;
+    U.uWind.value = wind;
+    U.uWindT.value = rainWindT;
+    U.uVis.value = vis;
+    U.uBeat.value = beat;
+    U.uTint.value = rainTintK;
   }
 
   // (g) orbital scan ring — equatorial, does not rotate with the land
@@ -1948,6 +2060,43 @@
       scene.traverse(restore);
       finalComposer.render();      // real scene + ADD bloom.rgb, keep base.a -> screen
     };
+
+    /* v3.3a QA hook — bloom-target isolation (§1.3, the v3.1g law with a test).
+       sceneDebug-gated (the __sceneDebug/__scanPlace precedent; allocates
+       nothing on real pages). Renders the BLOOM composer alone to the canvas,
+       optionally freezing the loop so the frame survives for a screenshot,
+       and returns an FNV-1a digest of the presented pixels (same-task
+       drawImage from renderer.domElement — the droplets IIFE's proven read
+       path, immune to DOM overlay contamination). The v33a acceptance pair:
+       digest(rain visible) MUST equal digest(rain hidden) — the instanced
+       mesh dark-swaps to darkMat and stamps nothing in the bloom buffer. */
+    if (sceneDebug) {
+      const digestCv = document.createElement('canvas');
+      window.__bloomIso = (rainVisible, hold) => {
+        const rainMesh = scene.getObjectByName('rain-streaks');
+        if (rainMesh) rainMesh.visible = rainVisible !== false;
+        if (hold && running) { running = false; cancelAnimationFrame(raf); }
+        scene.traverse(darken);
+        bloomComposer.renderToScreen = true;
+        bloomComposer.render();
+        bloomComposer.renderToScreen = false;
+        scene.traverse(restore);
+        const el = renderer.domElement;
+        digestCv.width = el.width; digestCv.height = el.height;
+        const g2 = digestCv.getContext('2d', { willReadFrequently: true });
+        g2.drawImage(el, 0, 0);
+        const px = g2.getImageData(0, 0, digestCv.width, digestCv.height).data;
+        let hsh = 0x811c9dc5;
+        for (let i = 0; i < px.length; i++) { hsh ^= px[i]; hsh = Math.imul(hsh, 0x01000193); }
+        return 'rain=' + (rainVisible !== false) + ' digest=' + (hsh >>> 0).toString(16);
+      };
+      window.__bloomResume = () => {
+        const rainMesh = scene.getObjectByName('rain-streaks');
+        if (rainMesh) rainMesh.visible = true;
+        if (!running) { running = true; last = performance.now(); raf = requestAnimationFrame(loop); }
+        return 'resumed';
+      };
+    }
   }
 
   const DPR_CAP = reduced ? 1 : LITE ? 1.5 : 2;   // mirrors getQualityProfile's per-tier caps
@@ -2070,6 +2219,7 @@
     idleT += dt;
     idleK += ((idleT > 20 ? 1 : 0) - idleK) * Math.min(1, 0.02 * f);   // idle cinematic ease
     rainShear += ((scrollY - lastScrollY2) * 0.0025 - rainShear) * Math.min(1, 0.12 * f);
+    if (shearHold !== null) rainShear = shearHold;   // v3.3a QA hold — always null outside ?sceneDebug=1
     lastScrollY2 = scrollY;
     updateDepthRain(dt, updateLightning(dt));
     updateScanTag(dt);
