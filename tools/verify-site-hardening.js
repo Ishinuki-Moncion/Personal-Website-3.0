@@ -446,6 +446,21 @@ check('v3.3c — droplet glass merges and trails, cap unchanged',
     /d\.trail > 0 && d\.y > d\.trailAt && drops\.length < cap/.test(background),
   'area-conserving MERGE_R_MAX-clamped merge pair-check + cap-gated trail spawn present; cap = LITE ? 12 : 24 unchanged');
 
+// v3.3d — M5: hero choreography is Element.animate() with a tracked cancel-before-
+// start set; the setTimeout ladders and the wall-clock settle sweep are retired.
+// The scramble engine's two nets are pinned POSITIVE — they serve the lang swap
+// and the one-shot coord decrypt, surfaces M5 does not touch (correction #3).
+check('v3.3d — hero choreography is WAAPI with structural interruption safety',
+  /\.animate\(/.test(app) &&
+    /anims\.forEach\(a => a\.cancel\(\)\)/.test(app) &&
+    /const HERO_BEATS = \{/.test(app) &&
+    !/heroSettleTimer/.test(app) &&
+    !/settleHero/.test(app) &&
+    !/setTimeout\(typeSub, 700\)/.test(app) &&
+    /__scrToken/.test(effects) &&
+    /dur \+ 400/.test(effects),
+  'hero entrance is WAAPI (tracked anims[], cancel-before-start, fill-owned end states); ladders + settle timer gone; scramble token guard + wall-clock net survive in effects.js');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';
