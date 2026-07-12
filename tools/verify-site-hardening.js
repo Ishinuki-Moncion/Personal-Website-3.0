@@ -434,6 +434,18 @@ check('v3.3b — the scene answers its lightning as ONE event',
     !/\(flash \|\| 0\) \* 1\.3/.test(background),
   'grade lift ' + gradeLift + ' must sit in (0, 0.10] and be word/lock-suppressed; wordT arms home-excluded in __sceneFocus and decays dt/1.9; limb catch present; glint hard-capped 0.32 over an unraised 0.22 lens body; LITE flash beat named; the old shared flat literal retired');
 
+// v3.3c — droplet-glass v2 (spec §3.3/§6): the O(n^2) bead merge is area-
+// conserving and clamped at the pre-merge radius envelope (MERGE_R_MAX = the
+// runAt ceiling 5 + 2.5) so peak glass coverage cannot rise; running drops shed
+// 1-3 trail beads gated on the SAME cap; the 24/12 bead cap is UNCHANGED.
+// Emitter bokeh is the recorded CUT (correction of record #2) — do not add it.
+check('v3.3c — droplet glass merges and trails, cap unchanged',
+  /const cap = LITE \? 12 : 24;/.test(background) &&
+    /const MERGE_R_MAX = 7\.5/.test(background) &&
+    /Math\.min\(MERGE_R_MAX, Math\.sqrt\(keep\.r \* keep\.r \+ gone\.r \* gone\.r\)\)/.test(background) &&
+    /d\.trail > 0 && d\.y > d\.trailAt && drops\.length < cap/.test(background),
+  'area-conserving MERGE_R_MAX-clamped merge pair-check + cap-gated trail spawn present; cap = LITE ? 12 : 24 unchanged');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';

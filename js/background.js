@@ -775,6 +775,8 @@
     const ctx = cv.getContext('2d');
     const cap = LITE ? 12 : 24;
     const REFRACT = !LITE;
+    const MERGE_R_MAX = 7.5;      // v3.3c: today's max bead radius (the runAt ceiling 5 + 2.5) — a merged survivor never exceeds the pre-merge spawn envelope
+    const MERGE_TOUCH_K = 0.85;   // v3.3c: beads absorb when centre distance < 0.85 * summed radii (deep overlap, not a graze)
     let W = 0, H = 0;
     function resizeDroplets() {
       const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -792,6 +794,7 @@
         r: 1.4 + Math.random() * 2.2, grow: 0.12 + Math.random() * 0.5,
         runAt: 5 + Math.random() * 2.5, vy: 0, wob: Math.random() * 6.28,
         state: 'sit', age: 0, alpha: 0,
+        trail: 0, trailAt: 0, dead: false,   // v3.3c: run-trail budget + merge flag (stable hidden class)
       });
     }
     function drawDrop(d) {
@@ -857,13 +860,45 @@
       ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';         // prior frame decays → running wakes
       ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = 'source-over';
+      /* v3.3c merge — O(n^2) pair check (n <= 24 => <= 276 pairs at this 30fps
+         half-rate; works unchanged at n = 12 LITE). Overlapping beads absorb
+         area-conserving (r^2 sum, clamped at MERGE_R_MAX = today's max radius) so
+         total glass coverage can only FALL from a merge; the survivor pulls
+         toward the absorbed bead, jitters, and briefly accelerates — the single
+         most "liquid" read at this scale (Bebber/raindrop-fx playbook, R2). */
+      if (drops.length > 1) {
+        for (let i = 0; i < drops.length; i++) {
+          const da = drops[i];
+          if (da.dead) continue;
+          for (let j = i + 1; j < drops.length; j++) {
+            const db = drops[j];
+            if (db.dead) continue;
+            const dx = da.x - db.x, dy = da.y - db.y, rr = (da.r + db.r) * MERGE_TOUCH_K;
+            if (dx * dx + dy * dy > rr * rr) continue;
+            const keep = da.r >= db.r ? da : db, gone = keep === da ? db : da;
+            keep.r = Math.min(MERGE_R_MAX, Math.sqrt(keep.r * keep.r + gone.r * gone.r));
+            keep.x += (gone.x - keep.x) * 0.3;         // meniscus pull toward the absorbed bead
+            keep.y += (gone.y - keep.y) * 0.3;
+            keep.wob += (Math.random() - 0.5) * 2.4;   // survivor jitters...
+            keep.vy = Math.min(120, keep.vy + 26);     // ...and briefly accelerates (run-speed ceiling held)
+            keep.alpha = Math.max(keep.alpha, gone.alpha);
+            gone.dead = true;
+            if (gone === da) break;                    // da absorbed — stop pairing it
+          }
+        }
+        for (let i = drops.length - 1; i >= 0; i--) if (drops[i].dead) drops.splice(i, 1);
+      }
       for (let i = drops.length - 1; i >= 0; i--) {
         const d = drops[i];
         d.age += dt;
         d.alpha = Math.min(1, d.alpha + dt * 1.5);
         if (d.state === 'sit') {
           d.r += d.grow * dt;
-          if (d.r >= d.runAt) d.state = 'run';
+          if (d.r >= d.runAt) {
+            d.state = 'run';
+            d.trail = 1 + (Math.random() * 3 | 0);       // v3.3c: this run sheds 1-3 trail beads
+            d.trailAt = d.y + 10 + Math.random() * 18;   // first bead lands 10-28px into the run
+          }
           else if (d.age > 12) {
             d.r -= dt * 0.7;
             if (d.r <= 1.2) { drops.splice(i, 1); continue; }
@@ -874,10 +909,47 @@
           d.y += d.vy * dt;
           d.x += Math.sin(d.wob) * 0.22;
           d.r -= dt * 1.1;
+          /* v3.3c trail beads — the run sheds tiny STATIC beads along its wobble
+             path (the hang-and-burst rivulet rhythm). Strictly smaller than the
+             parent (parent-relative and clamped to [1.25, 2.2]), counted against
+             the SAME cap, and retired by the existing machinery: age > 12 puts
+             them straight into the sit-evaporation branch, and the
+             destination-out decay above fades what they leave. Pushed at the
+             array tail — this downward loop never revisits them this frame. */
+          if (d.trail > 0 && d.y > d.trailAt && drops.length < cap) {
+            d.trail--;
+            d.trailAt = d.y + 14 + Math.random() * 22;
+            drops.push({
+              x: d.x - Math.sin(d.wob) * 1.5, y: d.y - d.r * 1.4,
+              r: Math.min(2.2, Math.max(1.25, d.r * (0.2 + Math.random() * 0.15))),
+              grow: 0, runAt: 99, vy: 0, wob: Math.random() * 6.28,
+              state: 'sit', age: 12.5, alpha: 0.6,
+              trail: 0, trailAt: 0, dead: false,
+            });
+          }
           if (d.r <= 1.6 || d.y > H + 12) { drops.splice(i, 1); continue; }
         }
         drawDrop(d);
       }
+    }
+    /* v3.3c QA hooks — sceneDebug-gated (the __forceFlash/__scanPlace precedent;
+       inert on the plain URL). __spawnMergePair(): two adjacent growing beads at
+       frame centre — contact at (r1+r2)*0.85 >= 6.2 in ~1.5-2s, a deterministic
+       merge for the archived 3-frame sequence. __spawnRunner(): one bead 0.3s
+       below its run threshold — enters 'run' through the REAL transition (so the
+       trail budget arms) and sheds trail beads on its way down. Both evict before
+       pushing, so the cap is never exceeded. */
+    if (sceneDebug) {
+      window.__spawnMergePair = () => {
+        while (drops.length > cap - 2) drops.shift();
+        const x = W * 0.5, y = H * 0.4;
+        drops.push({ x: x - 3.1, y, r: 3.4, grow: 0.2, runAt: 99, vy: 0, wob: 0,   state: 'sit', age: 0, alpha: 1, trail: 0, trailAt: 0, dead: false });
+        drops.push({ x: x + 3.1, y, r: 3.2, grow: 0.2, runAt: 99, vy: 0, wob: 3.1, state: 'sit', age: 0, alpha: 1, trail: 0, trailAt: 0, dead: false });
+      };
+      window.__spawnRunner = () => {
+        if (drops.length >= cap) drops.shift();
+        drops.push({ x: W * 0.5, y: H * 0.25, r: 5.2, grow: 0.3, runAt: 5.3, vy: 0, wob: 1, state: 'sit', age: 0, alpha: 1, trail: 0, trailAt: 0, dead: false });
+      };
     }
     return { update };
   })();
