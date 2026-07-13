@@ -479,6 +479,31 @@ check('v3.3e — scroll-driven animations behind @supports with a truthful JS fa
     /\[data-parallax\], \.scroll-progress \{ animation: none !important; \}/.test(css),
   'one @supports block owns SDA parallax (view()) + progress (scroll(root)); effects.js gates both writes on the mirrored boot-time check and keeps the fallback formula; migrated elements get animation:none under reduced-motion');
 
+// v3.3f — the rivulet grabpass is the gated M10 splurge (HALO_GATE discipline:
+// RIVULET_GATE false must allocate/fetch NOTHING; the gate ships TRUE for the
+// owner's live verdict — a kill-flip is an owner-gated pin update). Restraint
+// numbers pinned by VALUE: uCoverageMax <= 0.05, DROP_COUNT <= 200, refraction
+// luma clamp keyed to the 0.22 glint law. The desktop 2D droplet canvas
+// retires BEHIND the gate; LITE keeps the M3 beads.
+const rivuletPath = path.join(root, 'js/rivulet.mjs');
+const rivulet = fs.existsSync(rivuletPath) ? fs.readFileSync(rivuletPath, 'utf8') : '';
+const rivCovMatch = rivulet.match(/uCoverageMax\s*=\s*\{\s*value:\s*([0-9.]+)\s*\}/);
+const rivCov = rivCovMatch ? Number(rivCovMatch[1]) : NaN;
+const rivDropMatch = rivulet.match(/#define DROP_COUNT (\d+)/);
+const rivDrops = rivDropMatch ? Number(rivDropMatch[1]) : NaN;
+check('v3.3f — rivulet grabpass is gated, clamped, and the desktop 2D canvas is retired behind it',
+  /const RIVULET_GATE = true/.test(background) &&
+    /if \(RIVULET_GATE && quality\.name === 'high'\) return null;/.test(background) &&
+    /RIVULET_GATE && quality\.name === 'high' && !reduced/.test(background) &&
+    /import\('\.\/rivulet\.mjs\?v=/.test(background) &&
+    fs.existsSync(path.join(root, 'js/vendor/three-0.158.0/examples/jsm/misc/GPUComputationRenderer.js')) &&
+    rivCov > 0 && rivCov <= 0.05 &&
+    rivDrops > 0 && rivDrops <= 200 &&
+    /lBase \+ 0\.22 \* lRefr/.test(rivulet) &&
+    /insertPass\(pass, finalComposer\.passes\.indexOf\(caPass\)\)/.test(rivulet) &&
+    /NoBlending/.test(rivulet) && /base\.a/.test(rivulet),
+  'RIVULET_GATE=true ships the splurge; dynamic import gated on const + high tier + !reduced; droplets IIFE early-returns on high tier (LITE keeps M3 glass); vendored GPUComputationRenderer on disk; uCoverageMax ' + rivCov + ' <= 0.05 and DROP_COUNT ' + rivDrops + ' <= 200 by value; luma clamp keyed to 0.22; pass NoBlending + centre-tap alpha, inserted after grade before CA');
+
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
   const mark = item.pass ? 'PASS' : 'FAIL';

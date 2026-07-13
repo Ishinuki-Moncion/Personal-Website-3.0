@@ -763,6 +763,15 @@
   const tokyoHalo = makeTokyoHalo();
   const depthRain = reduced ? null : makeDepthRain();
 
+  /* v3.3f RIVULET_GATE — the M10 splurge: GPGPU rivulet-glass grabpass on the
+     high tier (js/rivulet.mjs). HALO_GATE discipline: with the gate false,
+     NOTHING is allocated, fetched, bound, or drawn — the dynamic import()
+     (postFX block below) never fires and the 2D droplet canvas keeps desktop
+     duty (the pre-built M3 fallback). Kill switch = flip to false + `?v=`
+     bump (spec §5); ships TRUE for the owner's live taste verdict. */
+  const RIVULET_GATE = true;
+  let rivulet = null;   // rivulet api handle — set only by the gated dynamic import
+
   /* Rain-on-glass droplets — 2D canvas beads that condense, swell, and break
      into wobbling runs; each lens samples the LIVE frame inverted (dossier:
      Joi/Pink-Joi — holograms and wet glass interact with real scene light;
@@ -770,6 +779,12 @@
      frame's buffer; idles to zero work when no drops live. */
   const droplets = (function () {
     if (reduced) return null;
+    /* v3.3f: with the rivulet grabpass live, the high tier retires this 2D
+       canvas ENTIRELY — no context, no listener, no draws (retirement pairing,
+       spec §1.1). LITE keeps the M3-elevated beads; a RIVULET_GATE kill-flip
+       restores this IIFE on desktop unchanged. The .scene-droplets element and
+       its CSS stay — they are LITE's home. */
+    if (RIVULET_GATE && quality.name === 'high') return null;
     const cv = document.querySelector('.scene-droplets');
     if (!cv) return null;
     const ctx = cv.getContext('2d');
@@ -2227,6 +2242,20 @@
         return 'resumed';
       };
     }
+
+    /* v3.3f — rivulet-glass grabpass (M10). Fetched ONLY here: gate + high
+       tier — LITE/reduced never request the module or the vendored
+       GPUComputationRenderer (HALO_GATE discipline; the LITE network log is a
+       §4.4 gate). initRivulet slots the pass after gradePass, before caPass:
+       drops refract the GRADED world and still receive the lens fringe. On a
+       load/init failure the high tier runs glass-less this session (warn) —
+       the sanctioned fallback is the RIVULET_GATE kill-flip, never a hybrid
+       revive of the already-retired canvas. */
+    if (RIVULET_GATE && quality.name === 'high' && !reduced) {
+      import('./rivulet.mjs?v=1').then(mod => {
+        rivulet = mod.initRivulet({ renderer, finalComposer, caPass, sceneState });
+      }).catch(err => console.warn('[scene] rivulet module failed to load — desktop glass off this session', err));
+    }
   }
 
   const DPR_CAP = reduced ? 1 : LITE ? 1.5 : 2;   // mirrors getQualityProfile's per-tier caps
@@ -2473,6 +2502,7 @@
     camera.position.y += (-mouse.y * 1.0 + scrollNS * 3 + sceneState.camera - camera.position.y) * 0.04;
     camera.position.z = 10 - scrollNS * 4 - warp * 6 - idleK * 1.6;   // idle cinematic dolly-in
     camera.lookAt(0, scrollNS * 1.5, 0);
+    if (rivulet) rivulet.update(dt);   // v3.3f: sim step + metaball-field splat BEFORE render — the grabpass consumes this frame's drop field
     render();
     if (droplets) droplets.update(dt, flash);   // after render: lenses sample THIS frame's buffer; flash drives the C4 glint
     if (!coarse) interrogate(dt);          // SP3: pointer interrogation (touch uses tap-select)
