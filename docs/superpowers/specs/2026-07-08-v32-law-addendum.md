@@ -147,3 +147,50 @@ Medians: on **18.88**, off **18.94**, pairwise Δ median **−0.01** (range −0
 1. **Focus-bias cap:** the plan-pinned `BIAS_MAX_RADS_PER_SEC = 0.12` was a spec defect (measured −0.054 rad/s reverse). Amended spec (task-13r-report, "Plan-amendment note"): cap MUST be < 0.066 (shipped 0.055), forward-only by construction, slew-limited (≤0.005 rad/s per frame), cap value harness-pinned.
 2. **Lightbox luminance (plan Step 9g):** "frame mean < §8b hero baseline" superseded — unmeetable with the law-protected unfiltered photograph. Amended proof: same-frame scrim A/B (0.985 → 51.35 vs 0.96 → 51.53, Δ −0.18) + p50 floor (15 < 18.43). Recorded in task-15r-report and GATE-PILE item 6.
 3. **Step-2 net-light letter criterion:** NOT amended — it fails as written at hero (warmShare, resolvable), projects (mean, likely real), gallery (mean, below resolution), and the failures are routed to the owner as GATE-PILE item 11.
+
+## v3.3 close-out measurements (2026-07-14, Task v33g, branch v33-rain, HEAD e56d7cb, tree clean)
+
+**Build:** bg 6.0 / app 4.3 / fx 3.8 / `site.css?v=3.30` / `boot.mjs?v=29` / `rivulet.mjs?v=1` (cache-busts confirmed loading on the measured page). Harness **48/48, exit 0**; `node --check` clean on background/app/effects (script) + boot.mjs/rivulet.mjs (ESM). RIVULET_GATE **ON** (the shipped state) for every capture. Campaign byte ledger: 11 files changed, 3830 insertions(+), 131 deletions(−) — `git diff --stat b3d4067..HEAD` (vendored GPUComputationRenderer 11821 B; js/rivulet.mjs 13564 B).
+
+**Method (per §8b/v3.2r, reproduced):** `http://127.0.0.1:8765/index.html`, ONE tab, stale QA tabs closed. Viewport 1440×743 CSS px @ DPR 2 via device-metrics emulation (2880×1486 captures). Fresh hard-reload (`ignoreCache`) before EVERY capture; 11 s settle post-boot and post-scroll; scroll landing verified per capture (hero scrollY 0; `#gallery` scrollY 3310, top 74.3 px; `#projects` scrollY 6707.5, top 74.1 px — all visits identical, unchanged from the v33a/v33f ledgers). Median of 5 per metric, spreads reported; `node tools/frame-luminance.mjs`. Frames (git-ignored): `docs/superpowers/gates/v33/closeout-v33-*.png`. Zero console messages across every session.
+
+### Luminance vs the v33a pre-campaign baseline (primary) and the v3.2r close-out (provenance)
+
+| Section | mean (median) | mean spread | p50 | p50 spread | p95 | p95 spread | warmShare | warm spread |
+|---|---|---|---|---|---|---|---|---|
+| hero | 19.10 | 19.03…21.73 | 8 | 8 (all 5) | 85 | 79…99 | 0.0074 | 0.0025…0.0079 |
+| projects | 19.83 | 19.81…20.10 | 7 | 7 (all 5) | 92 | 91…93 | 0.0041 | 0.0037…0.0080 |
+| gallery | 38.91 | 37.21…38.99 | 9 | 9 (all 5) | 120 | 120 (all 5, saturated) | 0.0018 | 0.0017…0.0040 |
+
+### Letter-criterion verdicts (as measured; below-resolution marked, never cited)
+
+- **§4.1 floors: PASS.** p50 exactly hero 8 / projects 7 / gallery 9 — held in all 15 frames individually, zero spread.
+- **§4.2 cross-build (hero mean must not rise beyond resolution): PASS** — 19.10 vs baseline 19.19 (Δ −0.09, below resolution, hero σ 0.4–1.2). hero p95 85 vs 86 (−1, below resolution); hero warmShare 0.0074 vs 0.0083 (−0.0009, below resolution). One high frame (hero-2: 21.73 / p95 99) caught a live scene event, absorbed by the median, reported in the spread.
+- **projects vs baseline:** mean 19.83 vs 20.22 (−0.39, below resolution σ ≈ 1.17); p95 92 vs 95 (inside the baseline's own spread 78…96); warmShare 0.0041 vs 0.0049 (−0.0008, below resolution). The baseline's recorded fresh/restored phase bimodality (16.76-class first visit) did not reproduce here — all five close-out visits read in one class (19.81…20.10); reported as measured.
+- **gallery vs baseline:** mean 38.91 vs 38.54 — **+0.37 on its face, below resolution (σ ≈ 0.72), inside the baseline spread (37.38…39.14), NOT citable as a real change**; no letter criterion attaches to gallery mean under §4.1/§4.2; noted in GATE-PILE item 3 for completeness only. p95 saturated 120 = 120; warmShare 0.0018 vs 0.0042 (fell).
+- **§4.2 rain Δ: FAIL as written** (median +0.20 > 0, below resolution) — routed to GATE-PILE item 3 with the variance analysis (next section).
+- v3.2r close-out provenance context (hero 18.54/8/77/0.0086 · projects 21.96/7/114/0.0028 · gallery 38.21/9/120/0.0015): vs that older build this close-out reads hero +0.56 mean / +8 p95, projects −2.13 mean / −22 p95, gallery +0.70 mean — cross-session, cross-build numbers, provenance only, never letter-judged (the binding baseline is v33a's same-campaign, same-procedure set).
+
+### Rain isolation A/B re-run (§4.2 at close-out)
+
+| pair | mean ON | mean OFF | Δ (on−off) |
+|---|---|---|---|
+| 1 | 18.70 | 17.85 | +0.85 |
+| 2 | 19.00 | 18.95 | +0.05 |
+| 3 | 19.04 | 18.92 | +0.12 |
+| 4 | 19.09 | 18.89 | +0.20 |
+| 5 | 19.09 | 18.87 | +0.22 |
+
+— medians: on 19.04, off 18.89, pairwise Δ median **+0.20** (bar: ≤ 0; v3.2r context −0.01). **The letter FAILS as written; the median sits inside the hero per-frame spread (σ 0.4–1.2) → below resolution, unresolvable as a rain-attributable rise, never cited as fact — routed to GATE-PILE item 3 with the variance analysis: all five deltas are positive (unlike v33a's sign-flipping set), a systematic sign consistent with a within-pair time-since-boot phase confound — the OFF frame of every pair was captured 22–28 s after its ON frame (capture-file mtimes; the in-page sample instants were not timestamped, so finer per-arm offsets are estimates), and the p95 gap (ON 86 vs OFF 79 medians) plus the warmShare gap (ON 0.0074–0.0080 vs OFF 0.0021–0.0026 in pairs 2–5) track the boot-seeded amber beats' monotonic decay across that window — a warm-channel signature the cyan rain (uCyan `0xbfeaff`, B > R) is structurally incapable of producing under the R > B + 20 probe.** p50 = 8 in all 10 frames. Note: desktop 2D canvas retired behind RIVULET_GATE; the rivulet pass stayed live in both arms (rain-keyed, sanctioned isolation). Method note of record: at this HEAD the v33a transient scene hook latches the FIRST rendered scene — now the rivulet GPGPU compute scene, not the main scene — so the re-run latches the first scene containing `rain-streaks` instead (same transient hook, one predicate added; recorded as a v33g deviation).
+
+### Rivulet grabpass (M10) numbers of record
+
+Coverage readback max 0.013300 (law ≤ 0.05); fps medians enabled 71 / disabled 73 (Task-6 same-session gate PASSED at ≥ −2 fps; this close-out spot-check 74 — readings 75/74/73/74/74 at hero rest, 30 s settle, quiet machine, cross-session so report-only); interleaved pass-on/off hero Δ median +0.08 (Task 6). Taste verdict → GATE-PILE item 1.
+
+### Mobile + reduced-motion sweeps
+
+390×844 @ DPR 2 mobile+touch sweep: scene alive (canvas 585×1266), M3 LITE glass live (`.scene-droplets` canvas exactly 585 px), zero rivulet/GPUComputationRenderer requests (19 scripts, all pre-existing), walked hero → gallery → contact, zero console; capture `closeout-v33-mobile-hero.png`. Reduced-motion (matchMedia initScript override, `?sceneDebug=1` page): SCENE=REDUCED static frame — spinY bit-identical over 1.5 s, page revealed (body opacity 1), droplets null (canvas inert at 300×150 defaults), no rivulet fetch, zero console; capture `closeout-v33-reduced-static.png`. Desktop section-walk (1440×743): the boxed state-word fired exactly ONCE per section change (about/work/gallery/projects/contact — 5 fires, home excluded; `.state-flash` class MutationObserver), lightbox open/close clean (aria-hidden/inert correct both ways, focus → `.lb-close`, gallery-07 loaded complete), contact downlink observed LOS-gated (armed on entry; 120 s occluded with no fire while Tokyo sat behind the disc, then fired +409 ms after re-entry with Tokyo facing — 56 visible frames, peak opacity 0.445).
+
+### Gate pile
+
+Assembled at `docs/superpowers/gates/v33/GATE-PILE.md` (git-ignored, 7 items per spec §8). The campaign stops here — no push, no PR, until the owner rules.
