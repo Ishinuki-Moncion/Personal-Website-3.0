@@ -19,36 +19,40 @@
     line.removeAttribute('data-text');
   }
 
-  /* SAFETY NET — force every hero line to its final, visible text. Called on a
-     timer after each entrance so a throttled/interrupted rAF (offscreen tab,
-     slow paint) can never leave the giant title blank. */
-  let heroSettleTimer = null;
-  function settleHero() {
-    titleLines.forEach(line => {
-      line.classList.remove('glitch', 'fire', 'scramble-on');
-      line.style.clipPath = '';
-      const chs = line.querySelectorAll('.ch');
-      if (chs.length) {
-        let txt = '';
-        chs.forEach(s => { s.style.opacity = '1'; s.style.transform = 'none'; txt += s.textContent; });
-        if (txt !== line.dataset.line) line.textContent = line.dataset.line;
-      } else if (line.textContent !== line.dataset.line) {
-        line.textContent = line.dataset.line;
-      }
-    });
-    if (sub && sub.dataset.text && sub.textContent !== sub.dataset.text) {
-      sub.textContent = sub.dataset.text;
-      if (caret) caret.style.opacity = '0.4';
-    }
+  /* v3.3d — WAAPI sequencer (M5). Every entrance beat is a tracked Animation on
+     the document timeline: runHero() cancels the whole set before re-running, so
+     interruption safety is STRUCTURAL (real cancel/finish/fill lifecycle) and the
+     old wall-clock settle sweep is retired. End states are owned by the animation
+     lifecycle — backwards fill through the delay, the elements' natural styles
+     after finish — never by inline styles. Beats are the pre-M5 constants, named
+     in one place. */
+  const EASE_OUT_CB = 'cubic-bezier(0.16, 1, 0.3, 1)';  // = --ease-out (site.css:43)
+  const EASE_IO_CB = 'cubic-bezier(0.65, 0, 0.35, 1)';  // = --ease-io  (site.css:44)
+  const HERO_BEATS = {
+    decryptLineMs: 230,                    // was setTimeout(li * 230)
+    staggerLineMs: 280, staggerChMs: 45,   // was transitionDelay li*0.28s + ci*0.045s
+    chromaticWipeMs: 180,                  // was transitionDelay li*0.18s
+    chromaticFireStepMs: 200, chromaticFireBaseMs: 560, chromaticFireHoldMs: 1100,
+    subMs: 700                             // was the 700ms sub setTimeout
+  };
+  let anims = [];
+  /* seq(): a zero-duration marker Animation whose finished promise fires a beat.
+     Cancellable like any Animation; cancel() REJECTS finished, so the rejection
+     handler swallows it by design — torture runs must stay console-clean. */
+  function seq(delayMs, fn) {
+    const a = document.body.animate([], { delay: delayMs, duration: 0 });
+    a.finished.then(fn, () => {});
+    anims.push(a);
+    return a;
   }
 
   function runDecrypt() {
     titleLines.forEach((line, li) => {
       clearLineStyles(line); line.textContent = '';
-      setTimeout(() => {
+      seq(li * HERO_BEATS.decryptLineMs, () => {
         line.classList.add('scramble-on');
         window.scramble(line, line.dataset.line, { duration: 950 }).then(() => line.classList.remove('scramble-on'));
-      }, li * 230);
+      });
     });
   }
 
@@ -58,17 +62,23 @@
       [...line.dataset.line].forEach((c, ci) => {
         const s = document.createElement('span');
         s.className = 'ch'; s.textContent = c;
-        s.style.opacity = '0';
-        s.style.transform = 'translateY(0.6em) rotateX(-55deg)';
-        s.style.transformOrigin = 'bottom';
-        s.style.transition = 'opacity .55s var(--ease-out), transform .8s var(--ease-out)';
-        s.style.transitionDelay = (li * 0.28 + ci * 0.045) + 's';
         line.appendChild(s);
+        /* ONE Animation per char carrying BOTH pre-M5 curves via property-
+           specific keyframes: opacity finishes at offset 550/800 = 0.6875
+           (= the old .55s track inside the .8s transform track), both easing
+           --ease-out. fill:'backwards' hides the char through its delay; on
+           finish the effect ceases and the char's NATURAL state (opacity 1,
+           transform none — byte-identical to the pre-M5 settled computed
+           style; a fill-held 'none' would serialize as the identity matrix)
+           takes over — zero inline styles, no double-rAF kick. */
+        anims.push(s.animate([
+          { offset: 0, easing: EASE_OUT_CB, opacity: 0,
+            transform: 'translateY(0.6em) rotateX(-55deg)', transformOrigin: 'bottom' },
+          { offset: 0.6875, opacity: 1 },
+          { offset: 1, transform: 'none', transformOrigin: 'bottom' }
+        ], { duration: 800, delay: li * HERO_BEATS.staggerLineMs + ci * HERO_BEATS.staggerChMs, fill: 'backwards' }));
       });
     });
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      $$('.hero h1 .ch').forEach(s => { s.style.opacity = '1'; s.style.transform = 'none'; });
-    }));
   }
 
   function runChromatic() {
@@ -77,11 +87,20 @@
       line.textContent = line.dataset.line;
       line.setAttribute('data-text', line.dataset.line);
       line.classList.add('glitch');
-      line.style.clipPath = 'inset(0 100% 0 0)';
-      line.style.transition = 'clip-path .85s var(--ease-io)';
-      line.style.transitionDelay = (li * 0.18) + 's';
-      requestAnimationFrame(() => requestAnimationFrame(() => { line.style.clipPath = 'inset(0 0 0 0)'; }));
-      setTimeout(() => { line.classList.add('fire'); setTimeout(() => line.classList.remove('fire'), 1100); }, li * 200 + 560);
+      /* Wipe fills BACKWARDS only: while it runs the line clips exactly as the
+         pre-M5 inline transition did; on finish the clip ceases to apply, so
+         computed clip-path returns to 'none' — the state the retired settle
+         sweep used to restore by hand. */
+      anims.push(line.animate(
+        [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }],
+        { duration: 850, delay: li * HERO_BEATS.chromaticWipeMs, easing: EASE_IO_CB, fill: 'backwards' }
+      ));
+      /* fire beat rides marker Animations at the pre-M5 offsets (li*200+560 on,
+         +1100 off) — same wall-clock beats, now cancellable. */
+      seq(li * HERO_BEATS.chromaticFireStepMs + HERO_BEATS.chromaticFireBaseMs, () => {
+        line.classList.add('fire');
+        seq(HERO_BEATS.chromaticFireHoldMs, () => line.classList.remove('fire'));
+      });
     });
   }
 
@@ -100,13 +119,14 @@
   function runHero() {
     if (!hero) return;
     if (reduced) { titleLines.forEach(l => { clearLineStyles(l); l.textContent = l.dataset.line; }); typeSub(); return; }
+    /* structural interruption safety: kill the previous entrance's whole
+       Animation set before starting — no timer bookkeeping, no stale beats. */
+    anims.forEach(a => a.cancel());
+    anims = [];
     if (heroVariant === 'stagger') runStagger();
     else if (heroVariant === 'chromatic') runChromatic();
     else runDecrypt();
-    setTimeout(typeSub, 700);
-    // guaranteed settle — covers the longest variant (~1.7s) with margin
-    clearTimeout(heroSettleTimer);
-    heroSettleTimer = setTimeout(settleHero, 2800);
+    seq(HERO_BEATS.subMs, typeSub);   // the 700ms sub beat, on the same timeline
   }
 
   /* ---------------- LANGUAGE SWAP ---------------- */
@@ -203,12 +223,14 @@
 
   /* v3.2n — touch photo parity: hover doesn't exist on coarse pointers, so the
      tile nearest viewport centre wears the EXISTING focus grade (.lit lifts the
-     rest filter) — exactly ONE at a time (one-signal rule). Same rAF+rect
-     pattern as checkTiles; IO misbehaves in scaled/preview iframes. The filter
-     change is covered by the global reduced-motion transition kill-switch. */
+     rest filter) — exactly ONE at a time (one-signal rule): remove-before-add.
+     Same rAF+rect pattern as checkTiles (IO misbehaves in scaled/preview
+     iframes), and registered for BOTH scroll and resize like onTileScroll — an
+     orientation flip without a scroll re-picks instead of leaving a stale lit
+     tile. Filter transition is covered by the reduced-motion kill-switch. */
   if (matchMedia('(pointer: coarse)').matches && shots.length) {
     let litShot = null, litTick = false;
-    const checkLit = () => {
+    function checkLit() {
       const mid = innerHeight / 2;
       let best = null, bestD = Infinity;
       for (const s of shots) {
@@ -222,11 +244,14 @@
         litShot = best;
         if (litShot) litShot.classList.add('lit');
       }
-    };
-    addEventListener('scroll', () => {
-      if (litTick) return; litTick = true;
+    }
+    function onLitScroll() {
+      if (litTick) return;
+      litTick = true;
       requestAnimationFrame(() => { litTick = false; checkLit(); });
-    }, { passive: true });
+    }
+    addEventListener('scroll', onLitScroll, { passive: true });
+    addEventListener('resize', onLitScroll, { passive: true });
     checkLit();
   }
 
@@ -275,17 +300,26 @@
     /* v3.2o — progressive enhancement: shared-element morph tile→stage where
        View Transitions exist; everywhere else (and under reduced motion) the
        original fade runs untouched. Name lives on the tile in the OLD state
-       and moves to the stage image in the NEW state — never both at once. */
-    const srcTile = shots[(i + sources.length) % sources.length];
+       and moves to the stage image in the NEW state — never both at once.
+       The full-res frame is decoded FIRST (bounded at 250ms so a cold cache
+       cannot stall the open) and set synchronously inside the update callback
+       — otherwise the NEW snapshot catches the stale/blank stage mid-swap. */
+    const srcTile = shots[(i + shots.length) % shots.length];
     const media = srcTile && srcTile.querySelector('.media');
     if (!reduced && typeof document.startViewTransition === 'function' && media && lbImg) {
-      media.style.viewTransitionName = 'lb-photo';
-      const vt = document.startViewTransition(() => {
-        media.style.viewTransitionName = '';
-        lbImg.style.viewTransitionName = 'lb-photo';
-        openNow();
+      const pre = new Image();
+      pre.src = sources[(i + sources.length) % sources.length];
+      Promise.race([pre.decode().catch(() => {}), new Promise(r => setTimeout(r, 250))]).then(() => {
+        media.style.viewTransitionName = 'lb-photo';
+        const vt = document.startViewTransition(() => {
+          media.style.viewTransitionName = '';
+          lbImg.style.viewTransitionName = 'lb-photo';
+          openNow();
+          lbImg.src = pre.src;                 // already decoded — snapshot gets the real photograph
+          lbImg.classList.remove('swapping');  // skip the fade show() armed; the morph IS the entrance
+        });
+        vt.finished.finally(() => { lbImg.style.viewTransitionName = ''; });
       });
-      vt.finished.finally(() => { lbImg.style.viewTransitionName = ''; });
     } else {
       openNow();
     }
@@ -301,9 +335,11 @@
   }
 
   /* v3.2o GATED — photo ambient halo: average-colour DOM glow behind the
-     lightbox image. The pass's ONLY new-emissive-layer candidate; ships OFF.
-     Owner decides on gates/v32/o-halo-on.png vs o-halo-off.png plus the
-     frame-luminance numbers. Flip HALO_GATE to true ONLY for the gate capture. */
+     lightbox image. The pass's ONLY new-emissive-layer candidate; ships OFF —
+     it FAILED its net-luminance-down gate in the original campaign (on 52.23
+     > off 51.29). Everything (canvas, listener, style) sits behind the const:
+     with HALO_GATE false, NOTHING is allocated, bound, or drawn. Flip to true
+     ONLY for an owner-requested gate capture. */
   const HALO_GATE = false;
   if (HALO_GATE && lbImg) {
     const av = document.createElement('canvas'); av.width = av.height = 1;
@@ -321,7 +357,8 @@
   /* v3.2o GATED — minimal typographic stack rail: per-row tech readouts align
      as ONE column; the alignment IS the rail, nothing is drawn (the L3
      deferral's over-framing warning stands). Ships OFF pending owner A/B:
-     gates/v32/o-rail-on.png vs o-rail-off.png. */
+     gates/v32/o2-rail-on.png vs o2-rail-off.png — the body class is the only
+     hook, so with RAIL_GATE false the CSS never matches anything. */
   const RAIL_GATE = false;
   if (RAIL_GATE) document.body.classList.add('proj-rail');
 

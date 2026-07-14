@@ -109,9 +109,9 @@ check('atmosphere sits below main content',
 
 check('depth rain renders as camera-space parallax particle layers',
   /makeDepthRain/.test(background) && /depth-rain/.test(background) &&
-    /rain-layer-/.test(background) && /camera\.add\(group\)/.test(background) &&
+    /'rain-streaks'/.test(background) && /camera\.add\(group\)/.test(background) &&
     /reduced \? null : makeDepthRain\(\)/.test(background),
-  'rain must be the WebGL particle system (GITS particulation), reduced-motion disabled — never CSS line-rain');
+  'rain must be the WebGL instanced streak batch (GITS particulation), camera-parented, reduced-motion disabled — never CSS line-rain');
 
 check('weather layer has lightning, lens droplets, reactive rain, and idle cinematics',
   /sheet-lightning/.test(background) && /updateLightning/.test(background) &&
@@ -304,24 +304,65 @@ check(
   'stat births the .readout pattern; lb-pos reads 01/12; the callout JST wakes on the minute; contact coords decrypt once on reveal; the whole-span .coord interface (translate="no" lang="ja") the decrypt consumes stays intact'
 );
 
+// v3.3a — the v3.2l motivation law moved into GLSL; pinned BY VALUE (biasCap idiom):
+// floor/cap/veil parse from the consts and must hold 0.16 / 0.80 / 0.55 exactly.
+const motivFloor = Number((background.match(/const MOTIV_FLOOR = ([0-9.]+)/) || [])[1]);
+const motivCap = Number((background.match(/const MOTIV_CAP\s*=\s*([0-9.]+)/) || [])[1]);
+const liteVeil = Number((background.match(/const RAIN_LITE_VEIL = ([0-9.]+)/) || [])[1]);
 check('v3.2l — rain is motivated light, not a flat veil',
-  /MOTIV_FLOOR/.test(background) && /MOTIV_CAP/.test(background) &&
-    /baseOp \* vis \* beat \* motivation/.test(background) &&
+  motivFloor === 0.16 && motivCap === 0.8 && liteVeil === 0.55 &&
+    /uMotivFloor: \{ value: MOTIV_FLOOR \}/.test(background) &&
+    /uMotivCap: \{ value: MOTIV_CAP \}/.test(background) &&
+    /uLiteVeil: \{ value: RAIN_LITE_VEIL \}/.test(background) &&
+    /min\(uMotivCap, uMotivFloor \+ m\)/.test(background) &&
     /saturate\(0\.5\) brightness\(0\.9\)/.test(background) &&
     !/rain: 0\.6,/.test(background),
-  'per-plane motivation term (rain brief Lever A), worn-glass droplet filter, and the retired flat hero veil');
+  'the motivation law lives in the rain shader now (v3.3a): FLOOR 0.16 / CAP 0.80 / LITE veil 0.55 pinned by value, min(uMotivCap, uMotivFloor + m) per drop, worn-glass droplet filter kept, flat hero veil stays retired');
 
+// v3.2r — the focus-bias safety invariant is pinned by VALUE, not just by name:
+// the added-rate cap must stay strictly below the autonomous spin rate (0.066
+// rad/s), or the bias can freeze/reverse the globe during the state-word (the
+// v3.2m 0.12 defect). A revert of the cap alone must fail this check.
+const biasCapMatch = background.match(/const BIAS_MAX_RADS_PER_SEC = ([0-9.]+)/);
+const biasCap = biasCapMatch ? Number(biasCapMatch[1]) : NaN;
 check('v3.2m — story beats are guaranteed: arc-arrival sync, subliminal focus-bias, contact downlink',
   /BIAS_MAX_RADS_PER_SEC/.test(background) && /seqArrival/.test(background) &&
     !/storyTimer/.test(background) &&
-    /celestial\.nextLink = 0/.test(background),
-  'sequence beat keys to arc arrival (no 650ms timer), spin carries a rate-capped focus bias, contact fires the LOS downlink');
+    /celestial\.nextLink = 0/.test(background) &&
+    biasCap > 0 && biasCap < 0.066 &&
+    /if \(e > 0\) biasTarget = Math\.min\(BIAS_MAX_RADS_PER_SEC, e \* 0\.9\);/.test(background) &&
+    /focusBiasRate \+= Math\.sign\(biasDr\) \* Math\.min\(Math\.abs\(biasDr\), BIAS_SLEW_RADS_PER_S2 \* dt\);/.test(background) &&
+    /focusBias \+= focusBiasRate \* dt;/.test(background),
+  'sequence beat keys to arc arrival (no 650ms timer); focus-bias cap ' + biasCap + ' must be in (0, 0.066) — strictly below the autonomous spin rate; the applied added-rate must be the forward-only slewed form (target clamp -> rate slew -> rate*dt integration); contact fires the LOS downlink');
 
+// v3.2n — pins REAL code shapes (not comments): the portrait offset branch with
+// its literal triple, the resize-handler re-aim (OFF = offsetFor()), the coarse-
+// pointer .lit picker wired to scroll AND resize (an orientation flip without a
+// scroll must re-pick, never leave a stale lit tile), and the .lit CSS grade.
+// Deleting the portrait branch, the re-aim, or the touch-parity code fails this.
 check('v3.2n — portrait globe branch + touch photo parity',
-  /offsetFor/.test(background) && /0\.8, 4\.5, -7\.5/.test(background) &&
+  /const offsetFor = /.test(background) && /0\.4, 3\.4, -7\.5/.test(background) &&
+    /OFF = offsetFor\(\);/.test(background) &&
+    /smoothstep\(topCss, 80, 100\)/.test(background) &&
     /pointer: coarse/.test(app) && /classList\.add\('lit'\)/.test(app) &&
+    /classList\.remove\('lit'\)/.test(app) &&
+    /addEventListener\('scroll', onLitScroll, \{ passive: true \}\);/.test(app) &&
+    /addEventListener\('resize', onLitScroll, \{ passive: true \}\);/.test(app) &&
     /\.shot\.lit \.media/.test(css),
-  'aspect-aware globe offset (sphere high behind the name, name on the dim limb) and one-at-a-time .lit focus grade');
+  'aspect-aware globe offset (sphere high behind the name, name on the dim limb) + portrait header gate (callout fades before entering the 80px nav band); one-at-a-time .lit focus grade, remove-before-add, re-checked on scroll AND resize/orientation');
+
+// v3.2n — the SP3 global tap-select must yield to real UI: bail while the
+// lightbox or mobile menu is open, and when the tap landed on an interactive
+// element (else a phone tap on a tile/hero name both activates it AND fires a
+// city-select — double-activation / navigation hijack / focus-restore breakage).
+// The h1 arm is TOUCH-ONLY: a mouse arm would kill desktop click-select across
+// the whole node region (the h1 block box invisibly spans it).
+check('v3.2n — global tap-select yields to real UI (seam guard)',
+  /lbGuard && lbGuard\.classList\.contains\('open'\)/.test(background) &&
+    /classList\.contains\('menu-open'\)/.test(background) &&
+    /e\.target\.closest\('a, button, input, \.shot, \.lightbox, \.mobile-menu, \.scroll-hud, nav, \.deck'\)/.test(background) &&
+    /e\.pointerType !== 'mouse' && e\.target && e\.target\.closest && e\.target\.closest\('h1'\)/.test(background),
+  'pointerup tap-select early-returns on open lightbox/menu and on taps over interactive or overlay DOM; h1 arm touch-only so desktop click-select survives');
 
 check('v3.2o — lightbox is the one light event (deep scrim, safe-centred strip, gated halo/rail, work shift)',
   /rgba\(2,3,6,0\.985\)/.test(css) && /justify-content: flex-start/.test(css) &&
@@ -329,6 +370,139 @@ check('v3.2o — lightbox is the one light event (deep scrim, safe-centred strip
     /const HALO_GATE = false/.test(app) && /const RAIL_GATE = false/.test(app) &&
     /startViewTransition/.test(app) && /shift: \[-1\.2, -2\.0\]/.test(background),
   'scrim sinks toward true black, strip safe-centres, halo/rail ship OFF behind gates, view-transition morph present, work globe eases left/deeper');
+
+// v3.2r — the scene consumes SCRUBBED scroll (one-pole low-pass), never raw
+// per-event scrollY: direct coupling made camera.z / spin / grid step visibly
+// under load (owner-reported). Pins the filter shape, its anchored-load seed,
+// and the scrubbed consumers; the raw spin coupling must stay retired.
+check('v3.2r — scroll scrub: scene consumes low-passed scrollNS, not raw scrollN',
+  /scrollNS \+= \(scrollN - scrollNS\) \* Math\.min\(1, dt \* 8\)/.test(background) &&
+    /if \(scrollNS < 0\) scrollNS = scrollN;/.test(background) &&
+    /spinBase = t \* 0\.22 \+ scrollNS \* 2\.4/.test(background) &&
+    /camera\.position\.z = 10 - scrollNS \* 4/.test(background) &&
+    /camera\.lookAt\(0, scrollNS \* 1\.5, 0\)/.test(background) &&
+    !/spinBase = t \* 0\.22 \+ scrollN \* 2\.4/.test(background),
+  'one-pole scrub (tau ~0.125s) sits between scrollY and every scene consumer — spin, camera dolly, lookAt');
+
+// v3.3a — M4 retirement law (§1.1): ONE instanced batch replaces the three Points
+// planes; the CPU walk and the rain streak-sprite call sites are deleted symbols
+// (negative pins). Dark-swap safety pinned as real code shapes: the base quad is
+// parked at z=-8 (never the camera plane) and the type-correct Mesh swap branch
+// survives. Rain stays OUT of the bloom emitter set (the exact emitter-tag lines
+// are pinned AND the rain mesh local must never be bloom-tagged). WELL_XY_SIGMA
+// tunes DOWN only.
+const wellXY = Number((background.match(/const WELL_XY_SIGMA = ([0-9.]+)/) || [])[1]);
+check('v3.3a — rain is ONE instanced batch; the Points planes and the CPU loop are retired',
+  /InstancedBufferGeometry/.test(background) &&
+    /nameObject\(new THREE\.Mesh\(geo, mat\), 'rain-streaks'\)/.test(background) &&
+    /uWells/.test(background) && /uWind/.test(background) && /uWindT/.test(background) &&
+    /mod\(aSeed\.y - aSpeed \* uT, 2\.0 \* aRect\.y\) - aRect\.y/.test(background) &&
+    /mesh\.renderOrder = 3/.test(background) &&
+    /mesh\.frustumCulled = false/.test(background) &&
+    /base\.translate\(0, 0, -8\)/.test(background) &&
+    /else if \(o\.isMesh \|\| o\.isLine\) \{ matCache\.set\(o, o\.material\); o\.material = darkMat; \}/.test(background) &&
+    /\[fieldCyan, fieldAmber, tokyoRing, comet\]\.forEach\(o => \{ o\.userData\.bloom = true; \}\);/.test(background) &&
+    /const bloomByName = new Set\(\['earth-land-particles', 'dallas-to-tokyo-arc'\]\);/.test(background) &&
+    !/mesh\.userData\.bloom/.test(background) &&
+    wellXY > 0 && wellXY <= 0.25 &&
+    !/rain-layer-/.test(background) &&
+    !/makeStreakTexture\(d\.len, d\.head\)/.test(background) &&
+    !/ud\.speeds/.test(background) &&
+    !/p\[i \* 3 \+ 1\] < -ud\.halfH/.test(background),
+  'one InstancedBufferGeometry mesh named rain-streaks with GPU mod-recycle, per-drop wells (uWells) and true-velocity lean (uWind/uWindT); dark-swap-safe base quad at z=-8 under the type-correct Mesh swap; rain absent from the bloom emitter set; WELL_XY_SIGMA ' + wellXY + ' in (0, 0.25]; the three Points layers, the rain sprite call site, and the ud.speeds CPU walk are deleted');
+
+// v3.3b — lightning is ONE event (spec §1.2/§3.2/§6): the whole-frame grade
+// lift is pinned by VALUE (0 < lift <= 0.10, the biasCap idiom) and suppressed
+// in its max(lockT, wordT) shape while the boxed state-word or the home/boot
+// lock owns the frame; wordT arms home-excluded inside __sceneFocus and decays
+// over the word's 1.9s CSS window; the limb catches the flash (uFlashLimb);
+// the glass glints capped at 0.32 over a NEVER-raised 0.22 lens body (Toy Shop
+// translucency law); LITE's surviving flat coupling is the named
+// LITE_FLASH_BEAT; the old shared flat literal is retired (MUST-NOT-MATCH).
+const gradeLiftMatch = background.match(/const LIGHTNING_GRADE_LIFT = ([0-9.]+)/);
+const gradeLift = gradeLiftMatch ? Number(gradeLiftMatch[1]) : NaN;
+check('v3.3b — the scene answers its lightning as ONE event',
+  gradeLift > 0 && gradeLift <= 0.10 &&
+    /1 - Math\.max\(sceneState\.lockT, sceneState\.wordT\)/.test(background) &&
+    /if \(id === 'home'\) sceneState\.lockT = 1;[^\n]*\n\s*else sceneState\.wordT = 1;/.test(background) &&
+    /sceneState\.wordT - dt \/ 1\.9/.test(background) &&
+    /uFlashLimb/.test(background) &&
+    /globalAlpha = 0\.22 \* a/.test(background) &&
+    /Math\.min\(0\.32, 0\.2 \* a \* \(1 \+ glintFlash \* 0\.6\)\)/.test(background) &&
+    /const LITE_FLASH_BEAT = 1\.3/.test(background) &&
+    /LITE \? \(flash \|\| 0\) \* LITE_FLASH_BEAT : 0/.test(background) &&
+    !/\(flash \|\| 0\) \* 1\.3/.test(background),
+  'grade lift ' + gradeLift + ' must sit in (0, 0.10] and be word/lock-suppressed; wordT arms home-excluded in __sceneFocus and decays dt/1.9; limb catch present; glint hard-capped 0.32 over an unraised 0.22 lens body; LITE flash beat named; the old shared flat literal retired');
+
+// v3.3c — droplet-glass v2 (spec §3.3/§6): the O(n^2) bead merge is area-
+// conserving and clamped at the pre-merge radius envelope (MERGE_R_MAX = the
+// runAt ceiling 5 + 2.5) so peak glass coverage cannot rise; running drops shed
+// 1-3 trail beads gated on the SAME cap; the 24/12 bead cap is UNCHANGED.
+// Emitter bokeh is the recorded CUT (correction of record #2) — do not add it.
+check('v3.3c — droplet glass merges and trails, cap unchanged',
+  /const cap = LITE \? 12 : 24;/.test(background) &&
+    /const MERGE_R_MAX = 7\.5/.test(background) &&
+    /Math\.min\(MERGE_R_MAX, Math\.sqrt\(keep\.r \* keep\.r \+ gone\.r \* gone\.r\)\)/.test(background) &&
+    /d\.trail > 0 && d\.y > d\.trailAt && drops\.length < cap/.test(background),
+  'area-conserving MERGE_R_MAX-clamped merge pair-check + cap-gated trail spawn present; cap = LITE ? 12 : 24 unchanged');
+
+// v3.3d — M5: hero choreography is Element.animate() with a tracked cancel-before-
+// start set; the setTimeout ladders and the wall-clock settle sweep are retired.
+// The scramble engine's two nets are pinned POSITIVE — they serve the lang swap
+// and the one-shot coord decrypt, surfaces M5 does not touch (correction #3).
+check('v3.3d — hero choreography is WAAPI with structural interruption safety',
+  /\.animate\(/.test(app) &&
+    /anims\.forEach\(a => a\.cancel\(\)\)/.test(app) &&
+    /const HERO_BEATS = \{/.test(app) &&
+    !/heroSettleTimer/.test(app) &&
+    !/settleHero/.test(app) &&
+    !/setTimeout\(typeSub, 700\)/.test(app) &&
+    /__scrToken/.test(effects) &&
+    /dur \+ 400/.test(effects),
+  'hero entrance is WAAPI (tracked anims[], cancel-before-start, fill-owned end states); ladders + settle timer gone; scramble token guard + wall-clock net survive in effects.js');
+
+// v3.3e — M6: parallax + progress ride the compositor behind @supports; effects.js
+// mirrors the identical CSS.supports check and stands down its per-frame writes
+// (never double-driven). The JS fallback formula is pinned POSITIVE — it stays the
+// truthful no-SDA path. Reduced-motion gets the explicit animation: none the
+// .001ms kill cannot provide (progress-driven playback ignores duration).
+check('v3.3e — scroll-driven animations behind @supports with a truthful JS fallback',
+  /@supports \(animation-timeline: view\(\)\)/.test(css) &&
+    /animation-timeline: view\(\);/.test(css) &&
+    /animation-timeline: scroll\(root\);/.test(css) &&
+    /@keyframes v33ParallaxDrift/.test(css) &&
+    /@keyframes v33ProgressGrow/.test(css) &&
+    /CSS\.supports\('animation-timeline: view\(\)'\)/.test(effects) &&
+    /if \(progress && !SDA\)/.test(effects) &&
+    /if \(!reduced && !SDA\)/.test(effects) &&
+    /\(-center \* speed\)\.toFixed\(1\)/.test(effects) &&
+    /\[data-parallax\], \.scroll-progress \{ animation: none !important; \}/.test(css),
+  'one @supports block owns SDA parallax (view()) + progress (scroll(root)); effects.js gates both writes on the mirrored boot-time check and keeps the fallback formula; migrated elements get animation:none under reduced-motion');
+
+// v3.3f — the rivulet grabpass is the gated M10 splurge (HALO_GATE discipline:
+// RIVULET_GATE false must allocate/fetch NOTHING; the gate ships TRUE for the
+// owner's live verdict — a kill-flip is an owner-gated pin update). Restraint
+// numbers pinned by VALUE: uCoverageMax <= 0.05, DROP_COUNT <= 200, refraction
+// luma clamp keyed to the 0.22 glint law. The desktop 2D droplet canvas
+// retires BEHIND the gate; LITE keeps the M3 beads.
+const rivuletPath = path.join(root, 'js/rivulet.mjs');
+const rivulet = fs.existsSync(rivuletPath) ? fs.readFileSync(rivuletPath, 'utf8') : '';
+const rivCovMatch = rivulet.match(/uCoverageMax\s*=\s*\{\s*value:\s*([0-9.]+)\s*\}/);
+const rivCov = rivCovMatch ? Number(rivCovMatch[1]) : NaN;
+const rivDropMatch = rivulet.match(/#define DROP_COUNT (\d+)/);
+const rivDrops = rivDropMatch ? Number(rivDropMatch[1]) : NaN;
+check('v3.3f — rivulet grabpass is gated, clamped, and the desktop 2D canvas is retired behind it',
+  /const RIVULET_GATE = true/.test(background) &&
+    /if \(RIVULET_GATE && quality\.name === 'high'\) return null;/.test(background) &&
+    /RIVULET_GATE && quality\.name === 'high' && !reduced/.test(background) &&
+    /import\('\.\/rivulet\.mjs\?v=/.test(background) &&
+    fs.existsSync(path.join(root, 'js/vendor/three-0.158.0/examples/jsm/misc/GPUComputationRenderer.js')) &&
+    rivCov > 0 && rivCov <= 0.05 &&
+    rivDrops > 0 && rivDrops <= 200 &&
+    /lBase \+ 0\.22 \* lRefr/.test(rivulet) &&
+    /insertPass\(pass, finalComposer\.passes\.indexOf\(caPass\)\)/.test(rivulet) &&
+    /NoBlending/.test(rivulet) && /base\.a/.test(rivulet),
+  'RIVULET_GATE=true ships the splurge; dynamic import gated on const + high tier + !reduced; droplets IIFE early-returns on high tier (LITE keeps M3 glass); vendored GPUComputationRenderer on disk; uCoverageMax ' + rivCov + ' <= 0.05 and DROP_COUNT ' + rivDrops + ' <= 200 by value; luma clamp keyed to 0.22; pass NoBlending + centre-tap alpha, inserted after grade before CA');
 
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {

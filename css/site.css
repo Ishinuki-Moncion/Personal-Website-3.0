@@ -445,6 +445,11 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
   [data-reveal] { opacity: 1 !important; transform: none !important; }
   .clip-reveal::after { display: none; }
   .clip-reveal img, .clip-reveal .media { transform: none !important; }
+  /* v3.3e — a scroll-driven animation is progress-driven: the .001ms duration
+     kill above cannot stop it, so the migrated elements get an explicit none.
+     The progress bar rests EMPTY (its SDA base is scaleX(0)) and the portrait
+     rests untransformed — zero transform/width change on scroll (spec §1.5). */
+  [data-parallax], .scroll-progress { animation: none !important; }
 }
 
 /* ============================================================
@@ -923,6 +928,46 @@ section[id] { scroll-margin-top: clamp(64px, 10vh, 96px); }
 }
 
 /* v3.2o GATED (.proj-rail via RAIL_GATE, app.js) — stack readouts as one
-   aligned right-hand column, no drawn rule. */
+   aligned right-hand column, no drawn rule. Inert unless the gate adds the
+   body class: these selectors match nothing while RAIL_GATE is false. */
 body.proj-rail .proj-end { flex-direction: column; align-items: flex-end; gap: 6px; }
 body.proj-rail .proj-tech { text-align: right; max-width: none; min-width: 30ch; }
+
+/* ============================================================
+   v3.3e — scroll-driven animations (M6): parallax + progress on
+   the compositor, progressive enhancement. js/effects.js mirrors
+   this exact check (CSS.supports('animation-timeline: view()'))
+   and stands down its per-frame writes — never double-driven.
+   View reveals stay JS on ALL engines: fire-once (.seen + splice)
+   is unexpressible in bidirectional SDA — ruling of record.
+   Census: exactly ONE data-parallax element exists (the about
+   portrait, speed 0.06); a future element with a different speed
+   needs its own keyframes here or it silently gets neither driver.
+   ============================================================ */
+@supports (animation-timeline: view()) {
+  [data-parallax="0.06"] {
+    /* sign truth (spec §3.5): entering at the viewport bottom => center
+       positive => translateY NEGATIVE. translate % resolves against the
+       element's own box, so the JS formula maps exactly. Non-zero
+       duration honors Firefox's SDA requirement; longhands sit AFTER
+       the animation shorthand, which would otherwise reset them. */
+    animation: v33ParallaxDrift 1ms linear both;
+    animation-timeline: view();
+    animation-range: cover 0% cover 100%;
+  }
+  .scroll-progress {
+    width: 100%;
+    transform: scaleX(0);   /* static base — under reduced-motion animation:none this leaves an EMPTY bar, never a full one */
+    transform-origin: 0 50%;
+    animation: v33ProgressGrow 1ms linear both;
+    animation-timeline: scroll(root);
+  }
+  @keyframes v33ParallaxDrift {
+    from { transform: translateY(calc((50vh + 50%) * -0.06)); }
+    to   { transform: translateY(calc((50vh + 50%) * 0.06)); }
+  }
+  @keyframes v33ProgressGrow {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+}

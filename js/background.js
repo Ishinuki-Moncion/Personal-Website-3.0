@@ -154,11 +154,20 @@
   // host page may reposition the globe (the lab centres it); the portfolio's
   // hero layout is the default
   /* v3.2n — the globe survives the phone: below ~0.7 aspect (or <700px) the
-     sphere sits smaller (deeper, z -7.5) and HIGH (y 4.5) behind the hero name,
-     so the name overlaps only the facing-dimmed lower limb (alpha floors at
-     0.18 via vFacing — luminance-under-text discipline, zero added GPU work). */
-  const offsetFor = () => ((w / h) < 0.7 || w < 700)
-    ? [0.8, 4.5, -7.5]
+     sphere sits smaller (deeper, z -7.5) and HIGH behind the hero name, so the
+     name overlaps only the facing-dimmed lower limb (point alpha floors at 0.18
+     via vFacing — luminance-under-text discipline, zero added GPU work).
+     Retune from the brief's [0.8, 4.5]: at y 4.5 the Tokyo callout (sprite at
+     TOKYO*1.22 + 0.45y = +2.73 world above centre) projected INSIDE the fixed
+     80px header band at 390x844 and collided with the wordmark/lang toggle; the
+     panel is ~190px wide on a 390px screen, so no x-shift can clear the fully-
+     occupied header row. y 3.4 puts the facing-open panel below the nav at the
+     normal camera (measured, not modelled); the portrait header gate in the
+     render loop covers every camera state the offset can't (warp, idle dolly).
+     x 0.4 recentres the disc off the right frame edge. */
+  const isPortrait = () => (w / h) < 0.7 || w < 700;
+  const offsetFor = () => isPortrait()
+    ? [0.4, 3.4, -7.5]
     : LITE ? [5.8, 0.35, -4.5] : [3, 0.4, -2];
   let OFF = window.__SCENE_OFFSET || offsetFor();
   coreGroup.position.set(OFF[0], OFF[1], OFF[2]);
@@ -483,10 +492,25 @@
     spin.add(m);
     return m;
   }
-  /* Depth rain — camera-space particle layers with per-drop speed jitter and
-     gusting wind (dossier: GITS solograms are particle systems of light in
-     Z-space; parallax + variation is what separates weather from "lines").
-     Hidden under reduced motion — a frozen rain frame reads as glitch. */
+  /* v3.2l motivation-law constants + the v3.3a well shape — hoisted above
+     makeDepthRain (the factory runs long before the rain-update block; the
+     shader uniforms initialize from these, TDZ otherwise). Values are LAW
+     (harness-pinned by value). */
+  const MOTIV_FLOOR = 0.16;      // rain never fully dies while a section calls for weather (0.22→0.16: hero mean read +0.3 over baseline at 0.22 — retuned per the luminance gate)
+  const MOTIV_CAP   = 0.80;      // motivated rain always sits BELOW the retired flat-veil peaks
+  const RAIN_LITE_VEIL = 0.55;   // LITE: single flat veil ≤ every old per-section value
+  const LITE_FLASH_BEAT = 1.3;   // v3.3b C2: LITE's flat flash coupling (no wells compiled on phones); high tier answers lightning directionally via well 3
+  const WELL_DEPTH_SIGMA = 6.0;  // camera-Z reach of an emitter's light, world units
+  const WELL_XY_SIGMA = 0.25;    // v3.3a: screen-xy reach of a well, NDC units — the ONE new tunable (tune DOWN only, under the luminance A/B gate)
+  /* Depth rain — v3.3a: ONE instanced velocity-stretched streak batch (R1).
+     470 quads high tier / 210 LITE in a single draw call, camera-parented so
+     the sheet rides the view (dossier: GITS solograms are particle systems
+     of light in Z-space). The three THREE.Points planes, their baked streak
+     sprites, and the per-frame CPU walk are RETIRED: fall + recycle are
+     closed-form in the vertex shader, the lean is the TRUE fall+wind vector
+     (streaks lean ~30° under full shear instead of sliding under a baked 10°
+     sprite), and the v3.2l motivation wells are evaluated PER DROP. Hidden
+     under reduced motion — a frozen rain frame reads as glitch. */
   function makeDepthRain() {
     const aspect = w / h;
     const defs = LITE
@@ -496,32 +520,142 @@
          { n: 150, size: 0.24, speed: [4.2, 7.5], op: 0.36, z: [-6, -11], len: 0.55, head: 0.8 },
          { n: 250, size: 0.15, speed: [2.2, 4.2], op: 0.24, z: [-9, -16], len: 0.35, head: 0.65 }];
     const group = new THREE.Group(); group.name = 'depth-rain';
-    const layers = defs.map((d, li) => {
+    const total = defs.reduce((sum, d) => sum + d.n, 0);   // 470 high / 210 LITE
+    const base = new THREE.PlaneGeometry(1, 1);
+    base.translate(0, 0, -8);   // dark-swap safety (v3.1g law): the bloom pass renders the RAW quads under MeshBasicMaterial (instance attrs ignored, all quads collapse onto the base geometry) — park them mid-band, never at the camera plane where w -> 0
+    const geo = new THREE.InstancedBufferGeometry();
+    geo.name = 'rain-streaks:geometry';
+    geo.setIndex(base.getIndex());
+    geo.setAttribute('position', base.getAttribute('position'));
+    geo.setAttribute('uv', base.getAttribute('uv'));
+    geo.instanceCount = total;
+    const seed = new Float32Array(total * 3);   // spawn x, spawn y, camera-space z (constant per drop)
+    const spd = new Float32Array(total);        // world units / s
+    const drop = new Float32Array(total * 4);   // streak len, streak width, baseOp, head alpha
+    const rect = new Float32Array(total * 2);   // layer band halfW, halfH — the mod-wrap range
+    const layer = new Float32Array(total);      // 0/1/2 — layer 0 takes the projects amber event tint
+    let k = 0;
+    defs.forEach((d, li) => {
       const halfH = Math.tan(31 * Math.PI / 180) * (-d.z[1]) + 1.5;
       const halfW = halfH * aspect + 1;
-      const geo = new THREE.BufferGeometry();
-      const pos = new Float32Array(d.n * 3);
-      const spd = new Float32Array(d.n);
-      for (let i = 0; i < d.n; i++) {
-        pos[i * 3] = (Math.random() * 2 - 1) * halfW;
-        pos[i * 3 + 1] = (Math.random() * 2 - 1) * halfH;
-        pos[i * 3 + 2] = d.z[0] + Math.random() * (d.z[1] - d.z[0]);
-        spd[i] = d.speed[0] + Math.random() * (d.speed[1] - d.speed[0]);
+      const spdMid = (d.speed[0] + d.speed[1]) / 2;
+      for (let i = 0; i < d.n; i++, k++) {
+        seed[k * 3] = (Math.random() * 2 - 1) * halfW;
+        seed[k * 3 + 1] = (Math.random() * 2 - 1) * halfH;
+        seed[k * 3 + 2] = d.z[0] + Math.random() * (d.z[1] - d.z[0]);
+        const s = d.speed[0] + Math.random() * (d.speed[1] - d.speed[0]);
+        spd[k] = s;
+        drop[k * 4] = d.size * d.len * (s / spdMid);   // streak length ∝ speed × layer len — equals the old d.size×d.len sprite streak at mid speed
+        drop[k * 4 + 1] = d.size * 0.085;              // ≈ the retired sprite's 9px/128px double-stroke footprint
+        drop[k * 4 + 2] = d.op;
+        drop[k * 4 + 3] = d.head;
+        rect[k * 2] = halfW; rect[k * 2 + 1] = halfH;
+        layer[k] = li;
       }
-      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      const pts = nameObject(new THREE.Points(geo, new THREE.PointsMaterial({
-        map: makeStreakTexture(d.len, d.head), size: d.size, sizeAttenuation: true,
-        transparent: true, opacity: 0, depthWrite: false,
-        blending: THREE.AdditiveBlending, color: 0xbfeaff,
-      })), 'rain-layer-' + li);
-      pts.userData = { speeds: spd, halfW, halfH, baseOp: d.op, zMid: (d.z[0] + d.z[1]) / 2 };  // v3.2l: camera-space mid-depth for the per-plane well falloff
-      pts.renderOrder = 3;
-      group.add(pts);
-      return pts;
     });
+    geo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seed, 3));
+    geo.setAttribute('aSpeed', new THREE.InstancedBufferAttribute(spd, 1));
+    geo.setAttribute('aDrop', new THREE.InstancedBufferAttribute(drop, 4));
+    geo.setAttribute('aRect', new THREE.InstancedBufferAttribute(rect, 2));
+    geo.setAttribute('aLayer', new THREE.InstancedBufferAttribute(layer, 1));
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uT: { value: 0 },       // rain-time (rainSway) — pauses with visibility, exactly like the retired CPU walk
+        uWind: { value: 0.1 },  // instantaneous wind+shear — the LEAN (spec §3.1: the one wind float)
+        uWindT: { value: 0 },   // ∫wind dt (rainWindT) — the x DRIFT clock; a wind change must not teleport drops
+        uBeat: { value: 0.85 }, uVis: { value: 0 }, uTint: { value: 0 },
+        uCyan: { value: new THREE.Color(0xbfeaff) },    // carried rain body color (old :521-527)
+        uAmber: { value: new THREE.Color(0xffd2a0) },   // layer-0 projects-entry event tint (RAIN_AMBER carried)
+        uWells: { value: [new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4()] },
+        uMotivFloor: { value: MOTIV_FLOOR },
+        uMotivCap: { value: MOTIV_CAP },
+        uLiteVeil: { value: RAIN_LITE_VEIL },
+        uWellXY: { value: WELL_XY_SIGMA },
+        uWellZ: { value: WELL_DEPTH_SIGMA },
+        uWellGain: { value: 1 },   // QA-only pools lever: the loop NEVER writes it, so an evaluate_script zero sticks (uWells itself is loop-written every frame)
+      },
+      vertexShader: `
+        attribute vec3 aSeed;
+        attribute float aSpeed;
+        attribute vec4 aDrop;
+        attribute vec2 aRect;
+        attribute float aLayer;
+        uniform float uT, uWind, uWindT, uBeat, uVis, uTint;
+        uniform vec3 uCyan, uAmber;
+        #ifdef WELLS
+        uniform vec4 uWells[3];
+        uniform float uMotivFloor, uMotivCap, uWellXY, uWellZ, uWellGain;
+        #else
+        uniform float uLiteVeil;
+        #endif
+        varying vec2 vQuad;
+        varying float vAlpha, vHead, vFogDepth;
+        varying vec3 vColor;
+        void main() {
+          // GPU recycle — the CPU per-drop walk is retired: fall + drift are
+          // closed-form in rain-time, mod-wrapped over the layer band.
+          float x = mod(aSeed.x - aSpeed * uWindT, 2.0 * aRect.x) - aRect.x;
+          float y = mod(aSeed.y - aSpeed * uT, 2.0 * aRect.y) - aRect.y;
+          vec4 mvC = modelViewMatrix * vec4(x, y, aSeed.z, 1.0);
+          vFogDepth = -mvC.z;
+          // velocity stretch: lean = atan(wind) off vertical, length rides |v|
+          // — the baked-10°-sprite cheapness tell is gone.
+          vec2 dir = normalize(vec2(-uWind, -1.0));
+          vec2 perp = vec2(dir.y, -dir.x);   // NOT vec2(-dir.y, dir.x): with dir pointing DOWN that basis has det = -1 (a reflection) — it flips the quad's CCW winding and FrontSide culling eats every streak (v33a live-debug find); this sign keeps det = +1, and the symmetric lateral profile makes the two mathematically mirrored widths visually identical
+          float stretch = length(vec2(uWind, 1.0));
+          vec2 off = perp * (position.x * aDrop.y) + dir * (position.y * aDrop.x * stretch);
+          gl_Position = projectionMatrix * vec4(mvC.xy + off, mvC.z, 1.0);
+          vQuad = vec2(position.x * 2.0, position.y + 0.5);   // x: -1..1 across the streak, y: 0 tail -> 1 head
+          #ifdef WELLS
+          vec4 pC = projectionMatrix * mvC;
+          vec2 ndc = pC.xy / max(pC.w, 1e-4);
+          float m = 0.0;
+          for (int i = 0; i < 3; i++) {   // per-DROP wells: v3.2l depth falloff carried × NEW screen-xy falloff
+            vec2 dxy = ndc - uWells[i].xy;
+            m += uWells[i].z * uWellGain
+               * exp(-abs(aSeed.z - uWells[i].w) / uWellZ)
+               * exp(-dot(dxy, dxy) / (uWellXY * uWellXY));
+          }
+          float motivation = min(uMotivCap, uMotivFloor + m);
+          #else
+          float motivation = uLiteVeil;   // LITE: flat veil — the well branch is not even compiled
+          #endif
+          vAlpha = aDrop.z * uVis * uBeat * motivation;   // the v3.2l terminal-opacity law (baseOp × vis × beat × motivation), per DROP now
+          vHead = aDrop.w;
+          vColor = mix(uCyan, uAmber, uTint * 0.85 * (1.0 - step(0.5, aLayer)));   // old :1345 tint carried — layer 0 only
+        }
+      `,
+      fragmentShader: `
+        varying vec2 vQuad;
+        varying float vAlpha, vHead, vFogDepth;
+        varying vec3 vColor;
+        void main() {
+          // head/tail profile — the retired makeStreakTexture ramp (:1035-1039),
+          // analytic: 0 at tail -> 0.45×head at 55% -> head at 90% -> 0 at the tip.
+          float t = vQuad.y;
+          float prof = t < 0.55 ? 0.45 * (t / 0.55)
+                     : (t < 0.9 ? mix(0.45, 1.0, (t - 0.55) / 0.35)
+                                : 1.0 - (t - 0.9) / 0.1);
+          float lateral = 1.0 - smoothstep(0.25, 1.0, abs(vQuad.x));   // soft edges ≈ the 4px core inside the 9px stroke
+          // FogExp2 carried: the retired PointsMaterial had fog:true, dimming far
+          // planes toward the #05060a void; additive contribution rides alpha,
+          // so the dim rides alpha. density 0.05 -> 0.05^2 = 0.0025.
+          float fog = exp(-0.0025 * vFogDepth * vFogDepth);
+          float a = vAlpha * vHead * prof * lateral * fog;
+          if (a < 0.003) discard;
+          gl_FragColor = vec4(vColor, a);
+        }
+      `,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      defines: LITE ? {} : { WELLS: '' },
+    });
+    const mesh = nameObject(new THREE.Mesh(geo, mat), 'rain-streaks');
+    mesh.renderOrder = 3;
+    mesh.frustumCulled = false;   // instances span the whole frustum band; the base quad's bounds are meaningless
+    group.add(mesh);
     scene.add(camera);
     camera.add(group);
-    return { group, layers };
+    return { group, mesh, mat };
   }
 
   const tokyoRing = tangentRing(0.16, 0.2, 0.8, 'tokyo-focus-ring');
@@ -629,6 +763,15 @@
   const tokyoHalo = makeTokyoHalo();
   const depthRain = reduced ? null : makeDepthRain();
 
+  /* v3.3f RIVULET_GATE — the M10 splurge: GPGPU rivulet-glass grabpass on the
+     high tier (js/rivulet.mjs). HALO_GATE discipline: with the gate false,
+     NOTHING is allocated, fetched, bound, or drawn — the dynamic import()
+     (postFX block below) never fires and the 2D droplet canvas keeps desktop
+     duty (the pre-built M3 fallback). Kill switch = flip to false + `?v=`
+     bump (spec §5); ships TRUE for the owner's live taste verdict. */
+  const RIVULET_GATE = true;
+  let rivulet = null;   // rivulet api handle — set only by the gated dynamic import
+
   /* Rain-on-glass droplets — 2D canvas beads that condense, swell, and break
      into wobbling runs; each lens samples the LIVE frame inverted (dossier:
      Joi/Pink-Joi — holograms and wet glass interact with real scene light;
@@ -636,11 +779,19 @@
      frame's buffer; idles to zero work when no drops live. */
   const droplets = (function () {
     if (reduced) return null;
+    /* v3.3f: with the rivulet grabpass live, the high tier retires this 2D
+       canvas ENTIRELY — no context, no listener, no draws (retirement pairing,
+       spec §1.1). LITE keeps the M3-elevated beads; a RIVULET_GATE kill-flip
+       restores this IIFE on desktop unchanged. The .scene-droplets element and
+       its CSS stay — they are LITE's home. */
+    if (RIVULET_GATE && quality.name === 'high') return null;
     const cv = document.querySelector('.scene-droplets');
     if (!cv) return null;
     const ctx = cv.getContext('2d');
     const cap = LITE ? 12 : 24;
     const REFRACT = !LITE;
+    const MERGE_R_MAX = 7.5;      // v3.3c: today's max bead radius (the runAt ceiling 5 + 2.5) — a merged survivor never exceeds the pre-merge spawn envelope
+    const MERGE_TOUCH_K = 0.85;   // v3.3c: beads absorb when centre distance < 0.85 * summed radii (deep overlap, not a graze)
     let W = 0, H = 0;
     function resizeDroplets() {
       const DPR = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -651,13 +802,14 @@
     resizeDroplets();
     window.addEventListener('resize', resizeDroplets);
     const drops = [];
-    let spawnIn = 1.4, skip = 0, fadeOut = 0;
+    let spawnIn = 1.4, skip = 0, fadeOut = 0, glintFlash = 0;
     function spawn() {
       drops.push({
         x: 20 + Math.random() * (W - 40), y: 10 + Math.random() * H * 0.75,
         r: 1.4 + Math.random() * 2.2, grow: 0.12 + Math.random() * 0.5,
         runAt: 5 + Math.random() * 2.5, vy: 0, wob: Math.random() * 6.28,
         state: 'sit', age: 0, alpha: 0,
+        trail: 0, trailAt: 0, dead: false,   // v3.3c: run-trail budget + merge flag (stable hidden class)
       });
     }
     function drawDrop(d) {
@@ -691,13 +843,18 @@
       g.addColorStop(1, 'rgba(0, 8, 12, 0)');
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, 6.2832); ctx.fill();
-      ctx.fillStyle = 'rgba(235, 250, 255, ' + (0.2 * a).toFixed(3) + ')';   // v3.1f: highlight 0.55 -> 0.2 (whisper, not signal)
+      /* v3.3b C4: the specular dot glints with lightning, hard-capped at 0.32
+         (0.2 * 1.6 exactly). Toy Shop translucency law: the 0.22 body/lens sample
+         cap above NEVER rises — drops go more transparent under lightning, never
+         brighter-bodied. (v3.1f: highlight 0.55 -> 0.2, whisper not signal.) */
+      ctx.fillStyle = 'rgba(235, 250, 255, ' + Math.min(0.32, 0.2 * a * (1 + glintFlash * 0.6)).toFixed(3) + ')';
       ctx.beginPath();
       ctx.ellipse(d.x - d.r * 0.34, d.y - d.r * 0.42, d.r * 0.2, d.r * 0.12, -0.6, 0, 6.2832);
       ctx.fill();
       ctx.restore();
     }
-    function update(dt) {
+    function update(dt, flash) {
+      glintFlash = flash || 0;                       // v3.3b C4: the frame's lightning envelope — drives the specular dot ONLY, never body alpha
       if ((skip = 1 - skip)) return;                 // ~30fps is plenty for glass
       dt = Math.min(dt * 2, 0.1);
       spawnIn -= dt * (0.4 + sceneState.rain * 0.6);   // v3.2l: rain is presence (≈1) now — rescaled to the old veil-era spawn rate
@@ -718,13 +875,45 @@
       ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';         // prior frame decays → running wakes
       ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = 'source-over';
+      /* v3.3c merge — O(n^2) pair check (n <= 24 => <= 276 pairs at this 30fps
+         half-rate; works unchanged at n = 12 LITE). Overlapping beads absorb
+         area-conserving (r^2 sum, clamped at MERGE_R_MAX = today's max radius) so
+         total glass coverage can only FALL from a merge; the survivor pulls
+         toward the absorbed bead, jitters, and briefly accelerates — the single
+         most "liquid" read at this scale (Bebber/raindrop-fx playbook, R2). */
+      if (drops.length > 1) {
+        for (let i = 0; i < drops.length; i++) {
+          const da = drops[i];
+          if (da.dead) continue;
+          for (let j = i + 1; j < drops.length; j++) {
+            const db = drops[j];
+            if (db.dead) continue;
+            const dx = da.x - db.x, dy = da.y - db.y, rr = (da.r + db.r) * MERGE_TOUCH_K;
+            if (dx * dx + dy * dy > rr * rr) continue;
+            const keep = da.r >= db.r ? da : db, gone = keep === da ? db : da;
+            keep.r = Math.min(MERGE_R_MAX, Math.sqrt(keep.r * keep.r + gone.r * gone.r));
+            keep.x += (gone.x - keep.x) * 0.3;         // meniscus pull toward the absorbed bead
+            keep.y += (gone.y - keep.y) * 0.3;
+            keep.wob += (Math.random() - 0.5) * 2.4;   // survivor jitters...
+            keep.vy = Math.min(120, keep.vy + 26);     // ...and briefly accelerates (run-speed ceiling held)
+            keep.alpha = Math.max(keep.alpha, gone.alpha);
+            gone.dead = true;
+            if (gone === da) break;                    // da absorbed — stop pairing it
+          }
+        }
+        for (let i = drops.length - 1; i >= 0; i--) if (drops[i].dead) drops.splice(i, 1);
+      }
       for (let i = drops.length - 1; i >= 0; i--) {
         const d = drops[i];
         d.age += dt;
         d.alpha = Math.min(1, d.alpha + dt * 1.5);
         if (d.state === 'sit') {
           d.r += d.grow * dt;
-          if (d.r >= d.runAt) d.state = 'run';
+          if (d.r >= d.runAt) {
+            d.state = 'run';
+            d.trail = 1 + (Math.random() * 3 | 0);       // v3.3c: this run sheds 1-3 trail beads
+            d.trailAt = d.y + 10 + Math.random() * 18;   // first bead lands 10-28px into the run
+          }
           else if (d.age > 12) {
             d.r -= dt * 0.7;
             if (d.r <= 1.2) { drops.splice(i, 1); continue; }
@@ -735,10 +924,47 @@
           d.y += d.vy * dt;
           d.x += Math.sin(d.wob) * 0.22;
           d.r -= dt * 1.1;
+          /* v3.3c trail beads — the run sheds tiny STATIC beads along its wobble
+             path (the hang-and-burst rivulet rhythm). Strictly smaller than the
+             parent (parent-relative and clamped to [1.25, 2.2]), counted against
+             the SAME cap, and retired by the existing machinery: age > 12 puts
+             them straight into the sit-evaporation branch, and the
+             destination-out decay above fades what they leave. Pushed at the
+             array tail — this downward loop never revisits them this frame. */
+          if (d.trail > 0 && d.y > d.trailAt && drops.length < cap) {
+            d.trail--;
+            d.trailAt = d.y + 14 + Math.random() * 22;
+            drops.push({
+              x: d.x - Math.sin(d.wob) * 1.5, y: d.y - d.r * 1.4,
+              r: Math.min(2.2, Math.max(1.25, d.r * (0.2 + Math.random() * 0.15))),
+              grow: 0, runAt: 99, vy: 0, wob: Math.random() * 6.28,
+              state: 'sit', age: 12.5, alpha: 0.6,
+              trail: 0, trailAt: 0, dead: false,
+            });
+          }
           if (d.r <= 1.6 || d.y > H + 12) { drops.splice(i, 1); continue; }
         }
         drawDrop(d);
       }
+    }
+    /* v3.3c QA hooks — sceneDebug-gated (the __forceFlash/__scanPlace precedent;
+       inert on the plain URL). __spawnMergePair(): two adjacent growing beads at
+       frame centre — contact at (r1+r2)*0.85 >= 6.2 in ~1.5-2s, a deterministic
+       merge for the archived 3-frame sequence. __spawnRunner(): one bead 0.3s
+       below its run threshold — enters 'run' through the REAL transition (so the
+       trail budget arms) and sheds trail beads on its way down. Both evict before
+       pushing, so the cap is never exceeded. */
+    if (sceneDebug) {
+      window.__spawnMergePair = () => {
+        while (drops.length > cap - 2) drops.shift();
+        const x = W * 0.5, y = H * 0.4;
+        drops.push({ x: x - 3.1, y, r: 3.4, grow: 0.2, runAt: 99, vy: 0, wob: 0,   state: 'sit', age: 0, alpha: 1, trail: 0, trailAt: 0, dead: false });
+        drops.push({ x: x + 3.1, y, r: 3.2, grow: 0.2, runAt: 99, vy: 0, wob: 3.1, state: 'sit', age: 0, alpha: 1, trail: 0, trailAt: 0, dead: false });
+      };
+      window.__spawnRunner = () => {
+        if (drops.length >= cap) drops.shift();
+        drops.push({ x: W * 0.5, y: H * 0.25, r: 5.2, grow: 0.3, runAt: 5.3, vy: 0, wob: 1, state: 'sit', age: 0, alpha: 1, trail: 0, trailAt: 0, dead: false });
+      };
     }
     return { update };
   })();
@@ -857,6 +1083,7 @@
     return { sprite: sp, draw };
   })();
   const calloutOffset = new THREE.Vector3(0, 0.45, 0);
+  const _calloutV = new THREE.Vector3();   // v3.2n scratch — portrait header gate projection
 
   // v3.2k — the callout bakes "BASE: JST HH:MM" into its texture at draw()
   // time; with no periodic redraw it reads stale within a minute. Wake exactly
@@ -942,12 +1169,13 @@
      back-side Fresnel scatter shell (rim brightest toward the sun, dying on the night
      limb). Parented to `spin` so normalize(position) shares uSunDir's geographic frame.
      Additive + depthWrite:false → cannot fill undrawn pixels (canvas stays transparent). */
+  const uFlashLimb = { value: 0 };   // v3.3b C3: lightning limb catch — loop-driven, 0 at rest (event-gated, decays with env)
   if (GLOBE_ELEV) {
     halo.visible = false;                                  // sprite off; shell is the atmosphere now
     const segW = LITE ? 24 : 48, segH = LITE ? 16 : 32;
     const limbMat = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide,
-      uniforms: { uSunDir: globeMat.uniforms.uSunDir, uReveal: globeMat.uniforms.uReveal },
+      uniforms: { uSunDir: globeMat.uniforms.uSunDir, uReveal: globeMat.uniforms.uReveal, uFlashLimb },
       vertexShader: `
         varying vec3 vNormalV;
         varying vec3 vViewDirV;
@@ -961,7 +1189,7 @@
         }`,
       fragmentShader: `
         uniform vec3 uSunDir;
-        uniform float uReveal;
+        uniform float uReveal, uFlashLimb;
         varying vec3 vNormalV;
         varying vec3 vViewDirV;
         varying vec3 vSphereDir;
@@ -972,7 +1200,10 @@
           float front = mix(-0.15, 1.15, uReveal);                     // boot sweep; 1.15 = fully lit at rest
           float reveal = 1.0 - smoothstep(front, front + 0.15, yN);
           float band = smoothstep(front - 0.12, front, yN) * (1.0 - smoothstep(front, front + 0.12, yN));
-          float a = min(rim * mix(0.05, 1.0, day) * reveal, 0.5) + band * 0.25 * day;
+          // v3.3b C3: the atmosphere catches the sheet flash (uFlashLimb = flash *
+          // 0.25 * tokyoFacing) — at rest the uniform is 0 => output unchanged; the
+          // existing 0.5 min-cap bounds the catch.
+          float a = min(rim * (mix(0.05, 1.0, day) + uFlashLimb) * reveal, 0.5) + band * 0.25 * day;
           gl_FragColor = vec4(vec3(0.224, 0.941, 1.0), a);             // cyan; additive scales RGB by a
         }`,
     });
@@ -1105,14 +1336,27 @@
   /* Sheet lightning — a rare decaying double-flicker behind the globe; the
      rain flares with it (dossier: motivated light — the flash is an emitter).
      Off under reduced motion. */
+  /* v3.3b — the scene answers its lightning (C-bundle, the Toy Shop parameter-
+     plumbing move): ONE event — every coupling consumes the single decaying env
+     returned by updateLightning(); zero new timers, zero new beats (§1.2).
+     LIGHTNING_GRADE_LIFT doubles as the C1 kill switch (set 0.0); law of record
+     0 < lift <= 0.10, harness-pinned by value. */
+  const LIGHTNING_GRADE_LIFT = 0.08;
   const lightning = (function () {
     if (reduced) return null;
     const cv = document.createElement('canvas'); cv.width = cv.height = 64;
     const g = cv.getContext('2d');
+    /* v3.3b C5 (rain brief Lever F pt 1): exponential falloff — 6 stops tracing
+       0.85 * exp(-r / 0.28), a near-white core dissolving into blue-black,
+       replacing the roughly-linear 3-stop ramp. Peak sprite opacity stays
+       env * 0.24 in updateLightning below. */
     const grd = g.createRadialGradient(32, 32, 2, 32, 32, 32);
-    grd.addColorStop(0, 'rgba(210,235,255,0.85)');
-    grd.addColorStop(0.55, 'rgba(140,190,230,0.25)');
-    grd.addColorStop(1, 'rgba(140,190,230,0)');
+    grd.addColorStop(0.00, 'rgba(235,245,255,0.85)');
+    grd.addColorStop(0.15, 'rgba(205,230,250,0.50)');
+    grd.addColorStop(0.30, 'rgba(170,210,240,0.29)');
+    grd.addColorStop(0.50, 'rgba(140,190,230,0.14)');
+    grd.addColorStop(0.70, 'rgba(120,170,215,0.07)');
+    grd.addColorStop(1.00, 'rgba(110,150,200,0)');
     g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
     const sp = nameObject(new THREE.Sprite(new THREE.SpriteMaterial({
       map: new THREE.CanvasTexture(cv), transparent: true, opacity: 0,
@@ -1122,9 +1366,26 @@
     camera.add(sp);
     return { sp, t: 0, next: 16 + Math.random() * 30 };
   })();
+  /* v3.3b §4.3 QA hook — sceneDebug-gated (the __sceneDebug/__scanPlace
+     precedent; inert & unallocated on the plain URL). __forceFlash(hold, lift, x):
+     hold truthy re-seeds L.t each frame so the dt*2.4 decay lands it at exactly
+     5/6 => env = sin(pi/2) * (1 - 0.7/6) ≈ 0.883 — the envelope's first peak,
+     held steady for the capture set. lift === false is the same-session control
+     arm (uFlash forced 0; sprite + rain response stay live). Numeric x pins the
+     strike's screen position for the directionality pair. */
+  let forceFlashHold = false, forceFlashLift = true;
+  if (sceneDebug) window.__forceFlash = (hold, lift, x) => {
+    forceFlashHold = !!hold;
+    forceFlashLift = lift !== false;
+    if (lightning) {
+      if (typeof x === 'number') lightning.sp.position.x = x;
+      if (!hold) { lightning.t = 0; lightning.next = 5 + Math.random() * 10; }   // release: end now, natural flash soon
+    }
+  };
   function updateLightning(dt) {
     if (!lightning) return 0;
     const L = lightning;
+    if (forceFlashHold) L.t = 5 / 6 + dt * 2.4;   // §4.3: decays to exactly 5/6 this frame — held first peak
     L.next -= dt;
     if (L.next <= 0 && L.t <= 0) {
       L.t = 1;
@@ -1279,27 +1540,22 @@
     });
   }
 
-  let rainSway = 0, rainShear = 0, lastScrollY2 = 0, rainTintK = 0;
+  let rainSway = 0, rainShear = 0, lastScrollY2 = 0, rainTintK = 0, rainWindT = 0;   // v3.3a: rainWindT = ∫wind dt — the GPU x-drift clock
+  let shearHold = null;   // v3.3a QA lever (lean captures): forced-shear hold; settable ONLY via the sceneDebug hook below — null on every real page
+  if (sceneDebug) window.__rainShear = v => { shearHold = (typeof v === 'number') ? Math.max(-0.6, Math.min(0.6, v)) : null; return shearHold; };
   let idleT = 0, idleK = 0;                                   // idle cinematics state
   ['pointermove', 'pointerdown', 'wheel', 'keydown', 'touchstart', 'scroll'].forEach(ev =>
     window.addEventListener(ev, () => { idleT = 0; }, { passive: true }));
-  const RAIN_CYAN = new THREE.Color(0xbfeaff), RAIN_AMBER = new THREE.Color(0xffd2a0);
-  /* v3.2l — rain lever A (rain brief, the one never-built research surface):
-     rain is bright only where motivated light reaches it. ≤3 screen-space
-     falloff wells at projected emitter positions — Tokyo halo (the city IS
-     the lamp), the focused place node, and lightning while it flashes —
-     evaluated per PLANE, never per drop:
-        terminal opacity = baseOp × vis × beat × motivation
-     `vis` (sceneState.rain) is now a simple presence envelope (see
-     sectionStories); density/art-direction moved into the wells. LITE skips
-     all projection math: one flat veil (RAIN_LITE_VEIL). No new scene
-     objects/materials — the bloom dark-swap set is untouched. */
-  const MOTIV_FLOOR = 0.16;      // rain never fully dies while a section calls for weather (0.22→0.16: hero mean read +0.3 over baseline at 0.22 — retuned per the luminance gate)
-  const MOTIV_CAP   = 0.80;      // motivated rain always sits BELOW the retired flat-veil peaks
-  const RAIN_LITE_VEIL = 0.55;   // LITE: single flat veil ≤ every old per-section value
-  const WELL_DEPTH_SIGMA = 6.0;  // camera-Z reach of an emitter's light, world units
+  /* v3.2l — rain lever A, ELEVATED PER-DROP by v3.3a: rain is bright only
+     where motivated light reaches it. ≤3 screen-space falloff wells at
+     projected emitter positions — Tokyo halo (the city IS the lamp), the
+     focused place node, and lightning while it flashes — now evaluated per
+     DROP in the rain vertex shader (uWells); this block only projects the
+     wells and uploads uniforms. `vis` (sceneState.rain) stays the presence
+     envelope; LITE still skips all projection math (uLiteVeil, in-shader).
+     The law consts live above makeDepthRain now (uniform init reads them). */
   const TOKYO_HALO_LOCAL = TOKYO.clone().multiplyScalar(1.08);   // halo group's spin-local seat (:526)
-  const rainWells = [{ s: 0, z: 0 }, { s: 0, z: 0 }, { s: 0, z: 0 }];
+  const rainWells = [{ x: 0, y: 0, s: 0, z: 0 }, { x: 0, y: 0, s: 0, z: 0 }, { x: 0, y: 0, s: 0, z: 0 }];
   const _wellP = new THREE.Vector3(), _wellN = new THREE.Vector3(), _wellC = new THREE.Vector3();
   function setWell(well, worldV, strength) {
     // world→screen: the exact path the DOM HUD reticle uses (interrogate(), :1577-1580)
@@ -1310,12 +1566,14 @@
     const edge = Math.max(Math.abs(_wellN.x), Math.abs(_wellN.y));
     well.s = strength * (1 - THREE.MathUtils.smoothstep(edge, 0.9, 1.5)); // screen-space falloff as the emitter leaves frame
     well.z = _wellC.z;
+    well.x = _wellN.x; well.y = _wellN.y;   // v3.3a: the NDC seat rides to the GPU as uWells[i].xy
   }
   function updateDepthRain(dt, flash) {
     if (!depthRain) return;
     const vis = sceneState.rain;
     depthRain.group.visible = vis > 0.02;
     if (!depthRain.group.visible) return;
+    const U = depthRain.mat.uniforms;
     if (!LITE) {   // wells: 1 Tokyo halo, 2 focused place node, 3 lightning reach while active
       _wellP.copy(TOKYO_HALO_LOCAL); spin.localToWorld(_wellP);
       setWell(rainWells[0], _wellP, sceneState.halo * (0.30 + sceneState.haloPulse * 0.25 + sceneState.lockT * 0.20));
@@ -1325,39 +1583,35 @@
         _wellP.copy(lightning.sp.position); camera.localToWorld(_wellP);   // sprite is a camera child (:1093)
         setWell(rainWells[2], _wellP, (flash || 0) * 0.9);
       } else rainWells[2].s = 0;
+      for (let wi = 0; wi < 3; wi++) {   // v3.3a: wells ride to the GPU — per-DROP falloff in the vertex shader
+        const wl = rainWells[wi];
+        U.uWells.value[wi].set(wl.x, wl.y, wl.s, wl.z);
+      }
     }
     rainSway += dt;
     const wind = 0.10 + Math.sin(rainSway * 0.6) * 0.05 + Math.max(-0.6, Math.min(0.6, rainShear));
-    const beat = 0.85 + sceneState.haloPulse * 0.5 + sceneState.lockT * 0.45 + (flash || 0) * 1.3;
+    rainWindT += wind * dt;   // v3.3a: the shader's x-drift clock — GPU advection needs ∫wind dt, not wind
+    /* v3.3b C2: the shared flat flash literal is RETIRED — the high tier answers
+       lightning directionally through well 3 (uWells[2], strength flash * 0.9:
+       near-strike drops over-brighten via the per-drop falloff, the far field
+       barely reacts). LITE compiles no wells, so it keeps the flat coupling under
+       its named const — without it phone rain would stop answering lightning. */
+    const beat = 0.85 + sceneState.haloPulse * 0.5 + sceneState.lockT * 0.45 + (LITE ? (flash || 0) * LITE_FLASH_BEAT : 0);
     // v3.2d: tint keys to the projects ENTRY beat (armed in __sceneFocus) and
     // decays over ~2s — amber is an event, never section-residency wallpaper.
     if (rainTintK > 0) rainTintK = Math.max(0, rainTintK - dt * 0.5);
-    depthRain.layers[0].material.color.copy(RAIN_CYAN).lerp(RAIN_AMBER, rainTintK * 0.85);
-    depthRain.layers.forEach(pts => {
-      const p = pts.geometry.attributes.position.array;
-      const ud = pts.userData;
-      for (let i = 0; i < ud.speeds.length; i++) {
-        const s = ud.speeds[i] * dt;
-        p[i * 3 + 1] -= s;
-        p[i * 3] -= s * wind;
-        if (p[i * 3 + 1] < -ud.halfH) {
-          p[i * 3 + 1] += ud.halfH * 2;
-          p[i * 3] = (Math.random() * 2 - 1) * ud.halfW;
-        }
-      }
-      pts.geometry.attributes.position.needsUpdate = true;
-      // v3.2l terminal opacity = baseOp × vis × beat × motivation (per PLANE, not per drop)
-      let motivation = RAIN_LITE_VEIL;               // LITE: flat veil, zero projection math on phones
-      if (!LITE) {
-        let m = 0;
-        for (let wi = 0; wi < 3; wi++) {
-          const wl = rainWells[wi];
-          if (wl.s > 0) m += wl.s * Math.exp(-Math.abs(ud.zMid - wl.z) / WELL_DEPTH_SIGMA);
-        }
-        motivation = Math.min(MOTIV_CAP, MOTIV_FLOOR + m);
-      }
-      pts.material.opacity = ud.baseOp * vis * beat * motivation;
-    });
+    /* v3.3a: the per-drop CPU walk is RETIRED — advection, recycle, and the
+       v3.2l terminal opacity (baseOp × vis × beat × motivation) all live in
+       the rain shader. This loop's only remaining rain work is well
+       projection + these uniform writes. THE A/B LAW (§3.1): the loop writes
+       ONLY group.visible and uniforms — NEVER mesh.visible, which stays the
+       loop-proof isolation lever for every luminance gate. */
+    U.uT.value = rainSway;
+    U.uWind.value = wind;
+    U.uWindT.value = rainWindT;
+    U.uVis.value = vis;
+    U.uBeat.value = beat;
+    U.uTint.value = rainTintK;
   }
 
   // (g) orbital scan ring — equatorial, does not rotate with the land
@@ -1455,26 +1709,39 @@
     shiftX: 0, shiftZ: 0,   // v3.2o: eased per-section globe offset (only work sets a target)
     lockT: 1,          // signal-lock timer (1 → 0), drives ring sweep + glow bloom; starts armed —
                        // boot IS the home entry (effects.js never emits an initial section focus)
+    wordT: 0,          // v3.3b: state-word suppression envelope (1 → 0 over the word's 1.9s CSS
+                       // window) — drives NOTHING but the uFlash gate (§1.2: pure suppression, never a beat)
   };
   let storyCooldown = 0;                       // seconds; guards re-arming on scroll jitter
-  /* v3.2m — eased focus-bias: while a story window is open the spin drifts
-     toward the focused place so the callout's facing gate (:1930) is met when
-     the beat fires; afterwards it decays back to pure autonomous drift.
-     ONE-SIGNAL RULE (v3.2m retune): the boxed state-word is the section's ONE
-     signal; the bias must never read as a second one. The ADDED angular velocity
-     cap is held STRICTLY BELOW the autonomous spin rate (0.22·0.3 = 0.066 rad/s,
-     see spinBase at :2030) so total y-velocity = 0.066 ± cap stays strictly
-     POSITIVE — the globe only ever speeds up or gently slows the forward drift,
-     it can never null, freeze, or reverse (any of which the eye reads as a
-     second beat). At 0.045 the far-side worst case still floors at 0.021 rad/s
-     forward while catch-up runs 0.111 rad/s (~1.7×); max deflection ≈ cap·window
-     ≈ 0.27 rad — partial facing accepted over a perceptible steer. A ~0.3s
-     smoothstep onset ramps the added velocity in (matching the decay's ease-out)
-     so neither edge is a velocity step. */
-  let focusBias = 0, focusBiasT = 0;
-  const BIAS_MAX_RADS_PER_SEC = 0.045;   // < autonomous 0.066 by construction — forward-only
+  /* v3.2r — forward-only focus-bias: while a story window is open the spin
+     carries a small ADDED forward rate so the callout's facing gate is met
+     when the beat fires. ONE-SIGNAL RULE, held by construction, not tuning:
+     the per-frame regime target biasTarget is clamped to [0, cap] — a place
+     BEHIND the current facing (e <= 0) is never chased, so the added rate is
+     never negative — and the APPLIED rate (focusBiasRate) is the only thing
+     integrated into the angle. What is ramped: focusBiasRate slews toward
+     biasTarget at BIAS_SLEW_RADS_PER_S2, so EVERY regime edge — onset, the
+     seqArrival mid-window flip, window expiry, re-arm mid-decay — moves the
+     applied rate by at most 0.15 * dt <= 0.005 rad/s per frame (dt clamps at
+     0.033, see loop()); the slew approaches a clamped target from the current
+     value, so the rate can never overshoot the cap. Invariant: total y-rate
+     = autonomous 0.066 (0.22 spinBase * 0.3 t-scale) + focusBiasRate, always
+     in [0.066, 0.121] rad/s (absent user scroll — spinBase also carries the
+     absolute, scrubbed scrollNS * 2.4 term) — never frozen, never reversed. Cap derivation:
+     safety is structural for any cap < 0.066, so the cap trades margin for
+     beat coverage — 0.055 keeps 0.011 rad/s (17%) margin, peaks at 1.83x
+     autonomous (below the ~2x subliminal ceiling), and covers cap * window
+     ~= 0.33 rad added (~0.72 rad ahead-geometry with the autonomous 0.40) —
+     places further behind stay partially faced; accepted over a perceptible
+     steer. SUPERSEDES the plan-pinned 0.12 (2026-07-08 plan :2593): 0.12
+     exceeds the autonomous rate — a spec defect, measured live at 5a4480e as
+     a -0.054 rad/s visible reverse during the state-word. The accumulated
+     phase offset is KEPT after the window (unwinding it would need a negative
+     added rate); it is bounded per window and spinBase is unbounded anyway. */
+  let focusBias = 0, focusBiasT = 0, focusBiasRate = 0;
+  const BIAS_MAX_RADS_PER_SEC = 0.055;   // added-rate cap — MUST stay < autonomous 0.066 (harness pins this)
   const BIAS_WINDOW_S = 6;
-  const BIAS_ONSET_S = 0.3;              // ease-in over the leading edge (no 0→cap velocity step)
+  const BIAS_SLEW_RADS_PER_S2 = 0.15;    // applied-rate slew: 0 -> cap in ~0.37s; bounds every regime edge
   window.__sceneFocus = sectionId => {
     const story = sectionStories[sectionId] || sectionStories.home;
     const id = sectionStories[sectionId] ? sectionId : 'home';
@@ -1492,6 +1759,7 @@
     focusBiasT = BIAS_WINDOW_S;   // v3.2m: open the subliminal facing window
     sceneState.haloPulse = Math.max(sceneState.haloPulse, story.intensity || 1);
     if (id === 'home') sceneState.lockT = 1;   // signal-lock beat (boot/home only)
+    else sceneState.wordT = 1;                 // v3.3b: the boxed state-word owns every OTHER section change (effects.js:13 skips home) — wordT gates ONLY the grade lift (§1.2)
     /* v3.2m — contact's own signature: fire the existing LOS-gated satellite
        downlink on section lock (the callout already reads SIGNAL ONLINE).
        REPLACES the duplicated home lockT copy — one signal per section-change
@@ -1526,10 +1794,18 @@
       labels: Number(sceneState.labels.toFixed(3)),
       callout: Number(sceneState.callout.toFixed(3)),
       lockT: Number(sceneState.lockT.toFixed(3)),
+      wordT: Number(sceneState.wordT.toFixed(3)),                                  // v3.3b: suppression-envelope probe (§4.3 gate)
+      uFlash: gradeUniforms ? Number(gradeUniforms.uFlash.value.toFixed(4)) : 0,   // v3.3b: grade-lift probe (§4.3 gate)
       fps: Math.round(fpsEMA),
       focusedPlaceId,
       arcHead: Math.floor(arcN),
       arcSegments: ARC_SEG,
+      // v3.2r probe surface — raw (unrounded): rad/s deltas are ~1e-3/frame
+      spinY: spin.rotation.y,
+      focusedA0,
+      focusBias,
+      focusBiasRate,
+      focusBiasT,
     };
   }
   function updateDebugText() {
@@ -1578,8 +1854,24 @@
   // SP3 select: tap (not drag/parallax) -> content. gallery photo -> lightbox; tokyo/dallas -> #about.
   let _downX = 0, _downY = 0;
   addEventListener('pointerdown', e => { _downX = e.clientX; _downY = e.clientY; });
+  /* v3.2n — seam guard: the global tap-select must yield to real UI. On phones
+     the globe disc sits behind the hero name and the gallery tiles, so an
+     unguarded pick DOUBLE-ACTIVATES (tile tap = lightbox AND city-select; hero-
+     name tap = surprise scroll to #about; lightbox-scrim tap = close AND
+     re-select, breaking the focus-restore contract). Bail while an overlay owns
+     the screen, and when the tap landed on interactive/overlay DOM. */
+  const lbGuard = document.querySelector('.lightbox');
   addEventListener('pointerup', e => {
     if (Math.hypot(e.clientX - _downX, e.clientY - _downY) > 8) return;   // drag/parallax, not a tap
+    if (lbGuard && lbGuard.classList.contains('open')) return;
+    if (document.body.classList.contains('menu-open')) return;
+    if (e.target && e.target.closest &&
+        e.target.closest('a, button, input, .shot, .lightbox, .mobile-menu, .scroll-hud, nav, .deck')) return;
+    /* h1 guards TOUCH only: on phones the hero name overlays the disc (tap =
+       surprise scroll), but on desktop the h1 block box invisibly spans the
+       whole node region — a mouse arm here would kill click-select that the
+       hover HUD just advertised. Mouse clicks pass through to the pick. */
+    if (e.pointerType !== 'mouse' && e.target && e.target.closest && e.target.closest('h1')) return;
     ptr.x = (e.clientX / innerWidth) * 2 - 1; ptr.y = -(e.clientY / innerHeight) * 2 + 1; ptr.inside = true;
     const r = pickPlace(); if (r && r.place) selectPlace(r.place);
   });
@@ -1719,6 +2011,7 @@
   const bloomEnabled = quality.name === 'high' && !reduced &&
                        !!(window.POST && window.POST.EffectComposer);
   let bloomComposer = null, finalComposer = null, renderBloomThenFinal = null;
+  let gradeUniforms = null;   // v3.3b: loop-visible handle for the uFlash drive — stays null on LITE/reduced (no grade pass there)
 
   if (bloomEnabled) {
     const POST = window.POST;
@@ -1797,12 +2090,13 @@
         uTeal:    { value: new THREE.Vector3( 0.00, 0.020, 0.030) }, // shadow floor colour (inert at uTealAmt 0)
         uTealAmt: { value: 0.0 },
         uSat:     { value: 1.06 },                                   // keep cyan lead / amber pop
+        uFlash:   { value: 0.0 },                                    // v3.3b C1: lightning exposure lift (LIGHTNING_GRADE_LIFT * env, word/lock-suppressed)
       },
       vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} `,
       fragmentShader: `
         uniform sampler2D tDiffuse;
         uniform vec3 uLift, uGamma, uGain, uTeal;
-        uniform float uTealAmt, uSat;
+        uniform float uTealAmt, uSat, uFlash;
         varying vec2 vUv;
         const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
         void main(){
@@ -1820,6 +2114,11 @@
           float shadow = 1.0 - smoothstep(0.0, 0.35, luma);
           c = mix(c, max(c, uTeal), shadow * uTealAmt);
 
+          // (v3.3b C1) lightning exposure lift — the whole frame breathes with the
+          // strike, pre-saturation (Toy Shop's pre-tonemap add). 0 at rest; the
+          // final clamp below keeps the write in range.
+          c *= 1.0 + uFlash;
+
           // (3) gentle saturation
           c = mix(vec3(dot(c, LUMA)), c, uSat);
 
@@ -1828,6 +2127,7 @@
       `,
     }));
     gradePass.material.blending = THREE.NoBlending;
+    gradeUniforms = gradePass.material.uniforms;   // v3.3b: the loop drives uFlash per frame
 
     // (c3) caPass — radial chromatic aberration ("worn projected glass" fringe),
     //      display-space, LAST in the chain. R/B sampled at ±radial offset; G AND
@@ -1905,6 +2205,57 @@
       scene.traverse(restore);
       finalComposer.render();      // real scene + ADD bloom.rgb, keep base.a -> screen
     };
+
+    /* v3.3a QA hook — bloom-target isolation (§1.3, the v3.1g law with a test).
+       sceneDebug-gated (the __sceneDebug/__scanPlace precedent; allocates
+       nothing on real pages). Renders the BLOOM composer alone to the canvas,
+       optionally freezing the loop so the frame survives for a screenshot,
+       and returns an FNV-1a digest of the presented pixels (same-task
+       drawImage from renderer.domElement — the droplets IIFE's proven read
+       path, immune to DOM overlay contamination). The v33a acceptance pair:
+       digest(rain visible) MUST equal digest(rain hidden) — the instanced
+       mesh dark-swaps to darkMat and stamps nothing in the bloom buffer. */
+    if (sceneDebug) {
+      const digestCv = document.createElement('canvas');
+      window.__bloomIso = (rainVisible, hold) => {
+        const rainMesh = scene.getObjectByName('rain-streaks');
+        if (rainMesh) rainMesh.visible = rainVisible !== false;
+        if (hold && running) { running = false; cancelAnimationFrame(raf); }
+        scene.traverse(darken);
+        bloomComposer.renderToScreen = true;
+        bloomComposer.render();
+        bloomComposer.renderToScreen = false;
+        scene.traverse(restore);
+        const el = renderer.domElement;
+        digestCv.width = el.width; digestCv.height = el.height;
+        const g2 = digestCv.getContext('2d', { willReadFrequently: true });
+        g2.drawImage(el, 0, 0);
+        const px = g2.getImageData(0, 0, digestCv.width, digestCv.height).data;
+        let hsh = 0x811c9dc5;
+        for (let i = 0; i < px.length; i++) { hsh ^= px[i]; hsh = Math.imul(hsh, 0x01000193); }
+        return 'rain=' + (rainVisible !== false) + ' digest=' + (hsh >>> 0).toString(16);
+      };
+      window.__bloomResume = () => {
+        const rainMesh = scene.getObjectByName('rain-streaks');
+        if (rainMesh) rainMesh.visible = true;
+        if (!running) { running = true; last = performance.now(); raf = requestAnimationFrame(loop); }
+        return 'resumed';
+      };
+    }
+
+    /* v3.3f — rivulet-glass grabpass (M10). Fetched ONLY here: gate + high
+       tier — LITE/reduced never request the module or the vendored
+       GPUComputationRenderer (HALO_GATE discipline; the LITE network log is a
+       §4.4 gate). initRivulet slots the pass after gradePass, before caPass:
+       drops refract the GRADED world and still receive the lens fringe. On a
+       load/init failure the high tier runs glass-less this session (warn) —
+       the sanctioned fallback is the RIVULET_GATE kill-flip, never a hybrid
+       revive of the already-retired canvas. */
+    if (RIVULET_GATE && quality.name === 'high' && !reduced) {
+      import('./rivulet.mjs?v=1').then(mod => {
+        rivulet = mod.initRivulet({ renderer, finalComposer, caPass, sceneState });
+      }).catch(err => console.warn('[scene] rivulet module failed to load — desktop glass off this session', err));
+    }
   }
 
   const DPR_CAP = reduced ? 1 : LITE ? 1.5 : 2;   // mirrors getQualityProfile's per-tier caps
@@ -1924,7 +2275,7 @@
       }
       camera.aspect = w / h; camera.updateProjectionMatrix();
       renderer.setSize(w, h);
-      if (!window.__SCENE_OFFSET) {          // v3.2n: portrait↔landscape re-aim
+      if (!window.__SCENE_OFFSET) {          // v3.2n: portrait<->landscape re-aim
         OFF = offsetFor();
         coreGroup.position.set(OFF[0], OFF[1], OFF[2]);
       }
@@ -1991,6 +2342,7 @@
      speed as 60Hz: 0.005/frame @60fps = 0.3/s. Clamped so a stalled tab can't
      jump time on resume. */
   let raf, running = true, t = 0, last = performance.now(), debugTick = 0;
+  let scrollNS = -1;   // scrubbed scroll (one-pole low-pass of scrollN); -1 = unseeded, first frame snaps to scrollN so anchored loads don't swoop
   let revealT = 0;   // SP2 boot reveal: real-time accumulator (pauses with the loop when hidden)
   function loop(now) {
     if (!running) return;
@@ -2004,11 +2356,14 @@
       globeMat.uniforms.uReveal.value = 1.0 - Math.pow(1.0 - rr, 3.0);
     }
     const scrollN = Math.min(1, Math.max(0, scrollY / maxScroll));
+    if (scrollNS < 0) scrollNS = scrollN;
+    scrollNS += (scrollN - scrollNS) * Math.min(1, dt * 8);   // scroll scrub: raw per-event scrollY steps the camera/spin under load; tau ~0.125s
     const f = dt * 60;   // per-frame speeds scale to real elapsed time
 
     // Section story state — eased toward the active story's targets each frame
     if (storyCooldown > 0) storyCooldown = Math.max(0, storyCooldown - dt);
     if (sceneState.lockT > 0) sceneState.lockT = Math.max(0, sceneState.lockT - dt * 0.9);
+    if (sceneState.wordT > 0) sceneState.wordT = Math.max(0, sceneState.wordT - dt / 1.9);   // v3.3b: mirrors the word's 1.9s run (.state-flash.show, site.css:665)
     sceneState.halo    += (sceneState.story.halo    - sceneState.halo)    * Math.min(1, 0.08 * f);
     sceneState.rain    += (sceneState.story.rain    - sceneState.rain)    * Math.min(1, 0.08 * f);
     sceneState.labels  += (sceneState.story.labels  - sceneState.labels)  * Math.min(1, 0.08 * f);
@@ -2024,8 +2379,16 @@
     idleT += dt;
     idleK += ((idleT > 20 ? 1 : 0) - idleK) * Math.min(1, 0.02 * f);   // idle cinematic ease
     rainShear += ((scrollY - lastScrollY2) * 0.0025 - rainShear) * Math.min(1, 0.12 * f);
+    if (shearHold !== null) rainShear = shearHold;   // v3.3a QA hold — always null outside ?sceneDebug=1
     lastScrollY2 = scrollY;
-    updateDepthRain(dt, updateLightning(dt));
+    const flash = updateLightning(dt);   // v3.3b: ONE event — every C-coupling consumes this single envelope (§1.2)
+    updateDepthRain(dt, flash);
+    /* C1 — the whole-frame grade lift, the only coupling with global reach:
+       suppressed while the boxed state-word (wordT) or the home/boot signal-lock
+       (lockT) owns the frame. forceFlashLift is the §4.3 sceneDebug control arm
+       (always true in production). gradeUniforms is null on LITE/reduced. */
+    if (gradeUniforms) gradeUniforms.uFlash.value = (forceFlashLift ? LIGHTNING_GRADE_LIFT : 0) *
+      flash * Math.max(0, 1 - Math.max(sceneState.lockT, sceneState.wordT));
     updateScanTag(dt);
     updateCelestial(dt);
     const scanY = Math.sin(t * 0.55) * R * 0.9;                       // holo shell sweeps the sphere
@@ -2045,25 +2408,26 @@
     fieldCyan.rotation.y -= 0.0004 * f * drift;
     fieldAmber.rotation.x += 0.0005 * f * drift;
     fieldDeep.rotation.y += 0.0002 * f;
-    grid.position.z = ((t * 6 + scrollN * 70) % 4) - 2;
+    grid.position.z = ((t * 6 + scrollNS * 70) % 4) - 2;
     grid.material.opacity = 0.2 * sceneState.grid;   // v3.2d: story-driven — near-0 in gallery
 
     /* Globe motion — autonomous spin (t term keeps phones alive without
-       pointermove) + scroll-advanced rotation, ABSOLUTE so smooth-scroll can't
-       make it jumpy. Gyro tilt eases on coreGroup; spin owns the y-rotation. */
-    const spinBase = t * 0.22 + scrollN * 2.4;
-    if (focusBiasT > 0) {          // chase: rate-capped P-controller (eases as it closes)
+       pointermove) + scroll-advanced rotation on the SCRUBBED scroll: absolute
+       in scrollNS (no drift), low-passed so per-event scroll steps can't make
+       it jumpy. Gyro tilt eases on coreGroup; spin owns the y-rotation. */
+    const spinBase = t * 0.22 + scrollNS * 2.4;
+    let biasTarget = 0;            // regime target for the ADDED rate, rad/s — in [0, cap] always
+    if (focusBiasT > 0) {          // chase: forward-only P-controller (eases as it closes)
       focusBiasT = Math.max(0, focusBiasT - dt);
-      const os = Math.min(1, (BIAS_WINDOW_S - focusBiasT) / BIAS_ONSET_S);
-      const onset = os * os * (3 - 2 * os);      // smoothstep ease-in over the first BIAS_ONSET_S
       let e = (focusedA0 - Math.PI / 2 - (spinBase + focusBias)) % (Math.PI * 2);
       if (e > Math.PI) e -= Math.PI * 2; else if (e < -Math.PI) e += Math.PI * 2;
-      focusBias += Math.sign(e) * Math.min(BIAS_MAX_RADS_PER_SEC * onset * dt, Math.abs(e) * 0.9 * dt);
-    } else if (focusBias !== 0) {  // decay home at the same subliminal cap
-      const back = Math.min(BIAS_MAX_RADS_PER_SEC * dt, Math.abs(focusBias) * 0.4 * dt);
-      focusBias -= Math.sign(focusBias) * back;
-      if (Math.abs(focusBias) < 1e-4) focusBias = 0;
+      if (e > 0) biasTarget = Math.min(BIAS_MAX_RADS_PER_SEC, e * 0.9);   // behind (e <= 0) is never chased
     }
+    // slew the applied rate toward the target — sole writer of focusBiasRate,
+    // so every regime edge is a bounded ramp (<= 0.15 * dt per frame), never a step
+    const biasDr = biasTarget - focusBiasRate;
+    focusBiasRate += Math.sign(biasDr) * Math.min(Math.abs(biasDr), BIAS_SLEW_RADS_PER_S2 * dt);
+    focusBias += focusBiasRate * dt;
     spin.rotation.y = spinBase + focusBias;
     coreGroup.rotation.x += ((-mouse.y * 0.26) - coreGroup.rotation.x) * 0.03;
     coreGroup.rotation.z += ((mouse.x * 0.12) - coreGroup.rotation.z) * 0.03;
@@ -2079,13 +2443,29 @@
     const focusedAngle = Math.atan2(focusedVector.z, focusedVector.x);
     const focusedFacing = Math.max(0, Math.sin(focusedAngle - spin.rotation.y));
     const tokyoFacing = Math.max(0, Math.sin(tokyoA0 - spin.rotation.y));
+    uFlashLimb.value = flash * 0.25 * tokyoFacing;   // v3.3b C3: limb catch — rides the ONE flash envelope, 0 at rest
     updateTokyoHalo(f, focusedFacing, tokyoFacing);
     callout.sprite.position.copy(focusedVector).multiplyScalar(1.22).add(calloutOffset);
     // v3.1: hard facing gate (0 below 0.35, full above 0.72) — the old facing²
     // curve left a half-faded panel drifting off the limb as a grey rectangle;
     // now it fades out completely before the node detaches from the disc.
     const calloutGate = THREE.MathUtils.smoothstep(focusedFacing, 0.35, 0.72);
-    callout.sprite.material.opacity = calloutGate * sceneState.callout * (focusedPlace.primary ? 0.9 : 0.55);
+    let calloutOp = calloutGate * sceneState.callout * (focusedPlace.primary ? 0.9 : 0.55);
+    /* v3.2n — portrait header gate: at phone aspect the panel rides just under
+       the fixed 80px nav band, and the boot warp / idle dolly-in push it higher
+       still; fade it out BEFORE its top edge enters the band — same grammar as
+       the facing gate above (the panel never half-collides with chrome).
+       Allocation-free: one projection of last frame's sprite matrix. Desktop
+       composition never projects the panel that high — gate is portrait-only. */
+    if (isPortrait()) {
+      _calloutV.setFromMatrixPosition(callout.sprite.matrixWorld);
+      const calloutDist = camera.position.distanceTo(_calloutV);
+      _calloutV.project(camera);
+      const halfHCss = 0.36 * (h * 0.5) / (Math.tan(camera.fov * Math.PI / 360) * calloutDist);
+      const topCss = (1 - _calloutV.y) * 0.5 * h - halfHCss;
+      calloutOp *= THREE.MathUtils.smoothstep(topCss, 80, 100);
+    }
+    callout.sprite.material.opacity = calloutOp;
     if (focusFlash > 0.01) focusFlash *= Math.pow(0.9, f);
     else focusFlash = 0;
     for (const id in placeNodesById) {
@@ -2119,11 +2499,12 @@
     if (warp > 0.001) warp *= 0.92; else warp = 0;
     if (debugEl && ++debugTick % 20 === 0) updateDebugText();
     camera.position.x += (mouse.x * 1.5 - camera.position.x) * 0.04;
-    camera.position.y += (-mouse.y * 1.0 + scrollN * 3 + sceneState.camera - camera.position.y) * 0.04;
-    camera.position.z = 10 - scrollN * 4 - warp * 6 - idleK * 1.6;   // idle cinematic dolly-in
-    camera.lookAt(0, scrollN * 1.5, 0);
+    camera.position.y += (-mouse.y * 1.0 + scrollNS * 3 + sceneState.camera - camera.position.y) * 0.04;
+    camera.position.z = 10 - scrollNS * 4 - warp * 6 - idleK * 1.6;   // idle cinematic dolly-in
+    camera.lookAt(0, scrollNS * 1.5, 0);
+    if (rivulet) rivulet.update(dt);   // v3.3f: sim step + metaball-field splat BEFORE render — the grabpass consumes this frame's drop field
     render();
-    if (droplets) droplets.update(dt);   // after render: droplet lenses sample THIS frame's buffer
+    if (droplets) droplets.update(dt, flash);   // after render: lenses sample THIS frame's buffer; flash drives the C4 glint
     if (!coarse) interrogate(dt);          // SP3: pointer interrogation (touch uses tap-select)
   }
   raf = requestAnimationFrame(loop);
