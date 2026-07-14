@@ -381,6 +381,8 @@ new_string (law consts hoisted here — `makeDepthRain()` runs at `:639`, long b
 ```
 (No verify yet — `node --check` passes only after Step 5 removes the now-duplicate consts at the old seat.)
 
+> **AMENDMENT 2026-07-14 (v3.3 final review, deviation D1 of record):** the basis line `vec2 perp = vec2(-dir.y, dir.x);` in the new_string above (:325 as committed) is a **spec defect** — with `dir` pointing DOWN (`normalize(vec2(-uWind, -1.0))`, y ≈ −1) the map `[perp, dir]` has determinant −1, a reflection: it flips PlaneGeometry's CCW winding to CW and the default `FrontSide` material backface-culls **every streak** — zero rain, zero console errors, harness regexes all still green. Found by v33a live bisection (12-variant expression bisect: alive ⇔ det > 0, exactly; `.superpowers/sdd/v33/task-v33a-report.md` D1). Shipped basis is the sign-corrected `vec2 perp = vec2(dir.y, -dir.x);` (det = +1, a proper rotation; the lateral alpha profile is symmetric in `vQuad.x`, so the mirrored width axis is visually identical to this plan's intent), with the warning comment at the fix site — js/background.js rain vertex shader (:604 at HEAD 2852ebd); the v33a reviewer re-derived the winding and swept the sign convention. Do NOT re-run the snippet above verbatim.
+
 - [ ] **Step 4: rain state + wells store their NDC seat.** Three Edits in `js/background.js`.
 Edit 1 — old_string:
 ```js
@@ -1446,6 +1448,8 @@ new_string:
     });
   }
 ```
+> **AMENDMENT 2026-07-14 (v3.3 final review, deviation D2 of record):** `fill: 'both'` in the new_string above (the comment and the options line — :1437/:1444 as committed) is a **spec defect** — a fill-held final keyframe keeps `transform: 'none'` applying as a fill style, which `getComputedStyle` serializes as `matrix(1, 0, 0, 1, 0, 0)`, so Step 10's own binding `chOk` criterion (`transform === 'none'`) and spec §3.4 acceptance-2 can NEVER pass as sketched. Shipped value is `fill: 'backwards'` (js/app.js runStagger, :69/:79 at HEAD 2852ebd) — delay-hiding preserved; on finish the effect ceases to apply and the chars' NATURAL computed style (opacity 1, transform none — byte-identical to the pre-M5 settled state) takes over, the same release pattern Step 6's chromatic wipe below already uses. Resolved in favor of the binding acceptance criterion; flagged "for coordinator/spec correction" at `.superpowers/sdd/v33/task-v33d-report.md` F2/D2 — this marker is that correction. Spec §3.4 carries the matching markers.
+
 - [ ] **Step 6: `runChromatic` — wipe on `line.animate()`, fire on markers.** Edit `js/app.js` old_string:
 ```js
   function runChromatic() {

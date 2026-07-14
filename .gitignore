@@ -12,3 +12,6 @@ docs/superpowers/gates/v32/
 
 # v3.3 gate screenshots (same class: owner review artifacts, git-ignored — spec §4)
 docs/superpowers/gates/v33/
+
+# Codex CLI local environment config (owner tool state, not site content)
+.codex/
