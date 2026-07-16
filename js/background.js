@@ -67,6 +67,29 @@
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(dpr);
   renderer.setSize(w, h);
+  /* v3.3h: opaque buffer — clear at a=1 to the CSS floor colour (body --void
+     #05060a, same literal as scene fog). The additive scene and the
+     alpha-preserving composer both leave rgb >> a in the canvas; browsers
+     composite the canvas as PREMULTIPLIED, where rgb > a is out-of-range.
+     Chrome passes those super-luminous pixels through; WebKit CLAMPS
+     rgb <= a — which crushed bloom/glow, collapsed the soft stars, and
+     erased the low-alpha rain on every Safari/iOS view (live-debug find,
+     2026-07-16; bisect: even the minimal RenderPass+OutputPass chain
+     clamped, and an a=1 final write restored parity). Clearing at a=1 makes
+     every composited pixel valid premultiplied colour, so both engines
+     display identical bytes; undrawn pixels BAKE the floor instead of
+     showing the body bg through — nothing else depended on the canvas
+     transparency (rivulet.mjs saves/restores clear state around its own
+     grabpass target, :253-259).
+     Colour is passed PRE-CONVERTED to linear: setClearColor keeps hex floats
+     raw, so on the composer path OutputPass would sRGB-encode a raw #05060a
+     into a washed #272a38 (measured [37,39,56]). Linear-converted, the floor
+     rides the grade like every other scene black and lands at [0,1,6] —
+     the "shadows sink to true black" law applied to the void itself; the
+     floor now also breathes with the C1 lightning lift, per its design
+     note. Direct path (LITE/reduced) displays it as near-black [0,0,1],
+     within 6/255 of the old CSS floor everywhere. */
+  renderer.setClearColor(new THREE.Color(0x05060a).convertSRGBToLinear(), 1);
   mount.appendChild(renderer.domElement);
   if (debugEl) debugEl.classList.add('on');
 
