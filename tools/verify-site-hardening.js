@@ -284,6 +284,47 @@ check(
   'one pure demoter must own the one-way 1.5 DPR transition, persisted lite result, debug-only injected FPS, complete named pass/composer/material disposal, live render/resize guards, and non-rebuilding demotion callback'
 );
 
+const task7SeverPass = (background.match(/function severPostPass\(pass\) \{[\s\S]*?\n\s*\}/) || [''])[0];
+const task7SeverComposer = (background.match(/function severPostComposer\(composer\) \{[\s\S]*?\n\s*\}/) || [''])[0];
+check(
+  'v3.4 Task 7 correction severs the disposed composer reference graph',
+    /function clearUniformValues\(uniforms\)[\s\S]*uniform\.value = null/.test(background) &&
+    /clearUniformValues\(pass\.uniforms\)/.test(task7SeverPass) &&
+    /clearUniformValues\(pass\.highPassUniforms\)/.test(task7SeverPass) &&
+    /clearUniformValues\(pass\.copyUniforms\)/.test(task7SeverPass) &&
+    /clearUniformValues\(pass\.compositeMaterial\?\.uniforms\)/.test(task7SeverPass) &&
+    /pass\.scene = null/.test(task7SeverPass) &&
+    /pass\.camera = null/.test(task7SeverPass) &&
+    /pass\.material = null/.test(task7SeverPass) &&
+    /pass\.uniforms = null/.test(task7SeverPass) &&
+    /pass\.fsQuad = null/.test(task7SeverPass) &&
+    /pass\.renderTargetsHorizontal = \[\]/.test(task7SeverPass) &&
+    /pass\.renderTargetsVertical = \[\]/.test(task7SeverPass) &&
+    /pass\.renderTargetBright = null/.test(task7SeverPass) &&
+    /pass\.separableBlurMaterials = \[\]/.test(task7SeverPass) &&
+    /pass\.materialHighPassFilter = null/.test(task7SeverPass) &&
+    /pass\.compositeMaterial = null/.test(task7SeverPass) &&
+    /pass\.blendMaterial = null/.test(task7SeverPass) &&
+    /pass\.basic = null/.test(task7SeverPass) &&
+    /severPostPass\(copyPass\)/.test(task7SeverComposer) &&
+    /composer\.passes = \[\]/.test(task7SeverComposer) &&
+    /composer\.renderTarget1 = null/.test(task7SeverComposer) &&
+    /composer\.renderTarget2 = null/.test(task7SeverComposer) &&
+    /composer\.writeBuffer = null/.test(task7SeverComposer) &&
+    /composer\.readBuffer = null/.test(task7SeverComposer) &&
+    /composer\.copyPass = null/.test(task7SeverComposer) &&
+    /composer\.renderer = null/.test(task7SeverComposer) &&
+    /composer\.clock = null/.test(task7SeverComposer) &&
+    background.indexOf('for (const pass of disposedPasses) pass?.dispose?.();') <
+      background.indexOf('for (const pass of disposedPasses) severPostPass(pass);') &&
+    background.indexOf('finalComposer?.dispose?.();') <
+      background.indexOf('for (const [, composer] of disposedComposers) severPostComposer(composer);') &&
+    /disposalRetained = auditPostFxReferences\(disposedComposers, disposedPasses\)/.test(background) &&
+    /retained: \[\.\.\.disposalRetained\]/.test(background) &&
+    /rendererDpr: renderer\.getPixelRatio\(\)/.test(background),
+  'real dispose calls must precede explicit uniform/pass/composer graph severing; only sorted names may survive the post-disposal audit, while debug exposes the actual live renderer DPR'
+);
+
 check(
   'v3.4 probe eligibility and cache paths allocate no WebGL resources',
   (() => {

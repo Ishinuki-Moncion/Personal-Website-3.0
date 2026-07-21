@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-async function openMobilePage(browser) {
+async function openMobilePage(browser, overrides = {}) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     hasTouch: true,
-    isMobile: true
+    isMobile: true,
+    ...overrides
   });
   return { context, page: await context.newPage() };
 }
@@ -14,8 +15,65 @@ async function readSceneState(page) {
   return page.evaluate(() => window.__sceneDebug());
 }
 
+async function installPostFxReferenceInstrumentation(context) {
+  await context.addInitScript(() => {
+    const refs = { composers: [], passes: [] };
+    Object.defineProperty(window, '__POST_TEST_REFS', { value: refs, configurable: true });
+    let currentPost;
+    const wrap = (Base, bucket) => class extends Base {
+      constructor(...args) {
+        super(...args);
+        refs[bucket].push(this);
+      }
+    };
+    Object.defineProperty(window, 'POST', {
+      configurable: true,
+      get: () => currentPost,
+      set(value) {
+        currentPost = value && {
+          ...value,
+          EffectComposer: wrap(value.EffectComposer, 'composers'),
+          RenderPass: wrap(value.RenderPass, 'passes'),
+          ShaderPass: wrap(value.ShaderPass, 'passes'),
+          UnrealBloomPass: wrap(value.UnrealBloomPass, 'passes'),
+          OutputPass: wrap(value.OutputPass, 'passes')
+        };
+      }
+    });
+  });
+}
+
+function readInstrumentedPostFxRetained(page) {
+  return page.evaluate(() => {
+    const refs = window.__POST_TEST_REFS;
+    const retained = [];
+    const record = (owner, key, value) => {
+      if (value !== null && value !== undefined) retained.push(owner + '.' + key);
+    };
+    refs.composers.forEach((composer, index) => {
+      const owner = 'composer[' + index + ']';
+      if (composer.passes?.length) retained.push(owner + '.passes');
+      for (const key of ['renderTarget1', 'renderTarget2', 'writeBuffer', 'readBuffer', 'copyPass', 'renderer', 'clock']) {
+        record(owner, key, composer[key]);
+      }
+    });
+    refs.passes.forEach((pass, index) => {
+      const owner = 'pass[' + index + ']';
+      for (const key of [
+        'scene', 'camera', 'overrideMaterial', 'material', 'uniforms', 'fsQuad',
+        'renderTargetBright', 'highPassUniforms', 'materialHighPassFilter',
+        'compositeMaterial', 'copyUniforms', 'blendMaterial', 'basic', 'resolution'
+      ]) record(owner, key, pass[key]);
+      for (const key of ['renderTargetsHorizontal', 'renderTargetsVertical', 'separableBlurMaterials', 'bloomTintColors']) {
+        if (pass[key]?.length) retained.push(owner + '.' + key);
+      }
+    });
+    return { composers: refs.composers.length, passes: refs.passes.length, retained: retained.sort() };
+  });
+}
+
 test('rich override resolves the mobile probe without GPU allocation', async ({ browser }) => {
-  const { context, page } = await openMobilePage(browser);
+  const { context, page } = await openMobilePage(browser, { deviceScaleFactor: 3 });
   try {
     await page.goto('/?tier=rich&sceneDebug=1');
     await expect.poll(() => page.evaluate(() => window.__TIER_PROBE)).toMatchObject({
@@ -59,7 +117,8 @@ test('rich override resolves the mobile probe without GPU allocation', async ({ 
 });
 
 test('mobile-rich demotes once, disposes postFX, persists DPR through resize, and stays lite next load', async ({ browser }) => {
-  const { context, page } = await openMobilePage(browser);
+  const { context, page } = await openMobilePage(browser, { deviceScaleFactor: 3 });
+  await installPostFxReferenceInstrumentation(context);
   const pageErrors = [];
   const consoleErrors = [];
   page.on('pageerror', error => pageErrors.push(error.message));
@@ -74,11 +133,14 @@ test('mobile-rich demotes once, disposes postFX, persists DPR through resize, an
     let state = await page.evaluate(() => window.__sceneDebug());
     expect(state.demoted).toBe(true);
     expect(state.effectiveDprCap).toBe(1.5);
+    expect(state.rendererDpr).toBe(1.5);
     expect(state.postFX.enabled).toBe(false);
     expect(state.postFX.disposed).toBe(true);
     expect(state.postFX.disposal.expected.length).toBeGreaterThan(0);
     expect(state.postFX.disposal.expected).toHaveLength(12);
     expect(state.postFX.disposal.called).toEqual(state.postFX.disposal.expected);
+    expect(state.postFX.disposal.retained).toEqual([]);
+    expect(await readInstrumentedPostFxRetained(page)).toEqual({ composers: 2, passes: 7, retained: [] });
     expect(state.demotionCount).toBe(1);
     const afterDemotion = { direct: state.renderCounts.direct, postfx: state.renderCounts.postfx };
     await page.waitForTimeout(300);
@@ -90,7 +152,10 @@ test('mobile-rich demotes once, disposes postFX, persists DPR through resize, an
     await page.waitForTimeout(400);
     state = await page.evaluate(() => window.__sceneDebug());
     expect(state.effectiveDprCap).toBe(1.5);
+    expect(state.rendererDpr).toBe(1.5);
     expect(state.demotionCount).toBe(1);
+    expect(state.postFX.disposal.retained).toEqual([]);
+    expect(await readInstrumentedPostFxRetained(page)).toEqual({ composers: 2, passes: 7, retained: [] });
     await page.goto('/?sceneDebug=1');
     await expect.poll(() => page.evaluate(() => window.__sceneDebug?.().tier)).toBe('lite');
     state = await page.evaluate(() => window.__sceneDebug());

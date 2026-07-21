@@ -1820,6 +1820,7 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
   const postPasses = [];
   const disposalExpected = new Set();
   const disposalCalls = new Map();
+  let disposalRetained = [];
   let injectedFps = null;
   function getSceneDebug() {
     return {
@@ -1832,6 +1833,7 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
       demoted,
       demotionCount,
       effectiveDprCap,
+      rendererDpr: renderer.getPixelRatio(),
       renderPath,
       renderCounts: { ...renderCounts },
       capabilities: {
@@ -1850,6 +1852,7 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
             .filter(([, count]) => count === 1)
             .map(([name]) => name)
             .sort(),
+          retained: [...disposalRetained],
         },
         bloomScale: quality.bloomScale,
         finalSamples: quality.postFXSamples.final,
@@ -2101,17 +2104,109 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
     return resource;
   }
 
+  function clearUniformValues(uniforms) {
+    if (!uniforms) return;
+    for (const uniform of Object.values(uniforms)) {
+      if (uniform && Object.prototype.hasOwnProperty.call(uniform, 'value')) uniform.value = null;
+    }
+  }
+
+  function severPostPass(pass) {
+    if (!pass) return;
+    clearUniformValues(pass.uniforms);
+    clearUniformValues(pass.highPassUniforms);
+    clearUniformValues(pass.copyUniforms);
+    clearUniformValues(pass.material?.uniforms);
+    clearUniformValues(pass.materialHighPassFilter?.uniforms);
+    clearUniformValues(pass.compositeMaterial?.uniforms);
+    clearUniformValues(pass.blendMaterial?.uniforms);
+    for (const material of pass.separableBlurMaterials || []) clearUniformValues(material?.uniforms);
+    if (pass.basic) pass.basic.map = null;
+    if (pass.fsQuad) pass.fsQuad.material = null;
+    if (Array.isArray(pass.renderTargetsHorizontal)) pass.renderTargetsHorizontal.length = 0;
+    if (Array.isArray(pass.renderTargetsVertical)) pass.renderTargetsVertical.length = 0;
+    if (Array.isArray(pass.separableBlurMaterials)) pass.separableBlurMaterials.length = 0;
+    if (Array.isArray(pass.bloomTintColors)) pass.bloomTintColors.length = 0;
+    pass.scene = null;
+    pass.camera = null;
+    pass.overrideMaterial = null;
+    pass.clearColor = null;
+    pass._oldClearColor = null;
+    pass.material = null;
+    pass.uniforms = null;
+    pass.fsQuad = null;
+    pass.renderTargetsHorizontal = [];
+    pass.renderTargetsVertical = [];
+    pass.renderTargetBright = null;
+    pass.highPassUniforms = null;
+    pass.materialHighPassFilter = null;
+    pass.separableBlurMaterials = [];
+    pass.compositeMaterial = null;
+    pass.bloomTintColors = [];
+    pass.copyUniforms = null;
+    pass.blendMaterial = null;
+    pass.basic = null;
+    pass.resolution = null;
+  }
+
+  function severPostComposer(composer) {
+    if (!composer) return;
+    const copyPass = composer.copyPass;
+    if (Array.isArray(composer.passes)) composer.passes.length = 0;
+    severPostPass(copyPass);
+    composer.passes = [];
+    composer.renderTarget1 = null;
+    composer.renderTarget2 = null;
+    composer.writeBuffer = null;
+    composer.readBuffer = null;
+    composer.copyPass = null;
+    composer.renderer = null;
+    composer.clock = null;
+  }
+
+  function auditPostFxReferences(composers, passes) {
+    const retained = [];
+    const record = (owner, key, value) => {
+      if (value !== null && value !== undefined) retained.push(owner + '.' + key);
+    };
+    for (const [name, composer] of composers) {
+      if (!composer) continue;
+      if (composer.passes?.length) retained.push(name + '.passes');
+      for (const key of ['renderTarget1', 'renderTarget2', 'writeBuffer', 'readBuffer', 'copyPass', 'renderer', 'clock']) {
+        record(name, key, composer[key]);
+      }
+    }
+    passes.forEach((pass, index) => {
+      if (!pass) return;
+      const name = 'pass[' + index + ']';
+      for (const key of [
+        'scene', 'camera', 'overrideMaterial', 'material', 'uniforms', 'fsQuad',
+        'renderTargetBright', 'highPassUniforms', 'materialHighPassFilter',
+        'compositeMaterial', 'copyUniforms', 'blendMaterial', 'basic', 'resolution'
+      ]) record(name, key, pass[key]);
+      for (const key of ['renderTargetsHorizontal', 'renderTargetsVertical', 'separableBlurMaterials', 'bloomTintColors']) {
+        if (pass[key]?.length) retained.push(name + '.' + key);
+      }
+    });
+    return retained.sort();
+  }
+
   function disposePostFX() {
     if (postDisposed) return;
     postDisposed = true;
     usePost = false;
     renderBloomThenFinal = null;
-    for (const pass of postPasses.splice(0)) pass?.dispose?.();
+    const disposedPasses = postPasses.splice(0);
+    const disposedComposers = [['composer:bloom', bloomComposer], ['composer:final', finalComposer]];
+    for (const pass of disposedPasses) pass?.dispose?.();
     for (const material of [darkMat, darkPoints, darkSprite]) material?.dispose?.();
     matCache?.clear?.();
     matCache = null;
     bloomComposer?.dispose?.();
     finalComposer?.dispose?.();
+    for (const pass of disposedPasses) severPostPass(pass);
+    for (const [, composer] of disposedComposers) severPostComposer(composer);
+    disposalRetained = auditPostFxReferences(disposedComposers, disposedPasses);
     bloomComposer = null;
     finalComposer = null;
     bloomRenderPass = null;
