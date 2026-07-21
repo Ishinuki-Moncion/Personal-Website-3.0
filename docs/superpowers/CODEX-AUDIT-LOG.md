@@ -19,6 +19,7 @@ This file is the durable review index for work led by **OpenAI Codex** on the Pe
 | `5b52ce5`, `d449888` | Mobile menu/contact repair, valid static semantics, modal sibling inertness, and deterministic lightbox race regressions | Independent task review approved after corrective pass; Chromium 7/7, WebKit 7/7, hardening 53/53, HTML/Nu clean |
 | `28b60bb`, `4902840`, `3ac9526` | Progressive app-first startup, optional scene boundary, mobile boot pacing, reduced cursor/probe shutdown, and terminal instant boot | Independent task review approved after two corrective passes; progressive Chromium/WebKit 4/4 each, smoke 2/2, Task 2 preservation 7/7 each, hardening 61/61 |
 | `008c3f2`, `6ffa536` | Pure tier policy, 128 MiB estimate, one-way FPS demoter, and yielded leak-free WebGL2 capability probe | Independent task review approved after corrective pass; unit 12/12, real-probe Chromium/WebKit 4/4 each, hardening 64/64, zero 404/console/page errors |
+| `3ce13c3` | Explicit reduced/lite/mobile-rich/high profiles, capability-owned richness gates, three-way rain payload, and expanded scene debug | Independent task review approved; Chromium/WebKit 5/5 each, six-profile runtime sweep error-free, desktop high values preserved; one non-blocking hardening allowlist gap deferred to Task 6 |
 
 This table is updated after each reviewed task. Every integrated commit on this
 branch is authored and committed as `OpenAI Codex <noreply@openai.com>` so the
@@ -75,5 +76,9 @@ remains responsible for the decisions, integration, and final verification.
   results; every retained WebGL object is deleted by identity before one
   context loss. Cache results are normalized to the exact five-field contract.
   Final review approved with no open findings.
+- Task 5 capability profiles: complete. Mobile-rich now owns rich renderer
+  capabilities while remaining in mobile layout/input mode; desktop high keeps
+  its locked values and behavior. Review approved with one Minor verifier
+  allowlist blind spot, scheduled inside Task 6's existing hardening scope.
 - Production site code changes remain isolated to this Codex worktree and have
   not been pushed, proposed as a PR, deployed, or merged into production.
