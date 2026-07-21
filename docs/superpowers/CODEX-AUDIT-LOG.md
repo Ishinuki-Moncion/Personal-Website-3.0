@@ -17,6 +17,7 @@ This file is the durable review index for work led by **OpenAI Codex** on the Pe
 | `2bb3038` | `docs/superpowers/specs/2026-07-21-v34-corrective-completion-program-design.md` plus worktree isolation rule | Owner approved; implementation seed |
 | `bee58dd`, `3db5161` | Reproducible Node/Playwright QA harness, pinned local Nu validator, and immutable desktop/mobile `before` references | Independent task review approved; hardening 48/48, unit 1/1, Chromium 2/2 and WebKit 2/2 smoke; HTML/Nu baseline debt recorded for Task 2 |
 | `5b52ce5`, `d449888` | Mobile menu/contact repair, valid static semantics, modal sibling inertness, and deterministic lightbox race regressions | Independent task review approved after corrective pass; Chromium 7/7, WebKit 7/7, hardening 53/53, HTML/Nu clean |
+| `28b60bb`, `4902840`, `3ac9526` | Progressive app-first startup, optional scene boundary, mobile boot pacing, reduced cursor/probe shutdown, and terminal instant boot | Independent task review approved after two corrective passes; progressive Chromium/WebKit 4/4 each, smoke 2/2, Task 2 preservation 7/7 each, hardening 61/61 |
 
 This table is updated after each reviewed task. Every integrated commit on this
 branch is authored and committed as `OpenAI Codex <noreply@openai.com>` so the
@@ -63,5 +64,10 @@ remains responsible for the decisions, integration, and final verification.
   corrective commit added request-token cancellation, activating-shot focus
   restoration, deterministic delayed-open coverage, and scoped CSS parsing.
   Re-review approved with no open findings.
+- Task 3 progressive startup: complete. Review corrections hide the disabled
+  reticle for reduced-motion fine pointers and make instant reduced/returning
+  boots synchronous, terminal, and single-event. Essential menu, gallery, and
+  contact behavior now survives scene import failure; final review approved
+  with no open findings.
 - Production site code changes remain isolated to this Codex worktree and have
   not been pushed, proposed as a PR, deployed, or merged into production.
