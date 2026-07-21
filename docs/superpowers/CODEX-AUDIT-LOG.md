@@ -18,6 +18,7 @@ This file is the durable review index for work led by **OpenAI Codex** on the Pe
 | `bee58dd`, `3db5161` | Reproducible Node/Playwright QA harness, pinned local Nu validator, and immutable desktop/mobile `before` references | Independent task review approved; hardening 48/48, unit 1/1, Chromium 2/2 and WebKit 2/2 smoke; HTML/Nu baseline debt recorded for Task 2 |
 | `5b52ce5`, `d449888` | Mobile menu/contact repair, valid static semantics, modal sibling inertness, and deterministic lightbox race regressions | Independent task review approved after corrective pass; Chromium 7/7, WebKit 7/7, hardening 53/53, HTML/Nu clean |
 | `28b60bb`, `4902840`, `3ac9526` | Progressive app-first startup, optional scene boundary, mobile boot pacing, reduced cursor/probe shutdown, and terminal instant boot | Independent task review approved after two corrective passes; progressive Chromium/WebKit 4/4 each, smoke 2/2, Task 2 preservation 7/7 each, hardening 61/61 |
+| `008c3f2`, `6ffa536` | Pure tier policy, 128 MiB estimate, one-way FPS demoter, and yielded leak-free WebGL2 capability probe | Independent task review approved after corrective pass; unit 12/12, real-probe Chromium/WebKit 4/4 each, hardening 64/64, zero 404/console/page errors |
 
 This table is updated after each reviewed task. Every integrated commit on this
 branch is authored and committed as `OpenAI Codex <noreply@openai.com>` so the
@@ -69,5 +70,10 @@ remains responsible for the decisions, integration, and final verification.
   boots synchronous, terminal, and single-event. Essential menu, gallery, and
   contact behavior now survives scene import failure; final review approved
   with no open findings.
+- Task 4 measured quality policy: complete. Reduced/fine/forced/cache paths are
+  allocation-gated; real Chromium and WebKit probes produce finite measured
+  results; every retained WebGL object is deleted by identity before one
+  context loss. Cache results are normalized to the exact five-field contract.
+  Final review approved with no open findings.
 - Production site code changes remain isolated to this Codex worktree and have
   not been pushed, proposed as a PR, deployed, or merged into production.
