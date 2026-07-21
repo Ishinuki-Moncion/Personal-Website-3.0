@@ -16,6 +16,7 @@ This file is the durable review index for work led by **OpenAI Codex** on the Pe
 |---|---|---|
 | `2bb3038` | `docs/superpowers/specs/2026-07-21-v34-corrective-completion-program-design.md` plus worktree isolation rule | Owner approved; implementation seed |
 | `bee58dd`, `3db5161` | Reproducible Node/Playwright QA harness, pinned local Nu validator, and immutable desktop/mobile `before` references | Independent task review approved; hardening 48/48, unit 1/1, Chromium 2/2 and WebKit 2/2 smoke; HTML/Nu baseline debt recorded for Task 2 |
+| `5b52ce5`, `d449888` | Mobile menu/contact repair, valid static semantics, modal sibling inertness, and deterministic lightbox race regressions | Independent task review approved after corrective pass; Chromium 7/7, WebKit 7/7, hardening 53/53, HTML/Nu clean |
 
 This table is updated after each reviewed task. Every integrated commit on this
 branch is authored and committed as `OpenAI Codex <noreply@openai.com>` so the
@@ -57,4 +58,10 @@ remains responsible for the decisions, integration, and final verification.
   states. Capture interactions run on fresh pages so scene-heavy section
   rendering cannot starve state actionability.
 - Task 1 task review: spec compliant, quality approved, no open findings.
-- Production site code changes: none yet.
+- Task 2 mobile and semantic baseline: complete. The initial review found two
+  Important WebKit lightbox defects and one Minor hardening weakness; the
+  corrective commit added request-token cancellation, activating-shot focus
+  restoration, deterministic delayed-open coverage, and scoped CSS parsing.
+  Re-review approved with no open findings.
+- Production site code changes remain isolated to this Codex worktree and have
+  not been pushed, proposed as a PR, deployed, or merged into production.
