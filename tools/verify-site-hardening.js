@@ -159,6 +159,9 @@ check(
       /if \(!env\.coarse\(\)\) return null/.test(resolver) &&
       /const forced = env\.forced\(\)/.test(resolver) &&
       /const cached = env\.cacheRead\(CACHE_KEY\)/.test(resolver) &&
+      /tier: cached\.tier/.test(resolver) &&
+      /score: Number\.isFinite\(cached\.score\) \? cached\.score : null/.test(resolver) &&
+      !/\.\.\.cached/.test(resolver) &&
       /result = await runProbe\(env\)/.test(resolver) &&
       resolver.indexOf('env.forced()') < resolver.indexOf('runProbe(env)') &&
       resolver.indexOf('env.cacheRead(CACHE_KEY)') < resolver.indexOf('runProbe(env)') &&
@@ -167,7 +170,7 @@ check(
       /sessionStorage\.getItem\(key\)/.test(gpuProbe) &&
       /sessionStorage\.setItem\(key, JSON\.stringify\(value\)\)/.test(gpuProbe);
   })(),
-  'reduced and fine-pointer visits must return null before override/cache/probe work; forced and valid cache hits must resolve before lazy canvas/WebGL allocation'
+  'reduced and fine-pointer visits must return null before override/cache/probe work; valid cache hits must normalize an explicit result without spreading untrusted fields or allocating WebGL'
 );
 
 check(

@@ -56,3 +56,26 @@ test('reduced motion keeps the mobile tier probe null', async ({ browser }) => {
     await context.close();
   }
 });
+
+test('uncached coarse mobile runs the real probe and bootstraps the scene', async ({ browser }) => {
+  const { context, page } = await openMobilePage(browser);
+  try {
+    await context.addInitScript(() => sessionStorage.removeItem('v34.tierProbe'));
+    await page.goto('/?sceneDebug=1');
+    await expect.poll(() => page.evaluate(() => window.__TIER_PROBE)).toMatchObject({
+      forced: false,
+      reason: 'measured',
+      cleaned: true
+    });
+
+    const { probe, sceneOk } = await page.evaluate(() => ({
+      probe: window.__TIER_PROBE,
+      sceneOk: window.__SCENE_STATUS?.ok ?? null
+    }));
+    expect(['mobile-rich', 'lite']).toContain(probe.tier);
+    expect(Number.isFinite(probe.score)).toBe(true);
+    expect(sceneOk).toBe(true);
+  } finally {
+    await context.close();
+  }
+});

@@ -35,19 +35,39 @@ test('demoter fires once after four cumulative low-fps seconds and resets on rec
   assert.equal(d.demoted, true);
 });
 
-function makeProbeHarness({ throwOnRead = null, readMs = 4 } = {}) {
+function makeProbeHarness({ throwOnRead = null, readMs = 4, failOnCreate = null } = {}) {
   let clock = 0;
   let readCalls = 0;
   let canvasCreates = 0;
   let contextRequests = 0;
   let yieldedFrames = 0;
-  let loseContextCalls = 0;
-  let drawCalls = 0;
+  let rainDrawCalls = 0;
+  let blurDrawCalls = 0;
   const cacheWrites = [];
-  const created = { shader: 0, program: 0, buffer: 0, texture: 0, framebuffer: 0 };
-  const deleted = { shader: 0, program: 0, buffer: 0, texture: 0, framebuffer: 0 };
+  const eventLog = [];
+  const resourceTypes = ['shader', 'program', 'buffer', 'texture', 'framebuffer'];
+  const createAttempts = Object.fromEntries(resourceTypes.map(type => [type, 0]));
+  const created = Object.fromEntries(resourceTypes.map(type => [type, []]));
+  const deletions = [];
 
-  const makeResource = type => ({ type, id: ++created[type] });
+  const makeResource = type => {
+    const attempt = ++createAttempts[type];
+    if (failOnCreate?.type === type && failOnCreate.attempt === attempt) {
+      eventLog.push({ type: 'create-failed', resourceType: type, attempt });
+      return null;
+    }
+    const resource = Object.freeze({ type, id: attempt });
+    created[type].push(resource);
+    eventLog.push({ type: 'create', resourceType: type, resource });
+    return resource;
+  };
+
+  const recordDelete = (resourceType, resource) => {
+    const deletion = { type: 'delete', resourceType, resource };
+    deletions.push(deletion);
+    eventLog.push(deletion);
+  };
+
   const gl = {
     VERTEX_SHADER: 0x8B31,
     FRAGMENT_SHADER: 0x8B30,
@@ -104,21 +124,28 @@ function makeProbeHarness({ throwOnRead = null, readMs = 4 } = {}) {
     enable() {},
     disable() {},
     blendFunc() {},
-    drawArraysInstanced() { drawCalls++; },
-    drawArrays() { drawCalls++; },
+    drawArraysInstanced() {
+      rainDrawCalls++;
+      eventLog.push({ type: 'draw-rain' });
+    },
+    drawArrays() {
+      blurDrawCalls++;
+      eventLog.push({ type: 'draw-blur' });
+    },
     readPixels() {
       readCalls++;
+      eventLog.push({ type: 'readback', call: readCalls });
       clock += readMs;
       if (readCalls === throwOnRead) throw new Error('injected readPixels failure');
     },
-    deleteShader() { deleted.shader++; },
-    deleteProgram() { deleted.program++; },
-    deleteBuffer() { deleted.buffer++; },
-    deleteTexture() { deleted.texture++; },
-    deleteFramebuffer() { deleted.framebuffer++; },
+    deleteShader(resource) { recordDelete('shader', resource); },
+    deleteProgram(resource) { recordDelete('program', resource); },
+    deleteBuffer(resource) { recordDelete('buffer', resource); },
+    deleteTexture(resource) { recordDelete('texture', resource); },
+    deleteFramebuffer(resource) { recordDelete('framebuffer', resource); },
     getExtension(name) {
       if (name !== 'WEBGL_lose_context') return null;
-      return { loseContext() { loseContextCalls++; } };
+      return { loseContext() { eventLog.push({ type: 'lose-context' }); } };
     }
   };
 
@@ -131,6 +158,7 @@ function makeProbeHarness({ throwOnRead = null, readMs = 4 } = {}) {
     now: () => clock,
     async nextFrame() {
       yieldedFrames++;
+      eventLog.push({ type: 'yield', frame: yieldedFrames });
       clock += 1;
     },
     createCanvas() {
@@ -154,20 +182,41 @@ function makeProbeHarness({ throwOnRead = null, readMs = 4 } = {}) {
       canvasCreates,
       contextRequests,
       yieldedFrames,
-      loseContextCalls,
-      drawCalls,
+      rainDrawCalls,
+      blurDrawCalls,
       readCalls,
-      created: { ...created },
-      deleted: { ...deleted }
+      created: Object.fromEntries(resourceTypes.map(type => [type, [...created[type]]])),
+      deletions: [...deletions],
+      eventLog: [...eventLog]
     })
   };
 }
 
-function assertFullyCleaned(snapshot) {
-  assert.deepEqual(snapshot.deleted, snapshot.created);
-  assert.ok(Object.values(snapshot.created).every(count => count > 0));
-  assert.equal(snapshot.loseContextCalls, 1);
-  assert.ok(snapshot.yieldedFrames > 0);
+function assertFullyCleaned(snapshot, expectedCreated) {
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(snapshot.created).map(([type, resources]) => [type, resources.length])),
+    expectedCreated
+  );
+
+  const allCreated = Object.entries(snapshot.created)
+    .flatMap(([resourceType, resources]) => resources.map(resource => ({ resourceType, resource })));
+  assert.equal(snapshot.deletions.length, allCreated.length, 'every deletion must correspond to one created resource');
+  for (const { resourceType, resource } of allCreated) {
+    const matching = snapshot.deletions.filter(deletion => deletion.resource === resource);
+    assert.equal(matching.length, 1, `${resourceType} ${resource.id} must be deleted exactly once`);
+    assert.equal(matching[0].resourceType, resourceType, `${resourceType} ${resource.id} used the wrong delete method`);
+  }
+
+  const loseIndices = snapshot.eventLog
+    .map((event, index) => event.type === 'lose-context' ? index : -1)
+    .filter(index => index >= 0);
+  assert.equal(loseIndices.length, 1, 'context must be lost exactly once');
+  const loseIndex = loseIndices[0];
+  const deleteIndices = snapshot.eventLog
+    .map((event, index) => event.type === 'delete' ? index : -1)
+    .filter(index => index >= 0);
+  assert.equal(deleteIndices.length, allCreated.length);
+  assert.ok(deleteIndices.every(index => index < loseIndex), 'all deletes must happen before loseContext');
 }
 
 test('successful injected WebGL2 probe yields, measures rain and blur work, and deletes every resource', async () => {
@@ -186,8 +235,10 @@ test('successful injected WebGL2 probe yields, measures rain and blur work, and 
   assert.equal(snapshot.canvasCreates, 1);
   assert.equal(snapshot.contextRequests, 1);
   assert.equal(snapshot.readCalls, 12);
-  assert.equal(snapshot.drawCalls, 60);
-  assertFullyCleaned(snapshot);
+  assert.equal(snapshot.rainDrawCalls, 12);
+  assert.equal(snapshot.blurDrawCalls, 48);
+  assert.equal(snapshot.yieldedFrames, 11);
+  assertFullyCleaned(snapshot, { shader: 4, program: 2, buffer: 1, texture: 2, framebuffer: 2 });
   assert.equal(snapshot.cacheWrites.length, 1);
   assert.deepEqual(snapshot.cacheWrites[0].value, result);
 });
@@ -206,7 +257,32 @@ test('thrown readPixels still yields, deletes every resource, loses context once
     cleaned: true
   });
   assert.equal(snapshot.readCalls, 3);
-  assertFullyCleaned(snapshot);
+  assert.equal(snapshot.rainDrawCalls, 3);
+  assert.equal(snapshot.blurDrawCalls, 12);
+  assert.equal(snapshot.yieldedFrames, 2);
+  assertFullyCleaned(snapshot, { shader: 4, program: 2, buffer: 1, texture: 2, framebuffer: 2 });
+  assert.equal(snapshot.cacheWrites.length, 1);
+  assert.deepEqual(snapshot.cacheWrites[0].value, result);
+});
+
+test('partial target allocation failure deletes only already-created resources with their matching methods', async () => {
+  const harness = makeProbeHarness({ failOnCreate: { type: 'texture', attempt: 2 } });
+
+  const result = await resolveTier(harness.env);
+  const snapshot = harness.snapshot();
+
+  assert.deepEqual(result, {
+    tier: 'lite',
+    score: null,
+    forced: false,
+    reason: 'error',
+    cleaned: true
+  });
+  assert.equal(snapshot.readCalls, 0);
+  assert.equal(snapshot.rainDrawCalls, 0);
+  assert.equal(snapshot.blurDrawCalls, 0);
+  assert.equal(snapshot.yieldedFrames, 0);
+  assertFullyCleaned(snapshot, { shader: 4, program: 2, buffer: 1, texture: 1, framebuffer: 1 });
   assert.equal(snapshot.cacheWrites.length, 1);
   assert.deepEqual(snapshot.cacheWrites[0].value, result);
 });
@@ -251,4 +327,48 @@ test('forced and cached paths resolve without allocating WebGL resources', async
     tier: 'lite', score: 7.5, forced: false, reason: 'cache', cleaned: true
   });
   assert.equal(canvasCreates, 0);
+});
+
+test('valid cache hits normalize stale scores and discard untrusted fields', async () => {
+  const cases = [
+    {
+      cached: { tier: 'mobile-rich' },
+      expected: { tier: 'mobile-rich', score: null, forced: false, reason: 'cache', cleaned: true }
+    },
+    {
+      cached: { tier: 'lite', score: Number.POSITIVE_INFINITY },
+      expected: { tier: 'lite', score: null, forced: false, reason: 'cache', cleaned: true }
+    },
+    {
+      cached: { tier: 'lite', score: '4.2' },
+      expected: { tier: 'lite', score: null, forced: false, reason: 'cache', cleaned: true }
+    },
+    {
+      cached: { tier: 'mobile-rich', score: 3.75, admin: true, reason: 'forged', cleaned: false },
+      expected: { tier: 'mobile-rich', score: 3.75, forced: false, reason: 'cache', cleaned: true }
+    }
+  ];
+
+  for (const { cached, expected } of cases) {
+    const result = await resolveTier({
+      reduced: () => false,
+      coarse: () => true,
+      forced: () => null,
+      cacheRead: () => cached,
+      createCanvas: () => { throw new Error('valid cache hit must not create a canvas'); }
+    });
+    assert.deepEqual(result, expected);
+  }
+});
+
+test('invalid cached tiers do not bypass the measured probe', async () => {
+  const harness = makeProbeHarness();
+
+  const result = await resolveTier({
+    ...harness.env,
+    cacheRead: () => ({ tier: 'high', score: 1, injected: true })
+  });
+
+  assert.equal(result.reason, 'measured');
+  assert.equal(harness.snapshot().canvasCreates, 1);
 });

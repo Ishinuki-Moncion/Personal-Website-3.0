@@ -57,7 +57,15 @@ export async function resolveTier(env = browserEnv()) {
   const forced = env.forced();
   if (forced) return { tier: forced === 'rich' ? 'mobile-rich' : 'lite', score: null, forced: true, reason: 'forced', cleaned: true };
   const cached = env.cacheRead(CACHE_KEY);
-  if (cached?.tier === 'mobile-rich' || cached?.tier === 'lite') return { ...cached, forced: false, reason: 'cache', cleaned: true };
+  if (cached?.tier === 'mobile-rich' || cached?.tier === 'lite') {
+    return {
+      tier: cached.tier,
+      score: Number.isFinite(cached.score) ? cached.score : null,
+      forced: false,
+      reason: 'cache',
+      cleaned: true
+    };
+  }
   let result;
   try { result = await runProbe(env); }
   catch { result = { tier: 'lite', score: null, forced: false, reason: 'error', cleaned: true }; }
