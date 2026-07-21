@@ -149,7 +149,9 @@
     const langBtn = $('.lang-btn');
     if (langBtn) {
       // the label announces the TARGET language, in that language
-      langBtn.setAttribute('aria-label', lang === 'en' ? 'Switch to Japanese' : '英語に切り替える');
+      langBtn.setAttribute('aria-label', lang === 'en'
+        ? 'EN / 日本 — Switch to Japanese'
+        : '日本 / EN — 英語に切り替える');
       langBtn.setAttribute('lang', lang === 'en' ? 'en' : 'ja');
     }
     document.documentElement.lang = lang === 'ja' ? 'ja' : 'en';
@@ -286,9 +288,23 @@
     el.focus();
     if (document.activeElement !== el && tries > 0) setTimeout(() => focusWhenFocusable(el, tries - 1), 80);
   }
+  const overlayInertState = new Map();
+  function setOverlaySiblingsInert(container, open) {
+    [...document.body.children].forEach(el => {
+      if (el === container || el.tagName === 'SCRIPT' || el.tagName === 'TEMPLATE') return;
+      if (open) {
+        overlayInertState.set(el, el.inert);
+        el.inert = true;
+      } else if (overlayInertState.has(el)) {
+        el.inert = overlayInertState.get(el);
+        overlayInertState.delete(el);
+      }
+    });
+  }
   function openLb(i) {
     if (!lb) return;
     lbReturnFocus = document.activeElement;
+    setOverlaySiblingsInert(lb, true);
     const openNow = () => {
       show(i);
       lb.inert = false;                       // un-inert BEFORE moving focus in
@@ -330,6 +346,7 @@
     lb.setAttribute('aria-hidden', 'true');
     lb.inert = true;
     document.body.style.overflow = '';
+    setOverlaySiblingsInert(lb, false);
     if (lbReturnFocus && lbReturnFocus.focus) lbReturnFocus.focus();
     lbReturnFocus = null;
   }
@@ -400,14 +417,20 @@
   function setMenu(open) {
     document.body.classList.toggle('menu-open', open);
     if (burger) burger.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (mmenu) mmenu.setAttribute('aria-hidden', open ? 'false' : 'true');
+    if (mmenu) {
+      mmenu.inert = !open;
+      mmenu.setAttribute('aria-hidden', open ? 'false' : 'true');
+    }
     if (burger) burger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
     document.body.style.overflow = open ? 'hidden' : '';
     if (open) {
-      menuReturnFocus = document.activeElement;
+      menuReturnFocus = burger || document.activeElement;
+      setOverlaySiblingsInert(mmenu, true);
       focusWhenFocusable($('.mm-close'));
-    } else if (menuReturnFocus && menuReturnFocus.focus) {
-      menuReturnFocus.focus(); menuReturnFocus = null;
+    } else {
+      setOverlaySiblingsInert(mmenu, false);
+      if (menuReturnFocus && menuReturnFocus.focus) menuReturnFocus.focus();
+      menuReturnFocus = null;
     }
   }
   burger && burger.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open')));

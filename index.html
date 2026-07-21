@@ -73,7 +73,7 @@
 <div class="scroll-progress" aria-hidden="true"></div>
 
 <!-- ============ NAV ============ -->
-<nav class="nav">
+<nav class="nav" aria-label="Primary navigation">
   <a class="brand" href="#home" data-cursor="home">
     <span class="dia" aria-hidden="true">◆</span>
     <span class="name" translate="no">ISHINUKI_DAIKIE</span>
@@ -95,13 +95,13 @@
 </nav>
 
 <!-- ============ MOBILE MENU ============ -->
-<div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+<div class="mobile-menu" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Site navigation" aria-hidden="true" inert>
   <div class="mm-grid"></div>
   <div class="mm-head">
     <span class="mm-tag" translate="no">daikieOS // NAV_INDEX</span>
     <button class="mm-close" aria-label="Close menu" data-cursor="close">CLOSE ✕</button>
   </div>
-  <nav class="mm-links">
+  <nav class="mm-links" aria-label="Mobile navigation">
     <a href="#home" data-mm><span class="mm-idx">00</span><span class="mm-label">Home</span><span class="mm-ja" lang="ja">ホーム</span></a>
     <a href="#about" data-mm><span class="mm-idx">01</span><span class="mm-label">About</span><span class="mm-ja" lang="ja">概要</span></a>
     <a href="#work" data-mm><span class="mm-idx">02</span><span class="mm-label">Work</span><span class="mm-ja" lang="ja">経歴</span></a>
@@ -188,7 +188,7 @@
           <div class="work-grid">
             <div>
               <div class="row-meta"><span class="row-date">Mar 2025 — Present</span><span class="live-tag"><span class="dot"></span>LIVE</span></div>
-              <div class="row-title">Technical Producer</div>
+              <h3 class="row-title">Technical Producer</h3>
               <div class="row-sub">SeenThis Japan — Tokyo, Japan</div>
             </div>
             <div>
@@ -201,7 +201,7 @@
           <div class="work-grid">
             <div>
               <div class="row-meta"><span class="row-date">Dec 2022 — Jan 2024</span></div>
-              <div class="row-title">Web Development</div>
+              <h3 class="row-title">Web Development</h3>
               <div class="row-sub">Otherworldly Adventures — Remote · Contract</div>
             </div>
             <div>
@@ -214,7 +214,7 @@
           <div class="work-grid">
             <div>
               <div class="row-meta"><span class="row-date">Jun 2022 — Apr 2023</span></div>
-              <div class="row-title">Instructor / TA</div>
+              <h3 class="row-title">Instructor / TA</h3>
               <div class="row-sub">All Star Code — New York, NY</div>
             </div>
             <div>
@@ -239,18 +239,18 @@
     </div>
     <div class="shell">
       <div class="gallery-grid" data-stagger>
-        <button class="shot feature" data-reveal="scale" data-src="images/gallery-07.jpg" data-title="NAGANO // 長野" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-07.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_01</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-03.jpg" data-title="KAMAKURA // 鎌倉" data-meta="ƒ/16 · 1/50s · ISO 100 · 50mm" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-03.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_02</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-08.jpg" data-title="FUJI // 富士" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-08.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_03</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-16.jpg" data-title="SENDAI // 仙台" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-16.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_04</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-04.jpg" data-title="OSAKA // 大阪" data-meta="ƒ/10 · 1/50s · ISO 1600 · 50mm" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-04.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_05</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-13.jpg" data-title="FUKUOKA // 福岡" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-13.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_06</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-01.jpg" data-title="HOKKAIDO // 北海道" data-meta="ƒ/10 · 1/160s · ISO 100 · 35mm" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-01.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_07</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-02.jpg" data-title="SHIBUYA // 渋谷" data-meta="ƒ/1.8 · 1s · ISO 100 · 50mm" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-02.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_08</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-05.jpg" data-title="KYOTO // 京都" data-meta="ƒ/1.8 · 1/100s · ISO 320 · 35mm" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-05.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_09</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-09.jpg" data-title="DALLAS // ダラス" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-09.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_10</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-10.jpg" data-title="ASAKUSA // 浅草" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-10.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_11</span><span class="plus" aria-hidden="true">＋</span></button>
-        <button class="shot" data-reveal="scale" data-src="images/gallery-11.jpg" data-title="OKINAWA // 沖縄" data-meta="EXIF//REDACTED" data-cursor="expand"><div class="media" style="background-image:url('images/thumbs/gallery-11.jpg')"></div><div class="sweep"></div><span class="id" aria-hidden="true">IMG_12</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot feature" data-reveal="scale" data-src="images/gallery-07.jpg" data-title="NAGANO // 長野" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 1 — NAGANO // 長野 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-07.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_01</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-03.jpg" data-title="KAMAKURA // 鎌倉" data-meta="ƒ/16 · 1/50s · ISO 100 · 50mm" data-cursor="expand" aria-label="View photograph 2 — KAMAKURA // 鎌倉 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-03.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_02</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-08.jpg" data-title="FUJI // 富士" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 3 — FUJI // 富士 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-08.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_03</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-16.jpg" data-title="SENDAI // 仙台" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 4 — SENDAI // 仙台 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-16.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_04</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-04.jpg" data-title="OSAKA // 大阪" data-meta="ƒ/10 · 1/50s · ISO 1600 · 50mm" data-cursor="expand" aria-label="View photograph 5 — OSAKA // 大阪 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-04.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_05</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-13.jpg" data-title="FUKUOKA // 福岡" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 6 — FUKUOKA // 福岡 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-13.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_06</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-01.jpg" data-title="HOKKAIDO // 北海道" data-meta="ƒ/10 · 1/160s · ISO 100 · 35mm" data-cursor="expand" aria-label="View photograph 7 — HOKKAIDO // 北海道 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-01.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_07</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-02.jpg" data-title="SHIBUYA // 渋谷" data-meta="ƒ/1.8 · 1s · ISO 100 · 50mm" data-cursor="expand" aria-label="View photograph 8 — SHIBUYA // 渋谷 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-02.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_08</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-05.jpg" data-title="KYOTO // 京都" data-meta="ƒ/1.8 · 1/100s · ISO 320 · 35mm" data-cursor="expand" aria-label="View photograph 9 — KYOTO // 京都 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-05.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_09</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-09.jpg" data-title="DALLAS // ダラス" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 10 — DALLAS // ダラス full screen"><span class="media" style="background-image:url('images/thumbs/gallery-09.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_10</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-10.jpg" data-title="ASAKUSA // 浅草" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 11 — ASAKUSA // 浅草 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-10.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_11</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-11.jpg" data-title="OKINAWA // 沖縄" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 12 — OKINAWA // 沖縄 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-11.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_12</span><span class="plus" aria-hidden="true">＋</span></button>
       </div>
     </div>
   </section>
@@ -265,7 +265,7 @@
           <div class="proj-grid">
             <span class="proj-idx">01</span>
             <div>
-              <div class="row-title">Degree Planning Audit Tool</div>
+              <h3 class="row-title">Degree Planning Audit Tool</h3>
               <p class="row-sub">Automated redundant degree-audit reporting, cutting manual calculation time — parsing source PDFs into clean generated documents.</p>
             </div>
             <div class="proj-end"><span class="proj-tech">JavaScript · Node.js · Express</span><span class="proj-year">2022 <span class="row-arrow" aria-hidden="true">↗</span></span></div>
@@ -275,7 +275,7 @@
           <div class="proj-grid">
             <span class="proj-idx">02</span>
             <div>
-              <div class="row-title">TimeFlies</div>
+              <h3 class="row-title">TimeFlies</h3>
               <p class="row-sub">Real-time data transfer from a PostgreSQL backend to the front-end, using MikroORM for the data layer at HackUTD VIII.</p>
             </div>
             <div class="proj-end"><span class="proj-tech">TypeScript · PostgreSQL · MikroORM</span><span class="proj-year">2021 <span class="row-arrow" aria-hidden="true">↗</span></span></div>
@@ -285,7 +285,7 @@
           <div class="proj-grid">
             <span class="proj-idx">03</span>
             <div>
-              <div class="row-title">Debug</div>
+              <h3 class="row-title">Debug</h3>
               <p class="row-sub">A full-stack app for real-time collaborative code sharing — syntax highlighting and live sync backed by Firebase.</p>
             </div>
             <div class="proj-end"><span class="proj-tech">React · Node.js · Firebase</span><span class="proj-year">2020 <span class="row-arrow" aria-hidden="true">↗</span></span></div>
@@ -329,7 +329,7 @@
     <span class="lb-corner" style="top:0;right:0;border-left:0;border-bottom:0"></span>
     <span class="lb-corner" style="bottom:0;left:0;border-right:0;border-top:0"></span>
     <span class="lb-corner" style="bottom:0;right:0;border-left:0;border-top:0"></span>
-    <img class="lb-img" alt="Gallery photograph" />
+    <img class="lb-img" src="images/tiles/gallery-07.jpg" width="640" height="426" alt="NAGANO // 長野 — gallery photograph 1 of 12" />
   </div>
   <div class="lb-nav">
     <button class="lb-prev" data-cursor="prev">← PREV</button>
@@ -344,18 +344,18 @@
   <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round"><g class="gear"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></g></svg>
 </button>
 <div class="deck" id="deck" role="group" aria-label="Control deck" aria-hidden="true" inert>
-  <h4>Control Deck</h4>
+  <h2>Control Deck</h2>
   <div class="grp">
-    <label>Hero entrance</label>
-    <div class="seg" data-seg="hero">
+    <div class="grp-label" id="deck-hero-label">Hero entrance</div>
+    <div class="seg" data-seg="hero" role="group" aria-labelledby="deck-hero-label">
       <button data-val="decrypt" data-cursor="set">Decrypt</button>
       <button data-val="stagger" data-cursor="set">Rise</button>
       <button data-val="chromatic" data-cursor="set">Glitch</button>
     </div>
   </div>
   <div class="grp">
-    <label>Language</label>
-    <div class="seg" data-seg="lang">
+    <div class="grp-label" id="deck-lang-label">Language</div>
+    <div class="seg" data-seg="lang" role="group" aria-labelledby="deck-lang-label">
       <button data-val="en" data-cursor="set">EN</button>
       <button data-val="ja" data-cursor="set" lang="ja">日本語</button>
     </div>
@@ -365,7 +365,7 @@
   </div>
 </div>
 
-<template id="__bundler_thumbnail">
+<template id="bundler-thumbnail">
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#05060a"/><text x="50" y="60" font-family="monospace" font-size="38" fill="#39f0ff" text-anchor="middle">◆</text></svg>
 </template>
 

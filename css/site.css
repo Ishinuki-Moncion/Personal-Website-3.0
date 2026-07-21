@@ -333,6 +333,7 @@ body.menu-open .nav-burger span:nth-child(3) { transform: translateY(-6.5px) rot
 .mobile-menu { position: fixed; inset: 0; z-index: var(--z-menu); background: rgba(3,4,7,0.97);
   backdrop-filter: blur(10px); display: flex; flex-direction: column;
   padding: clamp(20px, 6vw, 40px); opacity: 0; visibility: hidden; pointer-events: none;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
   transform: translateY(-10px);
   transition: opacity .42s var(--ease-out), transform .55s var(--ease-out), visibility 0s linear .45s; }
 body.menu-open .mobile-menu { opacity: 1; visibility: visible; pointer-events: auto; transform: none;
@@ -377,6 +378,14 @@ body.menu-open .mm-links a:nth-child(6) { transition-delay: .42s; }
 @media (prefers-reduced-motion: reduce) {
   .mobile-menu { transition: opacity .2s, visibility 0s; transform: none; }
   .mm-links a { transition: none; }
+}
+
+@media (max-height: 520px) and (max-width: 820px) {
+  .mobile-menu { display: block; }
+  .mm-head { position: sticky; top: 0; padding-bottom: 12px; background: rgba(3,4,7,0.97); }
+  .mm-links { display: block; margin-block: 20px; }
+  .mm-links a { padding: 10px 0; }
+  .mm-label { font-size: clamp(30px, 9vh, 42px); }
 }
 
 /* scroll progress + section HUD (right rail) */
@@ -745,14 +754,22 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
 /* v3.2f — contact return path: one instrument row in the ledger grammar. The
    address is JS-assembled (never in source); the copy tick is the amber event. */
 .signal-row { display: inline-flex; align-items: baseline; gap: 14px; margin-top: clamp(30px, 4vw, 48px);
+  max-width: 100%; flex-wrap: wrap;
   font-family: var(--font-mono); border: 1px solid var(--line); padding: 13px 20px; cursor: none;
   transition: border-color .3s var(--ease-out), box-shadow .3s var(--ease-out); }
 .signal-row:hover, .signal-row:focus-visible { border-color: var(--cyan); box-shadow: 0 0 18px rgba(57,240,255,0.25); }
 .signal-row .signal-k { font-size: 10px; letter-spacing: var(--track-10); color: var(--muted); text-transform: uppercase; }
-.signal-row .signal-addr { font-size: clamp(13px, 1.5vw, 16px); letter-spacing: var(--track-13); color: var(--cyan); }
+.signal-row .signal-addr { min-width: 0; overflow-wrap: anywhere;
+  font-size: clamp(13px, 1.5vw, 16px); letter-spacing: var(--track-13); color: var(--cyan); }
 .signal-row .signal-tick { font-size: 10px; letter-spacing: var(--track-10); color: var(--amber);
   opacity: 0; transition: opacity .25s; }
 .signal-row.copied .signal-tick { opacity: 1; text-shadow: 0 0 10px rgba(255,158,44,0.6); }
+
+@media (max-width: 400px) {
+  .signal-row { display: grid; width: 100%; grid-template-columns: auto minmax(0, 1fr); gap: 8px 12px; }
+  .signal-row .signal-tick { grid-column: 2; }
+  .signal-row .signal-addr { font-size: 12px; letter-spacing: 0.05em; }
+}
 
 /* L5 — JP-as-content: in Japanese mode the headline moments own the frame in the
    Zen Kaku Gothic display face, with JP metrics (positive tracking, looser leading)
@@ -801,9 +818,9 @@ html[lang="ja"] .hero-kicker span { letter-spacing: 0.14em; }
   transition: opacity .3s var(--ease-out), transform .3s var(--ease-out), visibility 0s linear .3s; }
 .deck.open { transform: none; opacity: 1; pointer-events: auto; visibility: visible;
   transition: opacity .3s var(--ease-out), transform .3s var(--ease-out), visibility 0s; }
-.deck h4 { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+.deck h2 { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
   color: var(--cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-.deck h4::before { content: '◆'; color: var(--muted); font-size: 8px; }
+.deck h2::before { content: '◆'; color: var(--muted); font-size: 8px; }
 /* P8 — worn-hardware read: demote the flat full border to a faint bezel + add crisp
    L-corner brackets (two opposite corners) and a header model-rail, so the deck reads
    as an instrument, not a card. The lightbox stage already wears its combiner frame
@@ -815,10 +832,10 @@ html[lang="ja"] .hero-kicker span { letter-spacing: 0.14em; }
 }
 .deck::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
 .deck::after { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
-.deck h4::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent); }
+.deck h2::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent); }
 .deck .grp { margin-bottom: 16px; }
 .deck .grp:last-child { margin-bottom: 0; }
-.deck .grp > label { font-family: var(--font-mono); font-size: 9px; letter-spacing: var(--track-9);
+.deck .grp > .grp-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: var(--track-9);
   text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 8px; }
 .seg { display: flex; gap: 5px; }
 .seg button { flex: 1; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em;

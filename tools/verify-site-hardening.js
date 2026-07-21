@@ -49,6 +49,53 @@ check(
 );
 
 check(
+  'mobile navigation is a named inert modal until opened',
+  /<nav class="nav"[^>]*aria-label="Primary navigation"/.test(index) &&
+    /<div class="mobile-menu"[^>]*id="mobileMenu"[^>]*role="dialog"[^>]*aria-modal="true"[^>]*aria-label="Site navigation"[^>]*\binert\b/.test(index) &&
+    /<nav class="mm-links"[^>]*aria-label="Mobile navigation"/.test(index) &&
+    /mmenu\.inert\s*=\s*!open/.test(app) &&
+    /setOverlaySiblingsInert\(mmenu, true\)/.test(app) &&
+    /setOverlaySiblingsInert\(mmenu, false\)/.test(app),
+  'the primary and mobile nav landmarks need unique names; the mobile menu starts inert and inerts its siblings while open'
+);
+
+check(
+  'gallery controls have static accessible names',
+  (index.match(/<button class="shot[^>]*aria-label="View photograph [^"]+ full screen"/g) || []).length === 12 &&
+    /aria-label="View photograph 1 — NAGANO \/\/ 長野 full screen"/.test(index),
+  'all 12 gallery buttons need their final accessible names in static HTML before app.js runs'
+);
+
+check(
+  'work and project row titles are section headings',
+  (() => {
+    const work = (index.match(/<section class="work"[\s\S]*?<\/section>/) || [''])[0];
+    const projects = (index.match(/<section class="projects"[\s\S]*?<\/section>/) || [''])[0];
+    return (work.match(/<h3 class="row-title">/g) || []).length === 3 &&
+      (projects.match(/<h3 class="row-title">/g) || []).length === 3;
+  })(),
+  'the three Work rows and three Project rows each need h3 titles beneath their section h2'
+);
+
+check(
+  'mobile menu is scrollable on short screens',
+  /\.mobile-menu\s*\{[^}]*overflow-y:\s*auto/.test(css) &&
+    /-webkit-overflow-scrolling:\s*touch/.test(css) &&
+    /@media\s*\(max-height:\s*520px\)\s*and\s*\(max-width:\s*820px\)/.test(css) &&
+    /\.mm-head\s*\{[^}]*position:\s*sticky/.test(css),
+  'the menu needs momentum scrolling plus a short-height layout with a sticky close header'
+);
+
+check(
+  'contact signal row fits 400px and narrower viewports',
+  /\.signal-row\s*\{[^}]*max-width:\s*100%[^}]*flex-wrap:\s*wrap/.test(css) &&
+    /\.signal-row \.signal-addr\s*\{[^}]*min-width:\s*0[^}]*overflow-wrap:\s*anywhere/.test(css) &&
+    /@media\s*\(max-width:\s*400px\)\s*\{[\s\S]*?\.signal-row\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\)/.test(css) &&
+    /\.signal-row \.signal-tick\s*\{[^}]*grid-column:\s*2/.test(css),
+  'the signal row needs a wrapping baseline and a two-column max-width-400 grid with the copied tick in column 2'
+);
+
+check(
   'scene has section story definitions',
   /const sectionStories =/.test(background) &&
     /about:\s*\{[\s\S]*sequence:\s*\[\s*'dallas'\s*,\s*'tokyo'\s*\]/.test(background),

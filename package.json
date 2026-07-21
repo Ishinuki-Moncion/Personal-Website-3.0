@@ -9,7 +9,7 @@
     "test:hardening": "node tools/verify-site-hardening.js",
     "test:html": "html-validate index.html 404.html",
     "test:w3c": "node tools/validate-w3c.mjs",
-    "qa:static": "npm run test:unit && npm run test:hardening",
+    "qa:static": "npm run test:unit && npm run test:hardening && npm run test:html && npm run test:w3c",
     "qa:browser": "npm run test:browser",
     "qa:all": "npm run qa:static && npm run qa:browser"
   },
