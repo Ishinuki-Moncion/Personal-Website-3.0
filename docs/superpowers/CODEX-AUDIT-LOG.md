@@ -15,7 +15,7 @@ This file is the durable review index for work led by **OpenAI Codex** on the Pe
 | Commit | Artifact | Status |
 |---|---|---|
 | `2bb3038` | `docs/superpowers/specs/2026-07-21-v34-corrective-completion-program-design.md` plus worktree isolation rule | Owner approved; implementation seed |
-| Task 1 commit | Reproducible Node/Playwright QA harness, pinned local Nu validator, and immutable desktop/mobile `before` references | Implemented; hardening 48/48, unit 1/1, Chromium 2/2 and WebKit 2/2 smoke; HTML/Nu baseline debt recorded for Task 2 |
+| `bee58dd`, `3db5161` | Reproducible Node/Playwright QA harness, pinned local Nu validator, and immutable desktop/mobile `before` references | Independent task review approved; hardening 48/48, unit 1/1, Chromium 2/2 and WebKit 2/2 smoke; HTML/Nu baseline debt recorded for Task 2 |
 
 This table is updated after each reviewed task. Every integrated commit on this
 branch is authored and committed as `OpenAI Codex <noreply@openai.com>` so the
@@ -56,4 +56,5 @@ remains responsible for the decisions, integration, and final verification.
   scene-hidden layout captures, control-deck, lightbox, and 390×844 mobile-menu
   states. Capture interactions run on fresh pages so scene-heavy section
   rendering cannot starve state actionability.
+- Task 1 task review: spec compliant, quality approved, no open findings.
 - Production site code changes: none yet.

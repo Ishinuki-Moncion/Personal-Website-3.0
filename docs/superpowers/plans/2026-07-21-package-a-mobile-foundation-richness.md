@@ -406,10 +406,16 @@ Expected: failures for landscape Contact visibility/scrolling, missing dialog se
 Make these exact structural changes:
 
 - `#mobileMenu`: add `role="dialog" aria-modal="true" aria-label="Site navigation" inert`.
+- Add `aria-label="Primary navigation"` to `.nav` and
+  `aria-label="Mobile navigation"` to `.mm-links` so the two navigation
+  landmarks have unique names.
 - Replace each gallery tile’s two child `div` elements with `span` elements and add its final accessible label directly in markup using the existing location/title.
 - Replace each `.row-title` in Work and Projects with `<h3 class="row-title">`.
 - Initialize `.lb-img` with `src="images/tiles/gallery-07.jpg" width="640" height="426" alt="NAGANO // 長野 — gallery photograph 1 of 12"`; those are the committed file's measured intrinsic dimensions.
 - Change Control Deck heading to `<h2>` and replace unattached `<label>` nodes with `.grp-label` elements referenced by `role="group" aria-labelledby="..."` on each `.seg`.
+- Rename the unused template ID `__bundler_thumbnail` to
+  `bundler-thumbnail`; the former is valid HTML but violates the committed
+  structural linter's CSS-safe ID contract, and no runtime code references it.
 
 - [ ] **Step 4: Implement modal sibling inertness in `app.js`**
 
