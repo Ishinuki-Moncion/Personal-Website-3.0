@@ -15,3 +15,6 @@ docs/superpowers/gates/v33/
 
 # Codex CLI local environment config (owner tool state, not site content)
 .codex/
+
+# Isolated implementation worktrees created for audited agent branches
+.worktrees/
