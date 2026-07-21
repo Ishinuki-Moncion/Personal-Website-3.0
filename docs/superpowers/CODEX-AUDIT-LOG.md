@@ -20,6 +20,7 @@ This file is the durable review index for work led by **OpenAI Codex** on the Pe
 | `28b60bb`, `4902840`, `3ac9526` | Progressive app-first startup, optional scene boundary, mobile boot pacing, reduced cursor/probe shutdown, and terminal instant boot | Independent task review approved after two corrective passes; progressive Chromium/WebKit 4/4 each, smoke 2/2, Task 2 preservation 7/7 each, hardening 61/61 |
 | `008c3f2`, `6ffa536` | Pure tier policy, 128 MiB estimate, one-way FPS demoter, and yielded leak-free WebGL2 capability probe | Independent task review approved after corrective pass; unit 12/12, real-probe Chromium/WebKit 4/4 each, hardening 64/64, zero 404/console/page errors |
 | `3ce13c3` | Explicit reduced/lite/mobile-rich/high profiles, capability-owned richness gates, three-way rain payload, and expanded scene debug | Independent task review approved; Chromium/WebKit 5/5 each, six-profile runtime sweep error-free, desktop high values preserved; one non-blocking hardening allowlist gap deferred to Task 6 |
+| `08add25` | Memory-bounded mobile postprocessing, profile-owned samples, half-scale mobile bloom, fail-closed allocation gate, and immutable-reference comparator | Independent task review approved with no findings; unit 13/13, hardening 67/67, Chromium/WebKit 5/5 each, six layout ratios at 0.014%–0.058%, desktop high preserved; Task 5 hardening gap closed |
 
 This table is updated after each reviewed task. Every integrated commit on this
 branch is authored and committed as `OpenAI Codex <noreply@openai.com>` so the
@@ -80,5 +81,13 @@ remains responsible for the decisions, integration, and final verification.
   capabilities while remaining in mobile layout/input mode; desktop high keeps
   its locked values and behavior. Review approved with one Minor verifier
   allowlist blind spot, scheduled inside Task 6's existing hardening scope.
+- Task 6 bounded postprocessing: complete. Mobile-rich uses half-resolution
+  bloom with 0 bloom samples and a full-resolution final composer with 2
+  samples; estimated attachment use must stay within 128 MiB before composer
+  allocation or the scene fails closed to direct rendering. Desktop high stays
+  full-resolution at 4/4 samples. Independent review instrumented both composer
+  sizes and the zero-allocation breach path, reran Chromium/WebKit, verified all
+  six layout ratios below 0.005, visually approved all six full-scene pairs,
+  and returned no findings. The deferred Task 5 hardening gap is closed.
 - Production site code changes remain isolated to this Codex worktree and have
   not been pushed, proposed as a PR, deployed, or merged into production.
