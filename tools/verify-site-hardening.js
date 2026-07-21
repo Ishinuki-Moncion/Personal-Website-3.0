@@ -138,9 +138,9 @@ check(
 );
 
 check(
-  'instant boot synchronously publishes completion after removing boot state',
-  /function instant\(\) \{[\s\S]*body\.removeAttribute\('data-booting'\);[\s\S]*boot\.remove\(\);[\s\S]*document\.dispatchEvent\(new Event\('boot:done'\)\);[\s\S]*\}/.test(boot),
-  'boot.js instant() must remove data-booting and the boot UI before synchronously dispatching boot:done'
+  'instant boot becomes terminal before synchronously publishing completion',
+  /function instant\(\) \{\s*if \(done\) return;\s*done = true;\s*clear\(\);\s*body\.removeAttribute\('data-booting'\);\s*boot\.remove\(\);\s*document\.dispatchEvent\(new Event\('boot:done'\)\);\s*\}/.test(boot),
+  'boot.js instant() must guard and set done, clear timers, remove boot state and UI, then synchronously dispatch boot:done'
 );
 
 check(

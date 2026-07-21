@@ -93,6 +93,9 @@
   }
 
   function instant() {
+    if (done) return;
+    done = true;
+    clear();
     body.removeAttribute('data-booting');
     boot.remove();
     document.dispatchEvent(new Event('boot:done'));

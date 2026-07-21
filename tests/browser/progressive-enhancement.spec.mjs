@@ -99,4 +99,14 @@ test('returning visit completes language and reveal initialization with instant 
     heroStarted: '1',
     revealDelay: '0.05s'
   });
+
+  await page.evaluate(() => {
+    window.__CODEX_SCENE_WARP_COUNT = 0;
+    window.__sceneWarp = () => { window.__CODEX_SCENE_WARP_COUNT++; };
+  });
+  await page.keyboard.press('Escape');
+  expect(await page.evaluate(() => ({
+    bootDoneCount: window.__CODEX_BOOT_DONE_COUNT,
+    sceneWarpCount: window.__CODEX_SCENE_WARP_COUNT
+  }))).toEqual({ bootDoneCount: 1, sceneWarpCount: 0 });
 });
