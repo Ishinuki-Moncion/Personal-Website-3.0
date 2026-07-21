@@ -12,6 +12,54 @@ const effects = read('js/effects.js');
 
 const checks = [];
 
+function cssBlockBody(source, headerPattern) {
+  headerPattern.lastIndex = 0;
+  const match = headerPattern.exec(source);
+  if (!match) return '';
+  const open = source.indexOf('{', match.index + match[0].length);
+  if (open < 0) return '';
+
+  let depth = 1;
+  let quote = '';
+  let comment = false;
+  for (let i = open + 1; i < source.length; i++) {
+    const char = source[i];
+    const next = source[i + 1];
+    if (comment) {
+      if (char === '*' && next === '/') { comment = false; i++; }
+      continue;
+    }
+    if (quote) {
+      if (char === '\\') i++;
+      else if (char === quote) quote = '';
+      continue;
+    }
+    if (char === '/' && next === '*') { comment = true; i++; continue; }
+    if (char === '"' || char === "'") { quote = char; continue; }
+    if (char === '{') depth++;
+    else if (char === '}' && --depth === 0) return source.slice(open + 1, i);
+  }
+  return '';
+}
+
+function cssRuleBody(source, selector) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return cssBlockBody(source, new RegExp('(?:^|\\n)\\s*' + escaped + '\\s*(?=\\{)'));
+}
+
+function cssBlockBodies(source, headerPattern) {
+  const flags = headerPattern.flags.replace(/[gy]/g, '') + 'g';
+  const matcher = new RegExp(headerPattern.source, flags);
+  const blocks = [];
+  let match;
+  while ((match = matcher.exec(source))) {
+    const tail = source.slice(match.index);
+    const body = cssBlockBody(tail, new RegExp('^' + headerPattern.source, flags.replace('g', '')));
+    if (body) blocks.push(body);
+  }
+  return blocks;
+}
+
 function check(name, pass, detail) {
   checks.push({ name, pass, detail });
 }
@@ -79,19 +127,35 @@ check(
 
 check(
   'mobile menu is scrollable on short screens',
-  /\.mobile-menu\s*\{[^}]*overflow-y:\s*auto/.test(css) &&
-    /-webkit-overflow-scrolling:\s*touch/.test(css) &&
-    /@media\s*\(max-height:\s*520px\)\s*and\s*\(max-width:\s*820px\)/.test(css) &&
-    /\.mm-head\s*\{[^}]*position:\s*sticky/.test(css),
+  (() => {
+    const menu = cssRuleBody(css, '.mobile-menu');
+    const shortHeight = cssBlockBody(css,
+      /@media\s*\(max-height:\s*520px\)\s*and\s*\(max-width:\s*820px\)\s*(?=\{)/);
+    const shortMenu = cssRuleBody(shortHeight, '.mobile-menu');
+    const shortHead = cssRuleBody(shortHeight, '.mm-head');
+    return /overflow-y:\s*auto/.test(menu) &&
+      /-webkit-overflow-scrolling:\s*touch/.test(menu) &&
+      /display:\s*block/.test(shortMenu) &&
+      /position:\s*sticky/.test(shortHead);
+  })(),
   'the menu needs momentum scrolling plus a short-height layout with a sticky close header'
 );
 
 check(
   'contact signal row fits 400px and narrower viewports',
-  /\.signal-row\s*\{[^}]*max-width:\s*100%[^}]*flex-wrap:\s*wrap/.test(css) &&
-    /\.signal-row \.signal-addr\s*\{[^}]*min-width:\s*0[^}]*overflow-wrap:\s*anywhere/.test(css) &&
-    /@media\s*\(max-width:\s*400px\)\s*\{[\s\S]*?\.signal-row\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\)/.test(css) &&
-    /\.signal-row \.signal-tick\s*\{[^}]*grid-column:\s*2/.test(css),
+  (() => {
+    const signal = cssRuleBody(css, '.signal-row');
+    const address = cssRuleBody(css, '.signal-row .signal-addr');
+    const narrow = cssBlockBodies(css, /@media\s*\(max-width:\s*400px\)\s*(?=\{)/)
+      .find(body => cssRuleBody(body, '.signal-row') && cssRuleBody(body, '.signal-row .signal-tick')) || '';
+    const narrowSignal = cssRuleBody(narrow, '.signal-row');
+    const narrowTick = cssRuleBody(narrow, '.signal-row .signal-tick');
+    return /max-width:\s*100%/.test(signal) && /flex-wrap:\s*wrap/.test(signal) &&
+      /min-width:\s*0/.test(address) && /overflow-wrap:\s*anywhere/.test(address) &&
+      /display:\s*grid/.test(narrowSignal) &&
+      /grid-template-columns:\s*auto minmax\(0, 1fr\)/.test(narrowSignal) &&
+      /grid-column:\s*2/.test(narrowTick);
+  })(),
   'the signal row needs a wrapping baseline and a two-column max-width-400 grid with the copied tick in column 2'
 );
 

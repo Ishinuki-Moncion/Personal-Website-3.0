@@ -280,6 +280,8 @@
      open, restore it on close — without this a keyboard user is left tabbing
      the page underneath an open modal. */
   let lbReturnFocus = null;
+  let lbOpenPending = false;
+  let lbOpenRequest = 0;
   /* v32h — overlays are visibility-gated while closed, and Blink applies the closed
      state's transition delay on the opening edge, so the focus target can stay
      computed-hidden (unfocusable) for up to ~.45s after open. Retry until it lands. */
@@ -301,17 +303,22 @@
       }
     });
   }
-  function openLb(i) {
+  function openLb(i, returnTarget) {
     if (!lb) return;
-    lbReturnFocus = document.activeElement;
+    const request = ++lbOpenRequest;
+    lbOpenPending = true;
+    lbReturnFocus = returnTarget || document.activeElement;
     setOverlaySiblingsInert(lb, true);
     const openNow = () => {
+      if (!lbOpenPending || request !== lbOpenRequest) return false;
+      lbOpenPending = false;
       show(i);
       lb.inert = false;                       // un-inert BEFORE moving focus in
       lb.classList.add('open');
       lb.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
       focusWhenFocusable($('.lb-close'));
+      return true;
     };
     /* v3.2o — progressive enhancement: shared-element morph tile→stage where
        View Transitions exist; everywhere else (and under reduced motion) the
@@ -326,8 +333,13 @@
       const pre = new Image();
       pre.src = sources[(i + sources.length) % sources.length];
       Promise.race([pre.decode().catch(() => {}), new Promise(r => setTimeout(r, 250))]).then(() => {
+        if (!lbOpenPending || request !== lbOpenRequest) return;
         media.style.viewTransitionName = 'lb-photo';
         const vt = document.startViewTransition(() => {
+          if (!lbOpenPending || request !== lbOpenRequest) {
+            media.style.viewTransitionName = '';
+            return;
+          }
           media.style.viewTransitionName = '';
           lbImg.style.viewTransitionName = 'lb-photo';
           openNow();
@@ -342,6 +354,8 @@
   }
   function closeLb() {
     if (!lb) return;
+    lbOpenPending = false;
+    lbOpenRequest++;
     lb.classList.remove('open');
     lb.setAttribute('aria-hidden', 'true');
     lb.inert = true;
@@ -379,7 +393,7 @@
   const RAIL_GATE = false;
   if (RAIL_GATE) document.body.classList.add('proj-rail');
 
-  shots.forEach((s, i) => s.addEventListener('click', () => openLb(i)));
+  shots.forEach((s, i) => s.addEventListener('click', () => openLb(i, s)));
   $('.lb-close') && $('.lb-close').addEventListener('click', closeLb);
   $('.lb-prev') && $('.lb-prev').addEventListener('click', () => show(lbIndex - 1));
   $('.lb-next') && $('.lb-next').addEventListener('click', () => show(lbIndex + 1));
@@ -394,7 +408,7 @@
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
   addEventListener('keydown', e => {
-    if (!lb || !lb.classList.contains('open')) return;
+    if (!lb || (!lb.classList.contains('open') && !lbOpenPending)) return;
     if (e.key === 'Escape') closeLb();
     else if (e.key === 'ArrowLeft') show(lbIndex - 1);
     else if (e.key === 'ArrowRight') show(lbIndex + 1);

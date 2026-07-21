@@ -30,15 +30,56 @@ for (const viewport of sizes) {
   });
 }
 
-test('lightbox inerts the document and restores it on close', async ({ page }) => {
+test('lightbox inerts the document and restores focus to its activating shot', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto('/');
   await page.evaluate(() => sessionStorage.setItem('daikie-booted', '1'));
   await page.reload();
-  await page.locator('.gallery-grid .shot').first().click();
+  const shot = page.locator('.gallery-grid .shot').first();
+  await shot.click();
+  await expect(page.locator('.lightbox')).toHaveClass(/\bopen\b/);
   expect(await page.locator('main').evaluate(el => el.inert)).toBe(true);
   await page.keyboard.press('Escape');
   expect(await page.locator('main').evaluate(el => el.inert)).toBe(false);
+  await expect(shot).toBeFocused();
+});
+
+test('Escape cancels a delayed lightbox open before the View Transition starts', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.addInitScript(() => {
+    Object.defineProperty(Image.prototype, 'decode', {
+      configurable: true,
+      value() {
+        return new Promise(resolve => { window.__resolveLightboxDecode = resolve; });
+      }
+    });
+    if (typeof document.startViewTransition !== 'function') {
+      document.startViewTransition = update => {
+        update();
+        return { finished: Promise.resolve() };
+      };
+    }
+  });
+  await page.goto('/');
+  await page.evaluate(() => sessionStorage.setItem('daikie-booted', '1'));
+  await page.reload();
+
+  const shot = page.locator('.gallery-grid .shot').first();
+  const lightbox = page.locator('.lightbox');
+  await shot.click();
+  await expect.poll(() => page.evaluate(() => typeof window.__resolveLightboxDecode)).toBe('function');
+  expect(await page.locator('main').evaluate(el => el.inert)).toBe(true);
+
+  await page.keyboard.press('Escape');
+  expect(await page.locator('main').evaluate(el => el.inert)).toBe(false);
+  await expect(shot).toBeFocused();
+
+  await page.evaluate(() => window.__resolveLightboxDecode());
+  await page.waitForTimeout(350);
+  await expect(lightbox).not.toHaveClass(/\bopen\b/);
+  await expect(lightbox).toHaveAttribute('aria-hidden', 'true');
+  expect(await page.locator('main').evaluate(el => el.inert)).toBe(false);
+  await expect(shot).toBeFocused();
 });
 
 test('gallery and work controls are semantically complete before app initialization', async ({ page }) => {
