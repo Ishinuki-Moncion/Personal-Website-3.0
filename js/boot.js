@@ -6,6 +6,9 @@
   if (!boot) return;
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const coarse = matchMedia('(hover: none), (pointer: coarse)').matches;
+  const pace = coarse ? 0.42 : 1;
+  const hardCap = coarse ? 1500 : 9000;
   const GLYPHS = 'ｱｲｳｴｵｶｷｸ01<>/\\#$%&*+=日本開発写真ABCDEF';
   const rand = s => s[Math.floor(Math.random() * s.length)];
 
@@ -32,6 +35,8 @@
 
   let done = false;
   let timers = [];
+  const later = (fn, ms) => { const tm = setTimeout(fn, ms * pace); timers.push(tm); return tm; };
+  const repeat = (fn, ms) => { const tm = setInterval(fn, ms * pace); timers.push(tm); return tm; };
   const clear = () => { timers.forEach(clearTimeout); timers.forEach(clearInterval); timers = []; };
 
   function finish() {
@@ -42,7 +47,7 @@
     body.removeAttribute('data-booting');
     body.classList.add('revealed');
     document.dispatchEvent(new Event('boot:done'));
-    setTimeout(() => boot.remove(), 1000);
+    later(() => boot.remove(), 1000);
   }
 
   function typeLine(item, cb) {
@@ -53,17 +58,15 @@
     if (item.scramble) {
       // decrypt effect on a payload word
       let frames = 0; const total = 14;
-      const iv = setInterval(() => {
+      const iv = repeat(() => {
         frames++;
         if (frames >= total) { clearInterval(iv); el.innerHTML = html(item.txt); cb(); return; }
         let scrambled = item.txt.replace(/[a-z_]/gi, () => rand(GLYPHS));
         el.innerHTML = html(scrambled);
       }, 38);
-      timers.push(iv);
     } else {
       el.innerHTML = html(item.txt);
-      const tm = setTimeout(cb, 150 + Math.random() * 90);
-      timers.push(tm);
+      later(cb, 150 + Math.random() * 90);
     }
   }
 
@@ -73,12 +76,11 @@
       if (done) return;
       if (i >= SEQ.length) {
         // ramp progress to 100 then finish
-        const iv = setInterval(() => {
+        const iv = repeat(() => {
           pct = Math.min(100, pct + 7);
           barEl.style.width = pct + '%'; pctEl.textContent = String(pct).padStart(3, '0') + '% // SYSTEM ONLINE';
-          if (pct >= 100) { clearInterval(iv); const tm = setTimeout(finish, 520); timers.push(tm); }
+          if (pct >= 100) { clearInterval(iv); later(finish, 520); }
         }, 34);
-        timers.push(iv);
         return;
       }
       typeLine(SEQ[i], () => {
@@ -105,5 +107,9 @@
   try { already = sessionStorage.getItem('daikie-booted') === '1'; } catch (e) {}
 
   if (reduced || already) { instant(); }
-  else { run(); timers.push(setTimeout(finish, 9000)); }   // hard cap — boot never hangs
+  else {
+    run();
+    const capDelay = coarse ? Math.max(0, hardCap - performance.now()) : hardCap;
+    timers.push(setTimeout(finish, capDelay));
+  }   // hard cap — boot never hangs
 })();

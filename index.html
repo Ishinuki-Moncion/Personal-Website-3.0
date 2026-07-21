@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/site.css?v=3.30" />
+<link rel="stylesheet" href="css/site.css?v=3.31" />
 <noscript>
   <style>
     /* No-JS truth: kill the boot screen and reveal everything the engine would */
@@ -406,10 +406,10 @@
 
 <script>
 document.getElementById('year').textContent = new Date().getFullYear();
-/* v3.2j boot watchdog — deliberately OUTSIDE the module chain: if any vendor/
-   module import 404s, boot.js never runs and the opaque boot screen would sit
-   forever. On any script error (capture phase catches resource failures) or
-   after 10s, force-reveal the DOM content. No-ops when boot.js finished. */
+/* v3.4c catastrophic boot watchdog — deliberately OUTSIDE the module chain.
+   Essential DOM behavior and the normal reveal do not depend on scene status;
+   if the entry module itself fails, reveal after 10s so content never stays
+   trapped beneath the boot screen. No-ops when boot.js finished. */
 (function () {
   var fired = false;
   function reveal() {
@@ -435,6 +435,6 @@ document.getElementById('year').textContent = new Date().getFullYear();
 })();
 </script>
 
-<script type="module" src="js/boot.mjs?v=30"></script>
+<script type="module" src="js/boot.mjs?v=31"></script>
 </body>
 </html>

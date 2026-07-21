@@ -449,8 +449,10 @@ body.revealed .clip-reveal::after { display: none; }
 body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important;
-    transition-duration: .001ms !important; scroll-behavior: auto !important; }
+  *, *::before, *::after { animation: none !important;
+    transition: none !important; scroll-behavior: auto !important; }
+  body, .boot-skip, .nav-burger, .mm-close, .shot, .lb-close, .lb-thumb,
+  .lb-nav button, .signal-row, .pill, .deck-toggle, .seg button, .switch { cursor: auto; }
   [data-reveal] { opacity: 1 !important; transform: none !important; }
   .clip-reveal::after { display: none; }
   .clip-reveal img, .clip-reveal .media { transform: none !important; }

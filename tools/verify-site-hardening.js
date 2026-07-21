@@ -9,6 +9,10 @@ const app = read('js/app.js');
 const background = read('js/background.js');
 const css = read('css/site.css');
 const effects = read('js/effects.js');
+const bootModule = read('js/boot.mjs');
+const boot = read('js/boot.js');
+const cursor = read('js/cursor.js');
+const sceneBootstrap = read('js/scene-bootstrap.mjs');
 
 const checks = [];
 
@@ -79,6 +83,64 @@ check(
     !index.includes('three.global.min.js') &&
     !fs.existsSync(path.join(root, 'js/vendor/three.global.min.js')),
   'import-map + versioned boot.mjs is the only Three.js path; the 651KB global build must stay deleted and unreferenced'
+);
+
+check(
+  'essential DOM modules initialize before the optional scene',
+  ['app.js', 'effects.js', 'cursor.js', 'boot.js'].every(name => bootModule.indexOf(name) >= 0) &&
+    bootModule.indexOf('window.__TIER_PROBE = null') < bootModule.indexOf('app.js') &&
+    bootModule.indexOf('window.__CURSOR_ACTIVE = false') < bootModule.indexOf('app.js') &&
+    bootModule.indexOf('app.js') < bootModule.indexOf('effects.js') &&
+    bootModule.indexOf('effects.js') < bootModule.indexOf('cursor.js') &&
+    bootModule.indexOf('cursor.js') < bootModule.indexOf('boot.js') &&
+    bootModule.indexOf('boot.js') < bootModule.indexOf('scene-bootstrap.mjs'),
+  'boot.mjs must initialize observable sentinels, then app/effects/cursor/boot, before importing scene-bootstrap.mjs'
+);
+
+check(
+  'scene bootstrap waits for a double-rAF paint boundary and reports status',
+  /requestAnimationFrame\(\(\) => requestAnimationFrame\(resolve\)\)/.test(bootModule) &&
+    /window\.__SCENE_STATUS/.test(bootModule) &&
+    /new CustomEvent\('scene:ready'/.test(bootModule),
+  'boot.mjs must yield two animation frames before scene startup and publish window.__SCENE_STATUS plus scene:ready'
+);
+
+check(
+  'scene startup is isolated behind try/catch with a clean unavailable fallback',
+  /export async function bootstrapScene/.test(sceneBootstrap) &&
+    /try\s*\{/.test(sceneBootstrap) && /catch \(error\)/.test(sceneBootstrap) &&
+    /await import\(`\.\/background\.js\?v=\$\{version\}`\)/.test(sceneBootstrap) &&
+    /document\.body\.dataset\.scene = 'unavailable'/.test(sceneBootstrap) &&
+    /return \{ ok: false,/.test(sceneBootstrap),
+  'scene-bootstrap.mjs must contain scene imports and turn failures into an explicit unavailable status'
+);
+
+check(
+  'mobile boot uses the 1500ms coarse cap and scaled timer helpers',
+  /const coarse = matchMedia\('\(hover: none\), \(pointer: coarse\)'\)\.matches/.test(boot) &&
+    /const pace = coarse \? 0\.42 : 1/.test(boot) &&
+    /const hardCap = coarse \? 1500 : 9000/.test(boot) &&
+    /const later = \(fn, ms\)/.test(boot) && /const repeat = \(fn, ms\)/.test(boot) &&
+    /Math\.max\(0, hardCap - performance\.now\(\)\)/.test(boot) &&
+    /setTimeout\(finish, capDelay\)/.test(boot),
+  'boot.js must scale the sequence on coarse pointers while retaining a navigation-relative 1500ms safety cap'
+);
+
+check(
+  'reduced motion disables both the cursor RAF and GPU probing',
+  /window\.__CURSOR_ACTIVE = false/.test(cursor) &&
+    /if \(!reduced && !coarse\) initCursor\(\)/.test(cursor) &&
+    /window\.__CURSOR_ACTIVE = true/.test(cursor) &&
+    /if \(!reduced\) \{[\s\S]*gpu-probe\.mjs/.test(sceneBootstrap) &&
+    /body,[\s\S]*\.boot-skip,[\s\S]*cursor: auto/.test(css),
+  'reduced motion must skip cursor initialization and probe import while CSS restores native cursors'
+);
+
+check(
+  'the catastrophic watchdog is independent of scene status',
+  /setTimeout\(reveal, 10000\)/.test(index) &&
+    !index.includes('__SCENE_STATUS'),
+  'the inline watchdog should depend only on boot state and remain a ten-second entry-module fallback'
 );
 
 check(
