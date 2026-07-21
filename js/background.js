@@ -2087,6 +2087,7 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
   let bloomComposer = null, finalComposer = null, renderBloomThenFinal = null;
   let bloomRenderPass = null, unrealBloomPass = null, finalRenderPass = null;
   let mixPass = null, outputPass = null, gradePass = null, caPass = null;
+  let unrealHighPassMaterial = null;
   let darkMat = null, darkPoints = null, darkSprite = null, matCache = null;
   let gradeUniforms = null;   // v3.3b: loop-visible handle for the uFlash drive — stays null without postFX
 
@@ -2199,6 +2200,7 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
     const disposedPasses = postPasses.splice(0);
     const disposedComposers = [['composer:bloom', bloomComposer], ['composer:final', finalComposer]];
     for (const pass of disposedPasses) pass?.dispose?.();
+    unrealHighPassMaterial?.dispose?.();
     for (const material of [darkMat, darkPoints, darkSprite]) material?.dispose?.();
     matCache?.clear?.();
     matCache = null;
@@ -2216,6 +2218,7 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
     outputPass = null;
     gradePass = null;
     caPass = null;
+    unrealHighPassMaterial = null;
     darkMat = null;
     darkPoints = null;
     darkSprite = null;
@@ -2264,6 +2267,7 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
     bloomRenderPass = registerDisposable('pass:bloom-render', new POST.RenderPass(scene, camera), true);
     unrealBloomPass = registerDisposable('pass:unreal-bloom', new POST.UnrealBloomPass(
       new THREE.Vector2(w, h), BLOOM_STRENGTH, BLOOM_RADIUS, BLOOM_THRESHOLD), true);
+    unrealHighPassMaterial = registerDisposable('material:unreal-high-pass', unrealBloomPass.materialHighPassFilter);
     bloomComposer.addPass(bloomRenderPass);
     bloomComposer.addPass(unrealBloomPass);
 

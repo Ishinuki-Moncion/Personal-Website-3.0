@@ -15,6 +15,7 @@ const cursor = read('js/cursor.js');
 const sceneBootstrap = read('js/scene-bootstrap.mjs');
 const qualityPolicy = read('js/quality-policy.mjs');
 const gpuProbe = read('js/gpu-probe.mjs');
+const unrealBloomPassSource = read('js/vendor/three-0.158.0/examples/jsm/postprocessing/UnrealBloomPass.js');
 
 const checks = [];
 
@@ -323,6 +324,20 @@ check(
     /retained: \[\.\.\.disposalRetained\]/.test(background) &&
     /rendererDpr: renderer\.getPixelRatio\(\)/.test(background),
   'real dispose calls must precede explicit uniform/pass/composer graph severing; only sorted names may survive the post-disposal audit, while debug exposes the actual live renderer DPR'
+);
+
+const unrealBloomDispose = (unrealBloomPassSource.match(/\tdispose\(\) \{[\s\S]*?\n\t\}\n\n\tsetSize/) || [''])[0];
+check(
+  'v3.4 Task 7 correction explicitly disposes the r158 UnrealBloom high-pass material',
+    !/materialHighPassFilter\.dispose\(\)/.test(unrealBloomDispose) &&
+    /unrealHighPassMaterial = registerDisposable\('material:unreal-high-pass', unrealBloomPass\.materialHighPassFilter\)/.test(background) &&
+    (background.match(/unrealHighPassMaterial\?\.dispose\?\.\(\)/g) || []).length === 1 &&
+    background.indexOf('for (const pass of disposedPasses) pass?.dispose?.();') <
+      background.indexOf('unrealHighPassMaterial?.dispose?.();') &&
+    background.indexOf('unrealHighPassMaterial?.dispose?.();') <
+      background.indexOf('for (const pass of disposedPasses) severPostPass(pass);') &&
+    /unrealHighPassMaterial = null;[\s\S]*darkMat = null/.test(background),
+  'the pinned r158 pass omits materialHighPassFilter disposal, so its registered real dispose must run exactly once after pass disposal and before reference severing/nulling'
 );
 
 check(

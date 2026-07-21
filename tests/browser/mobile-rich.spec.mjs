@@ -17,13 +17,14 @@ async function readSceneState(page) {
 
 async function installPostFxReferenceInstrumentation(context) {
   await context.addInitScript(() => {
-    const refs = { composers: [], passes: [] };
+    const refs = { composers: [], passes: [], unrealHighPassDisposeCalls: 0 };
     Object.defineProperty(window, '__POST_TEST_REFS', { value: refs, configurable: true });
     let currentPost;
-    const wrap = (Base, bucket) => class extends Base {
+    const wrap = (Base, bucket, onCreate) => class extends Base {
       constructor(...args) {
         super(...args);
         refs[bucket].push(this);
+        onCreate?.(this);
       }
     };
     Object.defineProperty(window, 'POST', {
@@ -35,7 +36,14 @@ async function installPostFxReferenceInstrumentation(context) {
           EffectComposer: wrap(value.EffectComposer, 'composers'),
           RenderPass: wrap(value.RenderPass, 'passes'),
           ShaderPass: wrap(value.ShaderPass, 'passes'),
-          UnrealBloomPass: wrap(value.UnrealBloomPass, 'passes'),
+          UnrealBloomPass: wrap(value.UnrealBloomPass, 'passes', pass => {
+            const material = pass.materialHighPassFilter;
+            const dispose = material.dispose.bind(material);
+            material.dispose = (...args) => {
+              refs.unrealHighPassDisposeCalls++;
+              return dispose(...args);
+            };
+          }),
           OutputPass: wrap(value.OutputPass, 'passes')
         };
       }
@@ -68,7 +76,12 @@ function readInstrumentedPostFxRetained(page) {
         if (pass[key]?.length) retained.push(owner + '.' + key);
       }
     });
-    return { composers: refs.composers.length, passes: refs.passes.length, retained: retained.sort() };
+    return {
+      composers: refs.composers.length,
+      passes: refs.passes.length,
+      unrealHighPassDisposeCalls: refs.unrealHighPassDisposeCalls,
+      retained: retained.sort()
+    };
   });
 }
 
@@ -137,10 +150,17 @@ test('mobile-rich demotes once, disposes postFX, persists DPR through resize, an
     expect(state.postFX.enabled).toBe(false);
     expect(state.postFX.disposed).toBe(true);
     expect(state.postFX.disposal.expected.length).toBeGreaterThan(0);
-    expect(state.postFX.disposal.expected).toHaveLength(12);
+    expect(state.postFX.disposal.expected).toContain('material:unreal-high-pass');
+    expect(state.postFX.disposal.expected).toHaveLength(13);
     expect(state.postFX.disposal.called).toEqual(state.postFX.disposal.expected);
+    expect(state.postFX.disposal.called.filter(name => name === 'material:unreal-high-pass')).toHaveLength(1);
     expect(state.postFX.disposal.retained).toEqual([]);
-    expect(await readInstrumentedPostFxRetained(page)).toEqual({ composers: 2, passes: 7, retained: [] });
+    expect(await readInstrumentedPostFxRetained(page)).toEqual({
+      composers: 2,
+      passes: 7,
+      unrealHighPassDisposeCalls: 1,
+      retained: []
+    });
     expect(state.demotionCount).toBe(1);
     const afterDemotion = { direct: state.renderCounts.direct, postfx: state.renderCounts.postfx };
     await page.waitForTimeout(300);
@@ -155,7 +175,12 @@ test('mobile-rich demotes once, disposes postFX, persists DPR through resize, an
     expect(state.rendererDpr).toBe(1.5);
     expect(state.demotionCount).toBe(1);
     expect(state.postFX.disposal.retained).toEqual([]);
-    expect(await readInstrumentedPostFxRetained(page)).toEqual({ composers: 2, passes: 7, retained: [] });
+    expect(await readInstrumentedPostFxRetained(page)).toEqual({
+      composers: 2,
+      passes: 7,
+      unrealHighPassDisposeCalls: 1,
+      retained: []
+    });
     await page.goto('/?sceneDebug=1');
     await expect.poll(() => page.evaluate(() => window.__sceneDebug?.().tier)).toBe('lite');
     state = await page.evaluate(() => window.__sceneDebug());
