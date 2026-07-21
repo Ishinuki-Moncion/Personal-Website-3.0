@@ -6,8 +6,6 @@
     "long-title": "off",
     "tel-non-breaking": "off",
     "void-style": "off",
-    "no-implicit-button-type": "off",
-    "hidden-focusable": "off",
-    "valid-id": "off"
+    "no-implicit-button-type": "off"
   }
 }

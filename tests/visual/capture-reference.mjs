@@ -43,6 +43,14 @@ await mkdir(`${out}/states`, { recursive: true });
 await statePage.locator('#contact').evaluate(el => el.scrollIntoView({ behavior: 'instant' }));
 await statePage.waitForTimeout(250);
 await statePage.locator('.deck-toggle').click();
+await statePage.waitForFunction(() => {
+  const deck = document.getElementById('deck');
+  const style = getComputedStyle(deck);
+  return deck.classList.contains('open') &&
+    deck.getAttribute('aria-hidden') === 'false' &&
+    style.opacity === '1' && style.visibility === 'visible' &&
+    style.transform === 'none';
+});
 await statePage.screenshot({ path: `${out}/states/control-deck.png` });
 await statePage.keyboard.press('Escape');
 await statePage.locator('#gallery').evaluate(el => el.scrollIntoView({ behavior: 'instant' }));
