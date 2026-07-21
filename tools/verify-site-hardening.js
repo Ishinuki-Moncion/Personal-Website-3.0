@@ -13,6 +13,8 @@ const bootModule = read('js/boot.mjs');
 const boot = read('js/boot.js');
 const cursor = read('js/cursor.js');
 const sceneBootstrap = read('js/scene-bootstrap.mjs');
+const qualityPolicy = read('js/quality-policy.mjs');
+const gpuProbe = read('js/gpu-probe.mjs');
 
 const checks = [];
 
@@ -135,6 +137,70 @@ check(
     /body,[\s\S]*\.boot-skip,[\s\S]*cursor: auto/.test(css) &&
     /\.cursor, \.cursor-dot, \.cursor-label \{ display: none !important; \}/.test(css),
   'reduced motion must skip cursor initialization and probe import while CSS restores native cursors and hides all custom cursor nodes'
+);
+
+check(
+  'v3.4 policy keeps tier classification, attachment budget, and demotion pure',
+  /export const RICH_THRESHOLD_MS = 4\.5/.test(qualityPolicy) &&
+    /export function classifyTier/.test(qualityPolicy) &&
+    /if \(reduced\) return 'reduced'/.test(qualityPolicy) &&
+    /score <= RICH_THRESHOLD_MS \? 'mobile-rich' : 'lite'/.test(qualityPolicy) &&
+    /export function estimatePostFxBytes/.test(qualityPolicy) &&
+    /export function createFpsDemoter/.test(qualityPolicy) &&
+    !/window|document|navigator|matchMedia|sessionStorage/.test(qualityPolicy),
+  'quality-policy.mjs must stay deterministic and browser-independent with the measured 4.5ms threshold, memory estimator, and one-way demoter'
+);
+
+check(
+  'v3.4 probe eligibility and cache paths allocate no WebGL resources',
+  (() => {
+    const resolver = (gpuProbe.match(/export async function resolveTier[\s\S]*?\n\}/) || [''])[0];
+    return /if \(env\.reduced\(\)\) return null/.test(resolver) &&
+      /if \(!env\.coarse\(\)\) return null/.test(resolver) &&
+      /const forced = env\.forced\(\)/.test(resolver) &&
+      /const cached = env\.cacheRead\(CACHE_KEY\)/.test(resolver) &&
+      /result = await runProbe\(env\)/.test(resolver) &&
+      resolver.indexOf('env.forced()') < resolver.indexOf('runProbe(env)') &&
+      resolver.indexOf('env.cacheRead(CACHE_KEY)') < resolver.indexOf('runProbe(env)') &&
+      !/createCanvas|getContext|createShader|createProgram|createBuffer|createTexture|createFramebuffer/.test(resolver) &&
+      /const CACHE_KEY = 'v34\.tierProbe'/.test(gpuProbe) &&
+      /sessionStorage\.getItem\(key\)/.test(gpuProbe) &&
+      /sessionStorage\.setItem\(key, JSON\.stringify\(value\)\)/.test(gpuProbe);
+  })(),
+  'reduced and fine-pointer visits must return null before override/cache/probe work; forced and valid cache hits must resolve before lazy canvas/WebGL allocation'
+);
+
+check(
+  'v3.4 probe earns tier by yielded fenced scene-shaped measurement, never identity',
+  /const FRAMES = 10/.test(gpuProbe) &&
+    /const WARMUP = 2/.test(gpuProbe) &&
+    /const BUDGET_MS = 1500/.test(gpuProbe) &&
+    /FRAMES \+ WARMUP/.test(gpuProbe) &&
+    /document\.createElement\('canvas'\)/.test(gpuProbe) &&
+    (gpuProbe.match(/canvas\.(?:width|height) = 512/g) || []).length >= 2 &&
+    /if \(iteration > 0\) await env\.nextFrame\(\)/.test(gpuProbe) &&
+    /drawArraysInstanced\(gl\.TRIANGLES, 0, 6, 600\)/.test(gpuProbe) &&
+    /viewport\(0, 0, 512, 512\)/.test(gpuProbe) &&
+    /for \(let pass = 0; pass < 4; pass\+\+\)/.test(gpuProbe) &&
+    /viewport\(0, 0, 256, 256\)/.test(gpuProbe) &&
+    /readPixels\(0, 0, 1, 1/.test(gpuProbe) &&
+    /env\.now\(\) - started >= BUDGET_MS/.test(gpuProbe) &&
+    /frameFinished - started >= BUDGET_MS/.test(gpuProbe) &&
+    /median\(times\)/.test(gpuProbe) &&
+    !/userAgent|deviceMemory|hardwareConcurrency|WEBGL_debug_renderer_info|UNMASKED_(?:VENDOR|RENDERER)/.test(gpuProbe),
+  'the probe must measure ten frames after two warmups with yielded rAF boundaries, one 512px rain draw, four 256px blur passes, readback fencing, before/after budget checks, and no identity sniffing'
+);
+
+check(
+  'v3.4 probe finally deletes every retained WebGL resource before losing context',
+  (() => {
+    const cleanup = (gpuProbe.match(/finally \{[\s\S]*?result\.cleaned = true;\n  \}/) || [''])[0];
+    const methods = ['deleteFramebuffer', 'deleteTexture', 'deleteBuffer', 'deleteProgram', 'deleteShader', 'loseContext'];
+    return methods.every(method => cleanup.includes(method)) &&
+      methods.every((method, index) => index === 0 || cleanup.indexOf(methods[index - 1]) < cleanup.indexOf(method)) &&
+      /result\.cleaned = true/.test(cleanup);
+  })(),
+  'runProbe() must use finally to release framebuffer, texture, buffer, program, and shader resources, then call WEBGL_lose_context once and mark the result cleaned'
 );
 
 check(
