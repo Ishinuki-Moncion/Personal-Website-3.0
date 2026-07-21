@@ -132,8 +132,15 @@ check(
     /if \(!reduced && !coarse\) initCursor\(\)/.test(cursor) &&
     /window\.__CURSOR_ACTIVE = true/.test(cursor) &&
     /if \(!reduced\) \{[\s\S]*gpu-probe\.mjs/.test(sceneBootstrap) &&
-    /body,[\s\S]*\.boot-skip,[\s\S]*cursor: auto/.test(css),
-  'reduced motion must skip cursor initialization and probe import while CSS restores native cursors'
+    /body,[\s\S]*\.boot-skip,[\s\S]*cursor: auto/.test(css) &&
+    /\.cursor, \.cursor-dot, \.cursor-label \{ display: none !important; \}/.test(css),
+  'reduced motion must skip cursor initialization and probe import while CSS restores native cursors and hides all custom cursor nodes'
+);
+
+check(
+  'instant boot synchronously publishes completion after removing boot state',
+  /function instant\(\) \{[\s\S]*body\.removeAttribute\('data-booting'\);[\s\S]*boot\.remove\(\);[\s\S]*document\.dispatchEvent\(new Event\('boot:done'\)\);[\s\S]*\}/.test(boot),
+  'boot.js instant() must remove data-booting and the boot UI before synchronously dispatching boot:done'
 );
 
 check(

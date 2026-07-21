@@ -92,7 +92,11 @@
     step();
   }
 
-  function instant() { body.removeAttribute('data-booting'); boot.remove(); }
+  function instant() {
+    body.removeAttribute('data-booting');
+    boot.remove();
+    document.dispatchEvent(new Event('boot:done'));
+  }
 
   skipEl && skipEl.addEventListener('click', finish);
   addEventListener('keydown', e => { if (e.key === 'Escape') finish(); }, { once: false });

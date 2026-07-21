@@ -49,10 +49,54 @@ test('coarse first visit paints before scene readiness and reveals within 1500ms
 });
 
 test('reduced motion does not run cursor animation or probe', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__CODEX_BOOT_DONE_COUNT = 0;
+    document.addEventListener('boot:done', () => { window.__CODEX_BOOT_DONE_COUNT++; });
+  });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/?sceneDebug=1');
   expect(await page.evaluate(() => window.__TIER_PROBE)).toBeNull();
   expect(await page.evaluate(() => window.__CURSOR_ACTIVE)).toBe(false);
+  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '');
   expect(await page.locator('body').evaluate(el => getComputedStyle(el).cursor)).not.toBe('none');
+  for (const selector of ['.cursor', '.cursor-dot', '.cursor-label']) {
+    expect(await page.locator(selector).evaluate(el => getComputedStyle(el).display)).toBe('none');
+  }
+  expect(await page.evaluate(() => window.__CODEX_BOOT_DONE_COUNT)).toBe(1);
   expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+});
+
+test('returning visit completes language and reveal initialization with instant boot', async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('daikie-booted', '1');
+    localStorage.setItem('daikie-lang', 'ja');
+    window.__CODEX_BOOT_DONE_COUNT = 0;
+    document.addEventListener('boot:done', () => { window.__CODEX_BOOT_DONE_COUNT++; });
+
+    const observer = new MutationObserver(() => {
+      if (!document.body || document.body.hasAttribute('data-booting') || window.__CODEX_INSTANT_SNAPSHOT) return;
+      window.__CODEX_INSTANT_SNAPSHOT = {
+        bootDoneCount: window.__CODEX_BOOT_DONE_COUNT,
+        language: document.documentElement.lang,
+        heroStarted: document.querySelector('.hero')?.dataset.started ?? null,
+        revealDelay: document.querySelector('[data-reveal-delay]')?.style.getPropertyValue('--d') ?? null
+      };
+      observer.disconnect();
+    });
+    observer.observe(document, {
+      attributes: true,
+      attributeFilter: ['data-booting'],
+      childList: true,
+      subtree: true
+    });
+  });
+
+  await page.goto('/');
+  await expect.poll(() => page.evaluate(() => window.__CODEX_INSTANT_SNAPSHOT ?? null)).not.toBeNull();
+  expect(await page.evaluate(() => window.__CODEX_INSTANT_SNAPSHOT)).toEqual({
+    bootDoneCount: 1,
+    language: 'ja',
+    heroStarted: '1',
+    revealDelay: '0.05s'
+  });
 });

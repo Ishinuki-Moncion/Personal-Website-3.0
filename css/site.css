@@ -453,6 +453,7 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
     transition: none !important; scroll-behavior: auto !important; }
   body, .boot-skip, .nav-burger, .mm-close, .shot, .lb-close, .lb-thumb,
   .lb-nav button, .signal-row, .pill, .deck-toggle, .seg button, .switch { cursor: auto; }
+  .cursor, .cursor-dot, .cursor-label { display: none !important; }
   [data-reveal] { opacity: 1 !important; transform: none !important; }
   .clip-reveal::after { display: none; }
   .clip-reveal img, .clip-reveal .media { transform: none !important; }
