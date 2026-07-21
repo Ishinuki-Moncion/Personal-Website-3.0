@@ -1,3 +1,5 @@
+import { classifyTier } from './quality-policy.mjs';
+
 /* Immersive scene: TOKYO DATA-GLOBE — a particle Earth whose points exist only
    where land exists, a pulsing amber Tokyo node with live coordinates, and a
    great-circle arc that draws his Dallas->Tokyo move on boot. Layered particle
@@ -12,41 +14,33 @@
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const coarse = window.matchMedia('(hover: none), (pointer: coarse)').matches;
   const small = window.matchMedia('(max-width: 760px)').matches;
-  const LITE = coarse || small;            // phones / tablets: lighter scene
-  const sceneDebug = new URLSearchParams(location.search).get('sceneDebug') === '1';
+  const LITE = coarse || small;            // phones / tablets: layout + input mode only
+  const query = new URLSearchParams(location.search);
+  const sceneDebug = query.get('sceneDebug') === '1';
   // SP2 globe shader elevation — ON by default; ?globe=classic restores the pre-SP2 look (A/B + rollback).
-  const GLOBE_ELEV = new URLSearchParams(location.search).get('globe') !== 'classic';
+  const GLOBE_ELEV = query.get('globe') !== 'classic';
+  /* v3.3f RIVULET_GATE — kill switch for the high-tier GPGPU glass. It must
+     precede profile construction because the high profile snapshots it. */
+  const RIVULET_GATE = true;
   const debugEl = sceneDebug ? document.querySelector('.scene-debug') : null;
-  function getQualityProfile() {
-    if (reduced) return {
-      name: 'reduced',
-      dpr: 1,
-      globeParticles: 2600,
-      fieldCounts: [360, 180, 120],
-      haloLabels: 1,
-      haloTicks: 8,
-      haloRings: 1,
-    };
-    if (LITE) return {
-      name: 'lite',
-      dpr: Math.min(window.devicePixelRatio || 1, 1.5),
-      globeParticles: 2600,
-      fieldCounts: [1100, 520, 360],
-      haloLabels: 2,
-      haloTicks: 12,
-      haloRings: 1,
-    };
-    return {
-      name: 'high',
-      dpr: Math.min(window.devicePixelRatio || 1, 2),
-      globeParticles: 7000,
-      fieldCounts: [2600, 1200, 900],
-      haloLabels: 5,
-      haloTicks: 24,
-      haloRings: 2,
-    };
-  }
-  const quality = getQualityProfile();
+  const tierProbe = window.__TIER_PROBE;
+  const probeScore = Number.isFinite(tierProbe?.score) ? tierProbe.score : null;
+  const tier = classifyTier({
+    reduced,
+    coarse,
+    small,
+    forced: query.get('tier'),
+    probeTier: tierProbe?.tier,
+    score: probeScore,
+  });
+  const profiles = {
+    reduced: { name: 'reduced', dprCap: 1, globeParticles: 2600, fieldCounts: [360, 180, 120], haloLabels: 1, haloTicks: 8, haloRings: 1, postFX: false, postFXSamples: { final: 0, bloom: 0 }, bloomScale: 0.5, wells: false, labelPriority: 1, graticuleFull: false, shellSegments: [24, 16], beadCap: 0, refractBeads: false, rivulet: false },
+    lite: { name: 'lite', dprCap: 1.5, globeParticles: 2600, fieldCounts: [1100, 520, 360], haloLabels: 2, haloTicks: 12, haloRings: 1, postFX: false, postFXSamples: { final: 0, bloom: 0 }, bloomScale: 0.5, wells: false, labelPriority: 1, graticuleFull: false, shellSegments: [24, 16], beadCap: 12, refractBeads: false, rivulet: false },
+    'mobile-rich': { name: 'mobile-rich', dprCap: 1.75, globeParticles: 5000, fieldCounts: [1800, 850, 620], haloLabels: 5, haloTicks: 24, haloRings: 2, postFX: true, postFXSamples: { final: 2, bloom: 0 }, bloomScale: 0.5, wells: true, labelPriority: 3, graticuleFull: true, shellSegments: [48, 32], beadCap: 16, refractBeads: true, rivulet: false },
+    high: { name: 'high', dprCap: 2, globeParticles: 7000, fieldCounts: [2600, 1200, 900], haloLabels: 5, haloTicks: 24, haloRings: 2, postFX: true, postFXSamples: { final: 4, bloom: 4 }, bloomScale: 1, wells: true, labelPriority: 3, graticuleFull: true, shellSegments: [48, 32], beadCap: 24, refractBeads: true, rivulet: RIVULET_GATE },
+  };
+  const quality = { ...profiles[tier] };
+  quality.dpr = Math.min(devicePixelRatio || 1, quality.dprCap);
   const SCENE_COLORS = {
     cyan: CYAN,
     amber: AMBER,
@@ -87,7 +81,7 @@
      rides the grade like every other scene black and lands at [0,1,6] —
      the "shadows sink to true black" law applied to the void itself; the
      floor now also breathes with the C1 lightning lift, per its design
-     note. Direct path (LITE/reduced) displays it as near-black [0,0,1],
+     note. Direct path (lite tier/reduced) displays it as near-black [0,0,1],
      within 6/255 of the old CSS floor everywhere. */
   renderer.setClearColor(new THREE.Color(0x05060a).convertSRGBToLinear(), 1);
   mount.appendChild(renderer.domElement);
@@ -345,10 +339,10 @@
   }
   updateSunDir();
 
-  // (b) graticule — one merged LineSegments (LITE: 3 rings, no meridians)
+  // (b) graticule — one merged LineSegments (reduced/lite: 3 rings, no meridians)
   (function buildGraticule() {
     const segs = [], SEG = 72;
-    const ringLats = LITE ? [0, 30, -30] : [0, 30, -30, 60, -60];
+    const ringLats = quality.graticuleFull ? [0, 30, -30, 60, -60] : [0, 30, -30];
     for (const lat of ringLats) {
       const r = R * Math.cos(lat * Math.PI / 180), y = R * Math.sin(lat * Math.PI / 180);
       for (let i = 0; i < SEG; i++) {
@@ -356,7 +350,7 @@
         segs.push(Math.cos(a) * r, y, Math.sin(a) * r, Math.cos(b) * r, y, Math.sin(b) * r);
       }
     }
-    if (!LITE) for (let m = 0; m < 6; m++) {
+    if (quality.graticuleFull) for (let m = 0; m < 6; m++) {
       const lon = m * 30;
       for (let i = 0; i < SEG; i++) {
         const a = (i / SEG) * Math.PI * 2, b = ((i + 1) / SEG) * Math.PI * 2;
@@ -521,12 +515,12 @@
      (harness-pinned by value). */
   const MOTIV_FLOOR = 0.16;      // rain never fully dies while a section calls for weather (0.22→0.16: hero mean read +0.3 over baseline at 0.22 — retuned per the luminance gate)
   const MOTIV_CAP   = 0.80;      // motivated rain always sits BELOW the retired flat-veil peaks
-  const RAIN_LITE_VEIL = 0.55;   // LITE: single flat veil ≤ every old per-section value
-  const LITE_FLASH_BEAT = 1.3;   // v3.3b C2: LITE's flat flash coupling (no wells compiled on phones); high tier answers lightning directionally via well 3
+  const RAIN_LITE_VEIL = 0.55;   // lite tier: single flat veil ≤ every old per-section value
+  const LITE_FLASH_BEAT = 1.3;   // v3.3b C2: lite-tier flat flash coupling (no wells compiled there); well-enabled tiers answer lightning directionally via well 3
   const WELL_DEPTH_SIGMA = 6.0;  // camera-Z reach of an emitter's light, world units
   const WELL_XY_SIGMA = 0.25;    // v3.3a: screen-xy reach of a well, NDC units — the ONE new tunable (tune DOWN only, under the luminance A/B gate)
   /* Depth rain — v3.3a: ONE instanced velocity-stretched streak batch (R1).
-     470 quads high tier / 210 LITE in a single draw call, camera-parented so
+     470 high / 320 mobile-rich / 210 lite-tier quads in a single draw call, camera-parented so
      the sheet rides the view (dossier: GITS solograms are particle systems
      of light in Z-space). The three THREE.Points planes, their baked streak
      sprites, and the per-frame CPU walk are RETIRED: fall + recycle are
@@ -536,14 +530,18 @@
      under reduced motion — a frozen rain frame reads as glitch. */
   function makeDepthRain() {
     const aspect = w / h;
-    const defs = LITE
+    const defs = tier === 'lite'
       ? [{ n: 80, size: 0.26, speed: [4.5, 6.5], op: 0.32, z: [-5, -9], len: 0.7, head: 0.85 },
          { n: 130, size: 0.16, speed: [2.4, 3.8], op: 0.22, z: [-8, -14], len: 0.45, head: 0.7 }]
-      : [{ n: 70, size: 0.4, speed: [8, 14], op: 0.5, z: [-4, -7], len: 0.8, head: 0.9 },
-         { n: 150, size: 0.24, speed: [4.2, 7.5], op: 0.36, z: [-6, -11], len: 0.55, head: 0.8 },
-         { n: 250, size: 0.15, speed: [2.2, 4.2], op: 0.24, z: [-9, -16], len: 0.35, head: 0.65 }];
+      : tier === 'mobile-rich'
+        ? [{ n: 50, size: 0.38, speed: [7.5, 13], op: 0.48, z: [-4, -7], len: 0.8, head: 0.9 },
+           { n: 100, size: 0.23, speed: [4, 7], op: 0.35, z: [-6, -11], len: 0.55, head: 0.8 },
+           { n: 170, size: 0.15, speed: [2.2, 4.2], op: 0.24, z: [-9, -16], len: 0.35, head: 0.65 }]
+        : [{ n: 70, size: 0.4, speed: [8, 14], op: 0.5, z: [-4, -7], len: 0.8, head: 0.9 },
+           { n: 150, size: 0.24, speed: [4.2, 7.5], op: 0.36, z: [-6, -11], len: 0.55, head: 0.8 },
+           { n: 250, size: 0.15, speed: [2.2, 4.2], op: 0.24, z: [-9, -16], len: 0.35, head: 0.65 }];
     const group = new THREE.Group(); group.name = 'depth-rain';
-    const total = defs.reduce((sum, d) => sum + d.n, 0);   // 470 high / 210 LITE
+    const total = defs.reduce((sum, d) => sum + d.n, 0);   // 470 high / 320 mobile-rich / 210 lite
     const base = new THREE.PlaneGeometry(1, 1);
     base.translate(0, 0, -8);   // dark-swap safety (v3.1g law): the bloom pass renders the RAW quads under MeshBasicMaterial (instance attrs ignored, all quads collapse onto the base geometry) — park them mid-band, never at the camera plane where w -> 0
     const geo = new THREE.InstancedBufferGeometry();
@@ -641,7 +639,7 @@
           }
           float motivation = min(uMotivCap, uMotivFloor + m);
           #else
-          float motivation = uLiteVeil;   // LITE: flat veil — the well branch is not even compiled
+          float motivation = uLiteVeil;   // non-well profile: flat veil — the well branch is not even compiled
           #endif
           vAlpha = aDrop.z * uVis * uBeat * motivation;   // the v3.2l terminal-opacity law (baseOp × vis × beat × motivation), per DROP now
           vHead = aDrop.w;
@@ -670,7 +668,7 @@
         }
       `,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      defines: LITE ? {} : { WELLS: '' },
+      defines: quality.wells ? { WELLS: '' } : {},
     });
     const mesh = nameObject(new THREE.Mesh(geo, mat), 'rain-streaks');
     mesh.renderOrder = 3;
@@ -714,7 +712,7 @@
 
     const labels = [];
     TOKYO_HALO_LABELS
-      .filter(l => l.priority <= (quality.name === 'high' ? 3 : 1))
+      .filter(l => l.priority <= quality.labelPriority)
       .slice(0, quality.haloLabels)
       .forEach(label => {
         const pack = makeCanvasSprite('tokyo-halo-label-' + label.id, 256, 72, [1.25, 0.35, 1],
@@ -786,13 +784,6 @@
   const tokyoHalo = makeTokyoHalo();
   const depthRain = reduced ? null : makeDepthRain();
 
-  /* v3.3f RIVULET_GATE — the M10 splurge: GPGPU rivulet-glass grabpass on the
-     high tier (js/rivulet.mjs). HALO_GATE discipline: with the gate false,
-     NOTHING is allocated, fetched, bound, or drawn — the dynamic import()
-     (postFX block below) never fires and the 2D droplet canvas keeps desktop
-     duty (the pre-built M3 fallback). Kill switch = flip to false + `?v=`
-     bump (spec §5); ships TRUE for the owner's live taste verdict. */
-  const RIVULET_GATE = true;
   let rivulet = null;   // rivulet api handle — set only by the gated dynamic import
 
   /* Rain-on-glass droplets — 2D canvas beads that condense, swell, and break
@@ -804,15 +795,15 @@
     if (reduced) return null;
     /* v3.3f: with the rivulet grabpass live, the high tier retires this 2D
        canvas ENTIRELY — no context, no listener, no draws (retirement pairing,
-       spec §1.1). LITE keeps the M3-elevated beads; a RIVULET_GATE kill-flip
+       spec §1.1). Non-rivulet profiles keep the M3-elevated beads; a RIVULET_GATE kill-flip
        restores this IIFE on desktop unchanged. The .scene-droplets element and
-       its CSS stay — they are LITE's home. */
-    if (RIVULET_GATE && quality.name === 'high') return null;
+       its CSS stay — they are the non-rivulet profiles' home. */
+    if (quality.rivulet) return null;
     const cv = document.querySelector('.scene-droplets');
     if (!cv) return null;
     const ctx = cv.getContext('2d');
-    const cap = LITE ? 12 : 24;
-    const REFRACT = !LITE;
+    const cap = quality.beadCap;
+    const REFRACT = quality.refractBeads;
     const MERGE_R_MAX = 7.5;      // v3.3c: today's max bead radius (the runAt ceiling 5 + 2.5) — a merged survivor never exceeds the pre-merge spawn envelope
     const MERGE_TOUCH_K = 0.85;   // v3.3c: beads absorb when centre distance < 0.85 * summed radii (deep overlap, not a graze)
     let W = 0, H = 0;
@@ -899,7 +890,7 @@
       ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = 'source-over';
       /* v3.3c merge — O(n^2) pair check (n <= 24 => <= 276 pairs at this 30fps
-         half-rate; works unchanged at n = 12 LITE). Overlapping beads absorb
+         half-rate; works unchanged at the lite tier's n = 12). Overlapping beads absorb
          area-conserving (r^2 sum, clamped at MERGE_R_MAX = today's max radius) so
          total glass coverage can only FALL from a merge; the survivor pulls
          toward the absorbed bead, jitters, and briefly accelerates — the single
@@ -1169,7 +1160,7 @@
   setCometAt(0);
   spin.add(comet);
 
-  // (f) atmosphere halo — 1 sprite, 0 render targets; sells "planet" on LITE too
+  // (f) atmosphere halo — 1 sprite, 0 render targets; sells "planet" on reduced/lite too
   const halo = (function () {
     const cv = document.createElement('canvas');
     cv.width = cv.height = 128;
@@ -1195,7 +1186,7 @@
   const uFlashLimb = { value: 0 };   // v3.3b C3: lightning limb catch — loop-driven, 0 at rest (event-gated, decays with env)
   if (GLOBE_ELEV) {
     halo.visible = false;                                  // sprite off; shell is the atmosphere now
-    const segW = LITE ? 24 : 48, segH = LITE ? 16 : 32;
+    const [segW, segH] = quality.shellSegments;
     const limbMat = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide,
       uniforms: { uSunDir: globeMat.uniforms.uSunDir, uReveal: globeMat.uniforms.uReveal, uFlashLimb },
@@ -1428,7 +1419,7 @@
 
   /* Kiroshi scan-and-tag (dossier: CP2077 — scanned things acquire bracket
      tags with readouts, one confident tick; GITS — tags ASSEMBLE FROM
-     PARTICLES). One tag live at a time; pointer-hover only (skipped on LITE
+     PARTICLES). One tag live at a time; pointer-hover only (skipped under mobile layout
      and reduced). Coordinates below are PLACEHOLDERS until the owner supplies
      real shot locations — swap values in this one map. */
   const GALLERY_PLACES = {
@@ -1541,7 +1532,7 @@
     scanTag.tag.sprite.material.opacity = Math.max(0, ease - 0.35) * 1.4;      // tag snaps in after particles
     scanTag.arcM.opacity = ease * 0.4;
   }
-  {   // SP3: focus/blur a11y mirrors ALWAYS (keyboard/AT + aria-live, even under reduced); pointer-hover scan only non-reduced non-LITE
+  {   // SP3: focus/blur a11y mirrors ALWAYS (keyboard/AT + aria-live, even under reduced); pointer-hover scan only non-reduced fine layout
     const wire = (el, enter, leave) => {
       if (!reduced && !LITE) { el.addEventListener('pointerenter', enter); el.addEventListener('pointerleave', leave); }
       el.addEventListener('focus', enter); el.addEventListener('blur', leave);
@@ -1575,7 +1566,7 @@
      focused place node, and lightning while it flashes — now evaluated per
      DROP in the rain vertex shader (uWells); this block only projects the
      wells and uploads uniforms. `vis` (sceneState.rain) stays the presence
-     envelope; LITE still skips all projection math (uLiteVeil, in-shader).
+     envelope; non-well profiles still skip all projection math (uLiteVeil, in-shader).
      The law consts live above makeDepthRain now (uniform init reads them). */
   const TOKYO_HALO_LOCAL = TOKYO.clone().multiplyScalar(1.08);   // halo group's spin-local seat (:526)
   const rainWells = [{ x: 0, y: 0, s: 0, z: 0 }, { x: 0, y: 0, s: 0, z: 0 }, { x: 0, y: 0, s: 0, z: 0 }];
@@ -1597,7 +1588,7 @@
     depthRain.group.visible = vis > 0.02;
     if (!depthRain.group.visible) return;
     const U = depthRain.mat.uniforms;
-    if (!LITE) {   // wells: 1 Tokyo halo, 2 focused place node, 3 lightning reach while active
+    if (quality.wells) {   // wells: 1 Tokyo halo, 2 focused place node, 3 lightning reach while active
       _wellP.copy(TOKYO_HALO_LOCAL); spin.localToWorld(_wellP);
       setWell(rainWells[0], _wellP, sceneState.halo * (0.30 + sceneState.haloPulse * 0.25 + sceneState.lockT * 0.20));
       _wellP.copy(focusedPlaceId === 'dallas' ? DALLAS : TOKYO); spin.localToWorld(_wellP);
@@ -1617,9 +1608,9 @@
     /* v3.3b C2: the shared flat flash literal is RETIRED — the high tier answers
        lightning directionally through well 3 (uWells[2], strength flash * 0.9:
        near-strike drops over-brighten via the per-drop falloff, the far field
-       barely reacts). LITE compiles no wells, so it keeps the flat coupling under
+       barely reacts). The lite tier compiles no wells, so it keeps the flat coupling under
        its named const — without it phone rain would stop answering lightning. */
-    const beat = 0.85 + sceneState.haloPulse * 0.5 + sceneState.lockT * 0.45 + (LITE ? (flash || 0) * LITE_FLASH_BEAT : 0);
+    const beat = 0.85 + sceneState.haloPulse * 0.5 + sceneState.lockT * 0.45 + (quality.wells ? 0 : (flash || 0) * LITE_FLASH_BEAT);
     // v3.2d: tint keys to the projects ENTRY beat (armed in __sceneFocus) and
     // decays over ~2s — amber is an event, never section-residency wallpaper.
     if (rainTintK > 0) rainTintK = Math.max(0, rainTintK - dt * 0.5);
@@ -1806,9 +1797,20 @@
   function getSceneDebug() {
     return {
       quality: quality.name,
+      tier,
       dpr,
       lite: LITE,
       reduced,
+      probeScore,
+      demoted: false,
+      effectiveDprCap: quality.dprCap,
+      capabilities: {
+        postFX: quality.postFX,
+        wells: quality.wells,
+        graticuleFull: quality.graticuleFull,
+        refractBeads: quality.refractBeads,
+        rivulet: quality.rivulet,
+      },
       globeParticles: globeFilled,
       expectedGlobeParticles: GLOBE_N,
       activeSection: sceneState.section,
@@ -2028,13 +2030,13 @@
    *  Two-composer selective DARK-MATERIAL-SWAP (NOT camera.layers, R8),*
    *  alpha-preserving via a NoBlending mixPass (R2). Fully decoupled:   *
    *  composers stay null unless enabled; render() falls back to the     *
-   *  direct path on LITE/reduced (R7). ON by default (high tier).       *
+   *  direct path on lite/reduced (R7). ON by capability.               *
    * ------------------------------------------------------------------ */
   // SP4: bloom is ON by default (high tier). The ?bloom=1 spike flag is retired.
-  const bloomEnabled = quality.name === 'high' && !reduced &&
+  const bloomEnabled = quality.postFX && !reduced &&
                        !!(window.POST && window.POST.EffectComposer);
   let bloomComposer = null, finalComposer = null, renderBloomThenFinal = null;
-  let gradeUniforms = null;   // v3.3b: loop-visible handle for the uFlash drive — stays null on LITE/reduced (no grade pass there)
+  let gradeUniforms = null;   // v3.3b: loop-visible handle for the uFlash drive — stays null without postFX
 
   if (bloomEnabled) {
     const POST = window.POST;
@@ -2057,7 +2059,7 @@
     bloomComposer = new POST.EffectComposer(renderer);   // no type arg -> HalfFloatType RGBA16F LINEAR target (EffectComposer.js:27)
     /* v3.2e: renderer {antialias:true} only multisamples the DEFAULT framebuffer;
        composer passes rasterize into plain targets, so the high tier shipped
-       WORSE line quality (graticule, arc, transit loop) than LITE's direct path.
+       WORSE line quality (graticule, arc, transit loop) than the lite tier's direct path.
        samples=4 = WebGL2 MSAA, auto-resolved on sample; EffectComposer.setSize
        reallocates targets preserving .samples, so resize keeps it. Set before
        first render — targets allocate lazily on first bind. */
@@ -2267,21 +2269,21 @@
     }
 
     /* v3.3f — rivulet-glass grabpass (M10). Fetched ONLY here: gate + high
-       tier — LITE/reduced never request the module or the vendored
-       GPUComputationRenderer (HALO_GATE discipline; the LITE network log is a
+       tier — non-rivulet profiles never request the module or the vendored
+       GPUComputationRenderer (HALO_GATE discipline; the lite-tier network log is a
        §4.4 gate). initRivulet slots the pass after gradePass, before caPass:
        drops refract the GRADED world and still receive the lens fringe. On a
        load/init failure the high tier runs glass-less this session (warn) —
        the sanctioned fallback is the RIVULET_GATE kill-flip, never a hybrid
        revive of the already-retired canvas. */
-    if (RIVULET_GATE && quality.name === 'high' && !reduced) {
+    if (quality.rivulet && !reduced) {
       import('./rivulet.mjs?v=1').then(mod => {
         rivulet = mod.initRivulet({ renderer, finalComposer, caPass, sceneState });
       }).catch(err => console.warn('[scene] rivulet module failed to load — desktop glass off this session', err));
     }
   }
 
-  const DPR_CAP = reduced ? 1 : LITE ? 1.5 : 2;   // mirrors getQualityProfile's per-tier caps
+  const DPR_CAP = quality.dprCap;
   addEventListener('resize', () => {
     clearTimeout(resizeTm);
     resizeTm = setTimeout(() => {
@@ -2327,7 +2329,7 @@
 
   const render = (bloomEnabled && renderBloomThenFinal)
     ? () => renderBloomThenFinal()               // high tier: dark-swap -> bloom composite -> final
-    : () => renderer.render(scene, camera);        // reduced / LITE: direct path
+    : () => renderer.render(scene, camera);        // reduced/lite: direct path
 
   if (reduced) {
     // Meaningful static frame: Tokyo rotated to face the camera, journey arc
@@ -2409,7 +2411,7 @@
     /* C1 — the whole-frame grade lift, the only coupling with global reach:
        suppressed while the boxed state-word (wordT) or the home/boot signal-lock
        (lockT) owns the frame. forceFlashLift is the §4.3 sceneDebug control arm
-       (always true in production). gradeUniforms is null on LITE/reduced. */
+       (always true in production). gradeUniforms is null without postFX. */
     if (gradeUniforms) gradeUniforms.uFlash.value = (forceFlashLift ? LIGHTNING_GRADE_LIFT : 0) *
       flash * Math.max(0, 1 - Math.max(sceneState.lockT, sceneState.wordT));
     updateScanTag(dt);
@@ -2425,7 +2427,7 @@
     if (sunTimer <= 0) { sunTimer = 120; updateSunDir(); }            // terminator drifts in real time
 
     /* Autonomous drift — phones never fire pointermove, so without this the
-       LITE scene reads as parked. Slow beat-frequency wobble on every speed. */
+       mobile scene reads as parked. Slow beat-frequency wobble on every speed. */
     const drift = 0.7 + 0.6 * Math.sin(t * 0.31) * Math.sin(t * 0.113 + 1.7);
 
     fieldCyan.rotation.y -= 0.0004 * f * drift;

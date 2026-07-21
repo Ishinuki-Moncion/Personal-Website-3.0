@@ -9,6 +9,11 @@ async function openMobilePage(browser) {
   return { context, page: await context.newPage() };
 }
 
+async function readSceneState(page) {
+  await expect.poll(() => page.evaluate(() => typeof window.__sceneDebug)).toBe('function');
+  return page.evaluate(() => window.__sceneDebug());
+}
+
 test('rich override resolves the mobile probe without GPU allocation', async ({ browser }) => {
   const { context, page } = await openMobilePage(browser);
   try {
@@ -22,6 +27,20 @@ test('rich override resolves the mobile probe without GPU allocation', async ({ 
     expect(probe.tier).toBe('mobile-rich');
     expect(probe.forced).toBe(true);
     expect(probe.cleaned).toBe(true);
+
+    const state = await readSceneState(page);
+    expect(state.quality).toBe('mobile-rich');
+    expect(state.tier).toBe('mobile-rich');
+    expect(state.lite).toBe(true);
+    expect(state.expectedGlobeParticles).toBe(5000);
+    expect(state.capabilities).toMatchObject({
+      postFX: true,
+      wells: true,
+      graticuleFull: true,
+      refractBeads: true,
+      rivulet: false
+    });
+    expect(state.effectiveDprCap).toBe(1.75);
   } finally {
     await context.close();
   }
@@ -40,9 +59,39 @@ test('lite override resolves the mobile probe without GPU allocation', async ({ 
     expect(probe.tier).toBe('lite');
     expect(probe.forced).toBe(true);
     expect(probe.cleaned).toBe(true);
+
+    const state = await readSceneState(page);
+    expect(state.quality).toBe('lite');
+    expect(state.tier).toBe('lite');
+    expect(state.lite).toBe(true);
+    expect(state.expectedGlobeParticles).toBe(2600);
+    expect(state.capabilities).toMatchObject({
+      postFX: false,
+      wells: false,
+      graticuleFull: false,
+      refractBeads: false,
+      rivulet: false
+    });
+    expect(state.effectiveDprCap).toBe(1.5);
   } finally {
     await context.close();
   }
+});
+
+test('desktop keeps the locked high scene payload', async ({ page }) => {
+  await page.goto('/?sceneDebug=1');
+  const state = await readSceneState(page);
+  expect(state.quality).toBe('high');
+  expect(state.tier).toBe('high');
+  expect(state.expectedGlobeParticles).toBe(7000);
+  expect(state.capabilities).toMatchObject({
+    postFX: true,
+    wells: true,
+    graticuleFull: true,
+    refractBeads: true,
+    rivulet: true
+  });
+  expect(state.effectiveDprCap).toBe(2);
 });
 
 test('reduced motion keeps the mobile tier probe null', async ({ browser }) => {

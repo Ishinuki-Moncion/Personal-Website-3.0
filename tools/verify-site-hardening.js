@@ -151,6 +151,53 @@ check(
   'quality-policy.mjs must stay deterministic and browser-independent with the measured 4.5ms threshold, memory estimator, and one-way demoter'
 );
 
+const task5Profiles = [
+  "reduced: { name: 'reduced', dprCap: 1, globeParticles: 2600, fieldCounts: [360, 180, 120], haloLabels: 1, haloTicks: 8, haloRings: 1, postFX: false, postFXSamples: { final: 0, bloom: 0 }, bloomScale: 0.5, wells: false, labelPriority: 1, graticuleFull: false, shellSegments: [24, 16], beadCap: 0, refractBeads: false, rivulet: false }",
+  "lite: { name: 'lite', dprCap: 1.5, globeParticles: 2600, fieldCounts: [1100, 520, 360], haloLabels: 2, haloTicks: 12, haloRings: 1, postFX: false, postFXSamples: { final: 0, bloom: 0 }, bloomScale: 0.5, wells: false, labelPriority: 1, graticuleFull: false, shellSegments: [24, 16], beadCap: 12, refractBeads: false, rivulet: false }",
+  "'mobile-rich': { name: 'mobile-rich', dprCap: 1.75, globeParticles: 5000, fieldCounts: [1800, 850, 620], haloLabels: 5, haloTicks: 24, haloRings: 2, postFX: true, postFXSamples: { final: 2, bloom: 0 }, bloomScale: 0.5, wells: true, labelPriority: 3, graticuleFull: true, shellSegments: [48, 32], beadCap: 16, refractBeads: true, rivulet: false }",
+  "high: { name: 'high', dprCap: 2, globeParticles: 7000, fieldCounts: [2600, 1200, 900], haloLabels: 5, haloTicks: 24, haloRings: 2, postFX: true, postFXSamples: { final: 4, bloom: 4 }, bloomScale: 1, wells: true, labelPriority: 3, graticuleFull: true, shellSegments: [48, 32], beadCap: 24, refractBeads: true, rivulet: RIVULET_GATE }"
+];
+const task5RainDefs = (background.match(/const defs = tier === 'lite'[\s\S]*?;\n\s*const group/) || [''])[0];
+const task5RainLayers = [
+  '{ n: 80, size: 0.26, speed: [4.5, 6.5], op: 0.32, z: [-5, -9], len: 0.7, head: 0.85 }',
+  '{ n: 130, size: 0.16, speed: [2.4, 3.8], op: 0.22, z: [-8, -14], len: 0.45, head: 0.7 }',
+  '{ n: 50, size: 0.38, speed: [7.5, 13], op: 0.48, z: [-4, -7], len: 0.8, head: 0.9 }',
+  '{ n: 100, size: 0.23, speed: [4, 7], op: 0.35, z: [-6, -11], len: 0.55, head: 0.8 }',
+  '{ n: 170, size: 0.15, speed: [2.2, 4.2], op: 0.24, z: [-9, -16], len: 0.35, head: 0.65 }',
+  '{ n: 70, size: 0.4, speed: [8, 14], op: 0.5, z: [-4, -7], len: 0.8, head: 0.9 }',
+  '{ n: 150, size: 0.24, speed: [4.2, 7.5], op: 0.36, z: [-6, -11], len: 0.55, head: 0.8 }',
+  '{ n: 250, size: 0.15, speed: [2.2, 4.2], op: 0.24, z: [-9, -16], len: 0.35, head: 0.65 }'
+];
+check(
+  'v3.4 renderer richness follows explicit capability profiles, not mobile layout',
+  /import \{ classifyTier \} from '\.\/quality-policy\.mjs'/.test(background) &&
+    /const LITE = coarse \|\| small/.test(background) &&
+    /const tier = classifyTier\(\{[\s\S]*probeTier: tierProbe\?\.tier,[\s\S]*score: probeScore/.test(background) &&
+    background.indexOf('const RIVULET_GATE = true') < background.indexOf('const profiles = {') &&
+    task5Profiles.every(profile => background.includes(profile)) &&
+    background.indexOf('const quality = { ...profiles[tier] };') <
+      background.indexOf('quality.dpr = Math.min(devicePixelRatio || 1, quality.dprCap);') &&
+    /const ringLats = quality\.graticuleFull/.test(background) &&
+    /if \(quality\.graticuleFull\) for/.test(background) &&
+    /defines: quality\.wells \? \{ WELLS: '' \} : \{\}/.test(background) &&
+    /if \(quality\.wells\) \{/.test(background) &&
+    /l\.priority <= quality\.labelPriority/.test(background) &&
+    /const \[segW, segH\] = quality\.shellSegments/.test(background) &&
+    /const cap = quality\.beadCap/.test(background) &&
+    /const REFRACT = quality\.refractBeads/.test(background) &&
+    /const bloomEnabled = quality\.postFX/.test(background) &&
+    /if \(quality\.rivulet\) return null/.test(background) &&
+    /if \(quality\.rivulet && !reduced\)/.test(background) &&
+    !/quality\.name === 'high'/.test(background) &&
+    /tier,\s*\n\s*dpr,/.test(background) &&
+    /probeScore,\s*\n\s*demoted: false,\s*\n\s*effectiveDprCap: quality\.dprCap/.test(background) &&
+    /capabilities: \{[\s\S]*postFX: quality\.postFX,[\s\S]*wells: quality\.wells,[\s\S]*graticuleFull: quality\.graticuleFull,[\s\S]*refractBeads: quality\.refractBeads,[\s\S]*rivulet: quality\.rivulet/.test(background) &&
+    /const defs = tier === 'lite'/.test(task5RainDefs) &&
+    /tier === 'mobile-rich'/.test(task5RainDefs) &&
+    task5RainLayers.every(layer => task5RainDefs.includes(layer)),
+  'the four exact profiles, copied live DPR, three exact rain payloads, capability gates, and expanded debug surface must remain explicit; quality.name high gates are forbidden'
+);
+
 check(
   'v3.4 probe eligibility and cache paths allocate no WebGL resources',
   (() => {
@@ -679,9 +726,9 @@ check('v3.3b — the scene answers its lightning as ONE event',
     /globalAlpha = 0\.22 \* a/.test(background) &&
     /Math\.min\(0\.32, 0\.2 \* a \* \(1 \+ glintFlash \* 0\.6\)\)/.test(background) &&
     /const LITE_FLASH_BEAT = 1\.3/.test(background) &&
-    /LITE \? \(flash \|\| 0\) \* LITE_FLASH_BEAT : 0/.test(background) &&
+    /quality\.wells \? 0 : \(flash \|\| 0\) \* LITE_FLASH_BEAT/.test(background) &&
     !/\(flash \|\| 0\) \* 1\.3/.test(background),
-  'grade lift ' + gradeLift + ' must sit in (0, 0.10] and be word/lock-suppressed; wordT arms home-excluded in __sceneFocus and decays dt/1.9; limb catch present; glint hard-capped 0.32 over an unraised 0.22 lens body; LITE flash beat named; the old shared flat literal retired');
+  'grade lift ' + gradeLift + ' must sit in (0, 0.10] and be word/lock-suppressed; wordT arms home-excluded in __sceneFocus and decays dt/1.9; limb catch present; glint hard-capped 0.32 over an unraised 0.22 lens body; non-well flash beat named; the old shared flat literal retired');
 
 // v3.3c — droplet-glass v2 (spec §3.3/§6): the O(n^2) bead merge is area-
 // conserving and clamped at the pre-merge radius envelope (MERGE_R_MAX = the
@@ -689,11 +736,11 @@ check('v3.3b — the scene answers its lightning as ONE event',
 // 1-3 trail beads gated on the SAME cap; the 24/12 bead cap is UNCHANGED.
 // Emitter bokeh is the recorded CUT (correction of record #2) — do not add it.
 check('v3.3c — droplet glass merges and trails, cap unchanged',
-  /const cap = LITE \? 12 : 24;/.test(background) &&
+  /const cap = quality\.beadCap;/.test(background) &&
     /const MERGE_R_MAX = 7\.5/.test(background) &&
     /Math\.min\(MERGE_R_MAX, Math\.sqrt\(keep\.r \* keep\.r \+ gone\.r \* gone\.r\)\)/.test(background) &&
     /d\.trail > 0 && d\.y > d\.trailAt && drops\.length < cap/.test(background),
-  'area-conserving MERGE_R_MAX-clamped merge pair-check + cap-gated trail spawn present; cap = LITE ? 12 : 24 unchanged');
+  'area-conserving MERGE_R_MAX-clamped merge pair-check + cap-gated trail spawn present; the selected profile supplies the unchanged desktop/lite caps and mobile-rich cap');
 
 // v3.3d — M5: hero choreography is Element.animate() with a tracked cancel-before-
 // start set; the setTimeout ladders and the wall-clock settle sweep are retired.
@@ -742,8 +789,8 @@ const rivDropMatch = rivulet.match(/#define DROP_COUNT (\d+)/);
 const rivDrops = rivDropMatch ? Number(rivDropMatch[1]) : NaN;
 check('v3.3f — rivulet grabpass is gated, clamped, and the desktop 2D canvas is retired behind it',
   /const RIVULET_GATE = true/.test(background) &&
-    /if \(RIVULET_GATE && quality\.name === 'high'\) return null;/.test(background) &&
-    /RIVULET_GATE && quality\.name === 'high' && !reduced/.test(background) &&
+    /if \(quality\.rivulet\) return null;/.test(background) &&
+    /quality\.rivulet && !reduced/.test(background) &&
     /import\('\.\/rivulet\.mjs\?v=/.test(background) &&
     fs.existsSync(path.join(root, 'js/vendor/three-0.158.0/examples/jsm/misc/GPUComputationRenderer.js')) &&
     rivCov > 0 && rivCov <= 0.05 &&
@@ -751,7 +798,7 @@ check('v3.3f — rivulet grabpass is gated, clamped, and the desktop 2D canvas i
     /lBase \+ 0\.22 \* lRefr/.test(rivulet) &&
     /insertPass\(pass, finalComposer\.passes\.indexOf\(caPass\)\)/.test(rivulet) &&
     /NoBlending/.test(rivulet) && /base\.a/.test(rivulet),
-  'RIVULET_GATE=true ships the splurge; dynamic import gated on const + high tier + !reduced; droplets IIFE early-returns on high tier (LITE keeps M3 glass); vendored GPUComputationRenderer on disk; uCoverageMax ' + rivCov + ' <= 0.05 and DROP_COUNT ' + rivDrops + ' <= 200 by value; luma clamp keyed to 0.22; pass NoBlending + centre-tap alpha, inserted after grade before CA');
+  'RIVULET_GATE=true is captured only by the high capability profile; dynamic import and desktop-canvas retirement follow quality.rivulet while mobile tiers keep canvas glass; vendored GPUComputationRenderer on disk; uCoverageMax ' + rivCov + ' <= 0.05 and DROP_COUNT ' + rivDrops + ' <= 200 by value; luma clamp keyed to 0.22; pass NoBlending + centre-tap alpha, inserted after grade before CA');
 
 const failed = checks.filter(item => !item.pass);
 for (const item of checks) {
