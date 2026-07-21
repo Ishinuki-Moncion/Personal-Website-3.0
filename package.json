@@ -1,0 +1,25 @@
+{
+  "name": "daikieos-qa",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "node tests/helpers/serve.mjs",
+    "test:unit": "node --test tests/unit/*.test.mjs",
+    "test:browser": "playwright test",
+    "test:hardening": "node tools/verify-site-hardening.js",
+    "test:html": "html-validate index.html 404.html",
+    "test:w3c": "node tools/validate-w3c.mjs",
+    "qa:static": "npm run test:unit && npm run test:hardening",
+    "qa:browser": "npm run test:browser",
+    "qa:all": "npm run qa:static && npm run qa:browser"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "chrome-launcher": "1.2.1",
+    "html-validate": "11.5.6",
+    "lighthouse": "13.4.1",
+    "pixelmatch": "7.2.0",
+    "pngjs": "7.0.0",
+    "vnu-jar": "26.7.16"
+  }
+}

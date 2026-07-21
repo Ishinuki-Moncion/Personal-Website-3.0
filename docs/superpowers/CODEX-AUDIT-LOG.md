@@ -15,6 +15,7 @@ This file is the durable review index for work led by **OpenAI Codex** on the Pe
 | Commit | Artifact | Status |
 |---|---|---|
 | `2bb3038` | `docs/superpowers/specs/2026-07-21-v34-corrective-completion-program-design.md` plus worktree isolation rule | Owner approved; implementation seed |
+| Task 1 commit | Reproducible Node/Playwright QA harness, pinned local Nu validator, and immutable desktop/mobile `before` references | Implemented; hardening 48/48, unit 1/1, Chromium 2/2 and WebKit 2/2 smoke; HTML/Nu baseline debt recorded for Task 2 |
 
 This table is updated after each reviewed task. Every integrated commit on this
 branch is authored and committed as `OpenAI Codex <noreply@openai.com>` so the
@@ -50,4 +51,9 @@ remains responsible for the decisions, integration, and final verification.
 - Baseline verification: JavaScript syntax clean, `git diff --check` clean, hardening 48/48.
 - Package A replacement implementation plan: complete; independent technical
   pre-flight closed six Important findings and returned clean.
-- Production code changes: none yet.
+- Task 1 QA foundation: complete on this branch. The immutable ignored
+  `package-a-reference/before/` set contains six full-scene captures, six
+  scene-hidden layout captures, control-deck, lightbox, and 390×844 mobile-menu
+  states. Capture interactions run on fresh pages so scene-heavy section
+  rendering cannot starve state actionability.
+- Production site code changes: none yet.

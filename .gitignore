@@ -18,3 +18,11 @@ docs/superpowers/gates/v33/
 
 # Isolated implementation worktrees created for audited agent branches
 .worktrees/
+
+# Local Node and Playwright output
+node_modules/
+test-results/
+playwright-report/
+
+# Codex v3.4 corrective-completion QA evidence (immutable local gate captures)
+.superpowers/gates/codex-v34/
