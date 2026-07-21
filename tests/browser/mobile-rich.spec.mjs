@@ -40,16 +40,63 @@ test('rich override resolves the mobile probe without GPU allocation', async ({ 
       refractBeads: true,
       rivulet: false
     });
-    expect(state.postFX).toEqual({
+    expect(state.postFX).toMatchObject({
       enabled: true,
+      disposed: false,
       bloomScale: 0.5,
       finalSamples: 2,
       bloomSamples: 0,
       estimatedBytes: expect.any(Number),
       withinBudget: true
     });
+    expect(state.postFX.disposal.expected.length).toBeGreaterThan(0);
+    expect(state.postFX.disposal.called).toEqual([]);
     expect(state.postFX.estimatedBytes).toBeLessThanOrEqual(128 * 1024 * 1024);
     expect(state.effectiveDprCap).toBe(1.75);
+  } finally {
+    await context.close();
+  }
+});
+
+test('mobile-rich demotes once, disposes postFX, persists DPR through resize, and stays lite next load', async ({ browser }) => {
+  const { context, page } = await openMobilePage(browser);
+  const pageErrors = [];
+  const consoleErrors = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+  page.on('console', message => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
+  try {
+    await page.goto('/?tier=rich&sceneDebug=1');
+    await expect.poll(() => page.evaluate(() => typeof window.__sceneTest?.setFps)).toBe('function');
+    await page.evaluate(() => window.__sceneTest.setFps(30));
+    await page.waitForTimeout(4300);
+    let state = await page.evaluate(() => window.__sceneDebug());
+    expect(state.demoted).toBe(true);
+    expect(state.effectiveDprCap).toBe(1.5);
+    expect(state.postFX.enabled).toBe(false);
+    expect(state.postFX.disposed).toBe(true);
+    expect(state.postFX.disposal.expected.length).toBeGreaterThan(0);
+    expect(state.postFX.disposal.expected).toHaveLength(12);
+    expect(state.postFX.disposal.called).toEqual(state.postFX.disposal.expected);
+    expect(state.demotionCount).toBe(1);
+    const afterDemotion = { direct: state.renderCounts.direct, postfx: state.renderCounts.postfx };
+    await page.waitForTimeout(300);
+    state = await page.evaluate(() => window.__sceneDebug());
+    expect(state.renderPath).toBe('direct');
+    expect(state.renderCounts.direct).toBeGreaterThan(afterDemotion.direct);
+    expect(state.renderCounts.postfx).toBe(afterDemotion.postfx);
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.waitForTimeout(400);
+    state = await page.evaluate(() => window.__sceneDebug());
+    expect(state.effectiveDprCap).toBe(1.5);
+    expect(state.demotionCount).toBe(1);
+    await page.goto('/?sceneDebug=1');
+    await expect.poll(() => page.evaluate(() => window.__sceneDebug?.().tier)).toBe('lite');
+    state = await page.evaluate(() => window.__sceneDebug());
+    expect(state.tier).toBe('lite');
+    expect(pageErrors).toEqual([]);
+    expect(consoleErrors).toEqual([]);
   } finally {
     await context.close();
   }
@@ -100,15 +147,28 @@ test('desktop keeps the locked high scene payload', async ({ page }) => {
     refractBeads: true,
     rivulet: true
   });
-  expect(state.postFX).toEqual({
+  expect(state.postFX).toMatchObject({
     enabled: true,
+    disposed: false,
     bloomScale: 1,
     finalSamples: 4,
     bloomSamples: 4,
     estimatedBytes: expect.any(Number),
     withinBudget: true
   });
+  expect(state.postFX.disposal.expected.length).toBeGreaterThan(0);
+  expect(state.postFX.disposal.called).toEqual([]);
   expect(state.effectiveDprCap).toBe(2);
+});
+
+test('deterministic FPS injection stays behind sceneDebug', async ({ browser }) => {
+  const { context, page } = await openMobilePage(browser);
+  try {
+    await page.goto('/?tier=lite');
+    expect(await page.evaluate(() => typeof window.__sceneTest)).toBe('undefined');
+  } finally {
+    await context.close();
+  }
 });
 
 test('reduced motion keeps the mobile tier probe null', async ({ browser }) => {

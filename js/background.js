@@ -1,4 +1,4 @@
-import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
+import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-policy.mjs';
 
 /* Immersive scene: TOKYO DATA-GLOBE — a particle Earth whose points exist only
    where land exists, a pulsing amber Tokyo node with live coordinates, and a
@@ -1810,6 +1810,17 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
   };
 
   let fpsEMA = 60;   // declared before the reduced branch runs — getSceneDebug must never TDZ-crash
+  let effectiveDprCap = quality.dprCap;
+  let usePost = false;
+  let postDisposed = false;
+  let demoted = false;
+  let demotionCount = 0;
+  let renderPath = 'none';
+  const renderCounts = { direct: 0, postfx: 0 };
+  const postPasses = [];
+  const disposalExpected = new Set();
+  const disposalCalls = new Map();
+  let injectedFps = null;
   function getSceneDebug() {
     return {
       quality: quality.name,
@@ -1818,8 +1829,11 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
       lite: LITE,
       reduced,
       probeScore,
-      demoted: false,
-      effectiveDprCap: quality.dprCap,
+      demoted,
+      demotionCount,
+      effectiveDprCap,
+      renderPath,
+      renderCounts: { ...renderCounts },
       capabilities: {
         postFX: quality.postFX,
         wells: quality.wells,
@@ -1828,7 +1842,15 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
         rivulet: quality.rivulet,
       },
       postFX: {
-        enabled: bloomEnabled,
+        enabled: usePost,
+        disposed: postDisposed,
+        disposal: {
+          expected: [...disposalExpected].sort(),
+          called: [...disposalCalls]
+            .filter(([, count]) => count === 1)
+            .map(([name]) => name)
+            .sort(),
+        },
         bloomScale: quality.bloomScale,
         finalSamples: quality.postFXSamples.final,
         bloomSamples: quality.postFXSamples.bloom,
@@ -2060,10 +2082,53 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
   const bloomEnabled = quality.postFX && postFxWithinBudget && !reduced &&
                        !!(window.POST && window.POST.EffectComposer);
   let bloomComposer = null, finalComposer = null, renderBloomThenFinal = null;
+  let bloomRenderPass = null, unrealBloomPass = null, finalRenderPass = null;
+  let mixPass = null, outputPass = null, gradePass = null, caPass = null;
+  let darkMat = null, darkPoints = null, darkSprite = null, matCache = null;
   let gradeUniforms = null;   // v3.3b: loop-visible handle for the uFlash drive — stays null without postFX
 
+  function registerDisposable(name, resource, isPass = false) {
+    if (!resource) return resource;
+    disposalExpected.add(name);
+    if (sceneDebug && typeof resource.dispose === 'function') {
+      const dispose = resource.dispose.bind(resource);
+      resource.dispose = (...args) => {
+        disposalCalls.set(name, (disposalCalls.get(name) || 0) + 1);
+        return dispose(...args);
+      };
+    }
+    if (isPass) postPasses.push(resource);
+    return resource;
+  }
+
+  function disposePostFX() {
+    if (postDisposed) return;
+    postDisposed = true;
+    usePost = false;
+    renderBloomThenFinal = null;
+    for (const pass of postPasses.splice(0)) pass?.dispose?.();
+    for (const material of [darkMat, darkPoints, darkSprite]) material?.dispose?.();
+    matCache?.clear?.();
+    matCache = null;
+    bloomComposer?.dispose?.();
+    finalComposer?.dispose?.();
+    bloomComposer = null;
+    finalComposer = null;
+    bloomRenderPass = null;
+    unrealBloomPass = null;
+    finalRenderPass = null;
+    mixPass = null;
+    outputPass = null;
+    gradePass = null;
+    caPass = null;
+    darkMat = null;
+    darkPoints = null;
+    darkSprite = null;
+    gradeUniforms = null;
+  }
+
   function sizeComposers(width, height, pixelRatio) {
-    if (!bloomComposer || !finalComposer) return;
+    if (!usePost || postDisposed || !bloomComposer || !finalComposer) return;
     bloomComposer.setPixelRatio(pixelRatio);
     bloomComposer.setSize(
       Math.max(1, Math.round(width * quality.bloomScale)),
@@ -2091,7 +2156,7 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
     // depth-rain, holo-scan-shell, satellite, transit/stations/packet, halo text labels.
 
     // (b) bloomComposer — renders ONLY tagged emitters (rest swapped to black), off-screen.
-    bloomComposer = new POST.EffectComposer(renderer);   // no type arg -> HalfFloatType RGBA16F LINEAR target (EffectComposer.js:27)
+    bloomComposer = registerDisposable('composer:bloom', new POST.EffectComposer(renderer));   // no type arg -> HalfFloatType RGBA16F LINEAR target (EffectComposer.js:27)
     /* v3.2e: renderer {antialias:true} only multisamples the DEFAULT framebuffer;
        composer passes rasterize into plain targets, so the high tier shipped
        WORSE line quality (graticule, arc, transit loop) than the lite tier's direct path.
@@ -2101,12 +2166,14 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
     bloomComposer.renderTarget1.samples = quality.postFXSamples.bloom;
     bloomComposer.renderTarget2.samples = quality.postFXSamples.bloom;
     bloomComposer.renderToScreen = false;
-    bloomComposer.addPass(new POST.RenderPass(scene, camera));
-    bloomComposer.addPass(new POST.UnrealBloomPass(
-      new THREE.Vector2(w, h), BLOOM_STRENGTH, BLOOM_RADIUS, BLOOM_THRESHOLD));
+    bloomRenderPass = registerDisposable('pass:bloom-render', new POST.RenderPass(scene, camera), true);
+    unrealBloomPass = registerDisposable('pass:unreal-bloom', new POST.UnrealBloomPass(
+      new THREE.Vector2(w, h), BLOOM_STRENGTH, BLOOM_RADIUS, BLOOM_THRESHOLD), true);
+    bloomComposer.addPass(bloomRenderPass);
+    bloomComposer.addPass(unrealBloomPass);
 
     // (c) mixPass — ADD glow rgb, KEEP base alpha, NoBlending overwrite (design §2b — THE fix).
-    const mixPass = new POST.ShaderPass(
+    mixPass = registerDisposable('pass:mix', new POST.ShaderPass(
       new THREE.ShaderMaterial({
         uniforms: {
           baseTexture:  { value: null },
@@ -2131,7 +2198,7 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
         `,
       }),
       'baseTexture'
-    );
+    ), true);
     mixPass.needsSwap = true;
     mixPass.material.blending = THREE.NoBlending;   // NOT transparent=true — overwrite the stale target
 
@@ -2141,7 +2208,7 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
     //      and lift pulled uniformly negative — shadows sink to true black so
     //      the scene sits on the deep-black CSS floor; amber-highlight gain
     //      (the signal look) stays.
-    const gradePass = new POST.ShaderPass(new THREE.ShaderMaterial({
+    gradePass = registerDisposable('pass:grade', new POST.ShaderPass(new THREE.ShaderMaterial({
       uniforms: {
         tDiffuse: { value: null },
         uLift:    { value: new THREE.Vector3(-0.02, -0.02, -0.02) }, // neutral crush: all channels down, no teal cast
@@ -2185,14 +2252,14 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
           gl_FragColor = vec4(clamp(c, 0.0, 1.0), src.a);   // alpha straight through
         }
       `,
-    }));
+    })), true);
     gradePass.material.blending = THREE.NoBlending;
     gradeUniforms = gradePass.material.uniforms;   // v3.3b: the loop drives uFlash per frame
 
     // (c3) caPass — radial chromatic aberration ("worn projected glass" fringe),
     //      display-space, LAST in the chain. R/B sampled at ±radial offset; G AND
     //      alpha at the un-offset CENTRE tap => undrawn pixels stay alpha 0 (no ghost).
-    const caPass = new POST.ShaderPass(new THREE.ShaderMaterial({
+    caPass = registerDisposable('pass:chromatic-aberration', new POST.ShaderPass(new THREE.ShaderMaterial({
       uniforms: {
         tDiffuse: { value: null },
         uAmount:  { value: 0.0035 },     // edge fringe, uv units; tune 0.002..0.006
@@ -2220,18 +2287,21 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
           gl_FragColor = vec4(r + dth, c.g + dth, b + dth, c.a);   // <-- centre alpha => undrawn stays 0
         }
       `,
-    }));
+    })), true);
     caPass.material.blending = THREE.NoBlending;   // overwrite stale ping-pong target
 
     // (d) finalComposer — full REAL scene + ADD glow + restore on-screen sRGB (R6).
-    finalComposer = new POST.EffectComposer(renderer);
+    finalComposer = registerDisposable('composer:final', new POST.EffectComposer(renderer));
     finalComposer.renderTarget1.samples = quality.postFXSamples.final;   // v3.2e MSAA — see bloomComposer note
     finalComposer.renderTarget2.samples = quality.postFXSamples.final;
-    finalComposer.addPass(new POST.RenderPass(scene, camera));
+    finalRenderPass = registerDisposable('pass:final-render', new POST.RenderPass(scene, camera), true);
+    outputPass = registerDisposable('pass:output', new POST.OutputPass(), true);
+    finalComposer.addPass(finalRenderPass);
     finalComposer.addPass(mixPass);
-    finalComposer.addPass(new POST.OutputPass());   // REQUIRED: composer strips on-screen sRGB otherwise
+    finalComposer.addPass(outputPass);   // REQUIRED: composer strips on-screen sRGB otherwise
     finalComposer.addPass(gradePass);               // SP4: grade tone-mapped sRGB display values, keep .a
     finalComposer.addPass(caPass);                  // SP4: lens fringe, centre-alpha, LAST -> writes canvas
+    usePost = true;
     sizeComposers(w, h, dpr);
 
     // (e) Dark-material-swap (official pattern; depthWrite:false preserves the scene's
@@ -2242,16 +2312,16 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
        drifted with the field (the owner's "dark squares stuttering"). Every untagged
        object now swaps to a type-correct fully-invisible material instead — safe
        because this scene has no occluders by design (all emitters additive). */
-    const darkMat    = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false });
-    const darkPoints = new THREE.PointsMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false, size: 0.001 });
+    darkMat = registerDisposable('material:dark-mesh', new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false }));
+    darkPoints = registerDisposable('material:dark-points', new THREE.PointsMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false, size: 0.001 }));
     /* v3.1f: SpriteMaterial defaults transparent:true, so a plain black swap kept the
        untagged canvas sprites (halo labels, callout, scan tag) in the TRANSPARENT queue
        as opaque black quads — each one stamped its rectangle over the additive emitters
        already drawn behind it in the bloom pass, and the missing bloom read as dark/grey
        slabs around the halo cluster on the deep-black floor. opacity:0 makes untagged
        sprites contribute nothing instead (this scene has no occluders by design). */
-    const darkSprite = new THREE.SpriteMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false });
-    const matCache = new Map();
+    darkSprite = registerDisposable('material:dark-sprite', new THREE.SpriteMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false }));
+    matCache = new Map();
     const darken = o => {
       if (o.userData.bloom) return;
       if (o.isSprite) { matCache.set(o, o.material); o.material = darkSprite; }
@@ -2279,6 +2349,7 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
     if (sceneDebug) {
       const digestCv = document.createElement('canvas');
       window.__bloomIso = (rainVisible, hold) => {
+        if (!usePost || postDisposed || !bloomComposer) return 'unavailable';
         const rainMesh = scene.getObjectByName('rain-streaks');
         if (rainMesh) rainMesh.visible = rainVisible !== false;
         if (hold && running) { running = false; cancelAnimationFrame(raf); }
@@ -2319,7 +2390,6 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
     }
   }
 
-  const DPR_CAP = quality.dprCap;
   addEventListener('resize', () => {
     clearTimeout(resizeTm);
     resizeTm = setTimeout(() => {
@@ -2328,7 +2398,7 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
       /* v3.2e: re-read devicePixelRatio — dragging the window between a Retina
          and a 1x display (or zooming) changes DPR without a reload; the boot-time
          snapshot left the canvas soft (or 4x oversized) after such a move. */
-      const newDpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
+      const newDpr = Math.min(window.devicePixelRatio || 1, effectiveDprCap);
       if (renderer.getPixelRatio() !== newDpr) {
         renderer.setPixelRatio(newDpr);
         globeMat.uniforms.uPx.value = newDpr;   // land-particle gl_PointSize is uPx-scaled
@@ -2339,7 +2409,7 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
         OFF = offsetFor();
         coreGroup.position.set(OFF[0], OFF[1], OFF[2]);
       }
-      sizeComposers(w, h, newDpr);
+      if (usePost && !postDisposed) sizeComposers(w, h, newDpr);
       maxScroll = Math.max(1, document.body.scrollHeight - innerHeight);
     }, 150);
   });
@@ -2362,9 +2432,39 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
     if (!document.hidden && !running) { running = true; raf = requestAnimationFrame(loop); }
   });
 
-  const render = (bloomEnabled && renderBloomThenFinal)
-    ? () => renderBloomThenFinal()               // rich path: dark-swap -> bloom composite -> final
-    : () => renderer.render(scene, camera);      // reduced/lite/budget-breach: direct path
+  function render() {
+    if (usePost && renderBloomThenFinal) {
+      renderPath = 'postfx';
+      renderCounts.postfx++;
+      renderBloomThenFinal();                    // rich path: dark-swap -> bloom composite -> final
+      return;
+    }
+    renderPath = 'direct';
+    renderCounts.direct++;
+    renderer.render(scene, camera);              // reduced/lite/budget-breach/demoted: direct path
+  }
+
+  const demoter = createFpsDemoter({
+    onDemote: () => {
+      demotionCount++;
+      demoted = true;
+      effectiveDprCap = 1.5;
+      const demotedDpr = Math.min(window.devicePixelRatio || 1, effectiveDprCap);
+      renderer.setPixelRatio(demotedDpr);
+      globeMat.uniforms.uPx.value = demotedDpr;
+      disposePostFX();
+      try {
+        sessionStorage.setItem('v34.tierProbe', JSON.stringify({ tier: 'lite', score: null, demoted: true }));
+      } catch {}
+    }
+  });
+  if (sceneDebug) {
+    window.__sceneTest = {
+      setFps(value) {
+        injectedFps = typeof value === 'number' && Number.isFinite(value) ? value : null;
+      }
+    };
+  }
 
   if (reduced) {
     // Meaningful static frame: Tokyo rotated to face the camera, journey arc
@@ -2407,8 +2507,12 @@ import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
   function loop(now) {
     if (!running) return;
     raf = requestAnimationFrame(loop);
-    const dt = Math.max(0, Math.min((now - last) / 1000, 0.033)); last = now;
-    if (dt > 0) fpsEMA += (Math.min(1 / dt, 120) - fpsEMA) * 0.04;   // QA gate reads this
+    const elapsed = Math.max(0, (now - last) / 1000); last = now;
+    const dt = Math.min(elapsed, 0.033);
+    if (elapsed > 0) fpsEMA += (Math.min(1 / elapsed, 120) - fpsEMA) * 0.04;   // QA gate reads this
+    if (quality.name === 'mobile-rich' && (query.get('tier') !== 'rich' || injectedFps !== null)) {
+      demoter.sample(injectedFps ?? fpsEMA, elapsed);
+    }
     t += dt * 0.3;
     if (GLOBE_ELEV) {   // boot-up scan-reveal: ease-out cubic over ~1.8s, then inert at 1
       revealT += dt;

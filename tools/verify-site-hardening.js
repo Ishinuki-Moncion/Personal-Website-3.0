@@ -196,6 +196,7 @@ const allowedQualityNameSites = [
   "const postFxWithinBudget = quality.name !== 'mobile-rich' ||",
   "if (globeFilled < GLOBE_N) console.warn('[scene] land particle sample underfilled', { quality: quality.name, globeFilled, expected: GLOBE_N });",
   'quality: quality.name,',
+  "if (quality.name === 'mobile-rich' && (query.get('tier') !== 'rich' || injectedFps !== null)) {",
 ];
 check(
   'v3.4 Task 5 deferred audit: LITE and quality.name executable sites are allowlisted',
@@ -203,11 +204,11 @@ check(
     executableLiteSites.every((site, index) => site === allowedLiteSites[index]) &&
     qualityNameSites.length === allowedQualityNameSites.length &&
     qualityNameSites.every((site, index) => site === allowedQualityNameSites[index]),
-  'standalone LITE may only drive the nine audited layout/input sites; quality.name may only appear in the underfill diagnostic, mobile-rich budget gate, and debug publication; tier-name rain selection and law-pinned LITE_* names remain allowed'
+  'standalone LITE may only drive the nine audited layout/input sites; quality.name may only appear in the underfill diagnostic, mobile-rich budget gate, debug publication, and the one-way mobile-rich watchdog; tier-name rain selection and law-pinned LITE_* names remain allowed'
 );
 check(
   'v3.4 renderer richness follows explicit capability profiles, not mobile layout',
-    /import \{ classifyTier, estimatePostFxBytes \} from '\.\/quality-policy\.mjs'/.test(background) &&
+    /import \{ classifyTier, createFpsDemoter, estimatePostFxBytes \} from '\.\/quality-policy\.mjs'/.test(background) &&
     /const LITE = coarse \|\| small/.test(background) &&
     /const tier = classifyTier\(\{[\s\S]*probeTier: tierProbe\?\.tier,[\s\S]*score: probeScore/.test(background) &&
     background.indexOf('const RIVULET_GATE = true') < background.indexOf('const profiles = {') &&
@@ -227,7 +228,7 @@ check(
     /if \(quality\.rivulet && !reduced\)/.test(background) &&
     !/quality\.name === 'high'/.test(background) &&
     /tier,\s*\n\s*dpr,/.test(background) &&
-    /probeScore,\s*\n\s*demoted: false,\s*\n\s*effectiveDprCap: quality\.dprCap/.test(background) &&
+    /probeScore,\s*\n\s*demoted,\s*\n\s*demotionCount,\s*\n\s*effectiveDprCap,/.test(background) &&
     /capabilities: \{[\s\S]*postFX: quality\.postFX,[\s\S]*wells: quality\.wells,[\s\S]*graticuleFull: quality\.graticuleFull,[\s\S]*refractBeads: quality\.refractBeads,[\s\S]*rivulet: quality\.rivulet/.test(background) &&
     /const defs = tier === 'lite'/.test(task5RainDefs) &&
     /tier === 'mobile-rich'/.test(task5RainDefs) &&
@@ -251,8 +252,36 @@ check(
     (background.match(/finalComposer\.setSize/g) || []).length === 1 &&
     /sizeComposers\(w, h, dpr\)/.test(background) &&
     /sizeComposers\(w, h, newDpr\)/.test(background) &&
-    /postFX: \{[\s\S]*enabled: bloomEnabled,[\s\S]*estimatedBytes: estimatedPostFxBytes,[\s\S]*withinBudget: postFxWithinBudget/.test(background),
+    /postFX: \{[\s\S]*enabled: usePost,[\s\S]*estimatedBytes: estimatedPostFxBytes,[\s\S]*withinBudget: postFxWithinBudget/.test(background),
   'mobile-rich must fail closed at 128 MiB before EffectComposer construction, samples must remain profile-owned, and initial/resize sizing must share sizeComposers with complete debug publication'
+);
+
+const task7DemoterBlock = (background.match(/const demoter = createFpsDemoter\(\{[\s\S]*?\n\s*\}\);/) || [''])[0];
+check(
+  'v3.4 Task 7 demotes mobile-rich exactly once and fully disposes live postFX',
+    (background.match(/createFpsDemoter\(/g) || []).length === 1 &&
+    /let effectiveDprCap = quality\.dprCap/.test(background) &&
+    /let usePost = false/.test(background) &&
+    /function disposePostFX\(\) \{[\s\S]*if \(postDisposed\) return;[\s\S]*postDisposed = true;[\s\S]*usePost = false;[\s\S]*postPasses\.splice\(0\)[\s\S]*darkMat, darkPoints, darkSprite[\s\S]*matCache\?\.clear\?\.\(\)[\s\S]*bloomComposer\?\.dispose\?\.\(\)[\s\S]*finalComposer\?\.dispose\?\.\(\)[\s\S]*bloomComposer = null;[\s\S]*finalComposer = null;[\s\S]*darkMat = null;[\s\S]*darkPoints = null;[\s\S]*darkSprite = null;/.test(background) &&
+    (background.match(/registerDisposable\('pass:/g) || []).length === 7 &&
+    (background.match(/registerDisposable\('composer:/g) || []).length === 2 &&
+    (background.match(/registerDisposable\('material:dark-/g) || []).length === 3 &&
+    /if \(sceneDebug && typeof resource\.dispose === 'function'\)[\s\S]*return dispose\(\.\.\.args\)/.test(background) &&
+    /filter\(\(\[, count\]\) => count === 1\)/.test(background) &&
+    /demotionCount\+\+/.test(task7DemoterBlock) &&
+    /effectiveDprCap = 1\.5/.test(task7DemoterBlock) &&
+    /disposePostFX\(\)/.test(task7DemoterBlock) &&
+    /sessionStorage\.setItem\('v34\.tierProbe', JSON\.stringify\(\{ tier: 'lite', score: null, demoted: true \}\)\)/.test(task7DemoterBlock) &&
+    !/new THREE\.|makeGeometry|setAttribute/.test(task7DemoterBlock) &&
+    /if \(quality\.name === 'mobile-rich' && \(query\.get\('tier'\) !== 'rich' \|\| injectedFps !== null\)\) \{\s*demoter\.sample\(injectedFps \?\? fpsEMA, elapsed\)/.test(background) &&
+    /if \(sceneDebug\) \{\s*window\.__sceneTest = \{[\s\S]*setFps\(value\)/.test(background) &&
+    (background.match(/window\.__sceneTest/g) || []).length === 1 &&
+    /Math\.min\(window\.devicePixelRatio \|\| 1, effectiveDprCap\)/.test(background) &&
+    /if \(usePost && !postDisposed\) sizeComposers\(w, h, newDpr\)/.test(background) &&
+    /else if \(!running\) \{\s*running = true;\s*last = performance\.now\(\);[^\n]*\n\s*raf = requestAnimationFrame\(loop\)/.test(background) &&
+    /function render\(\) \{\s*if \(usePost && renderBloomThenFinal\)/.test(background) &&
+    /postFX: \{[\s\S]*enabled: usePost,[\s\S]*disposed: postDisposed,[\s\S]*expected: \[\.\.\.disposalExpected\]\.sort\(\)/.test(background),
+  'one pure demoter must own the one-way 1.5 DPR transition, persisted lite result, debug-only injected FPS, complete named pass/composer/material disposal, live render/resize guards, and non-rebuilding demotion callback'
 );
 
 check(
