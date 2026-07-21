@@ -40,6 +40,15 @@ test('rich override resolves the mobile probe without GPU allocation', async ({ 
       refractBeads: true,
       rivulet: false
     });
+    expect(state.postFX).toEqual({
+      enabled: true,
+      bloomScale: 0.5,
+      finalSamples: 2,
+      bloomSamples: 0,
+      estimatedBytes: expect.any(Number),
+      withinBudget: true
+    });
+    expect(state.postFX.estimatedBytes).toBeLessThanOrEqual(128 * 1024 * 1024);
     expect(state.effectiveDprCap).toBe(1.75);
   } finally {
     await context.close();
@@ -90,6 +99,14 @@ test('desktop keeps the locked high scene payload', async ({ page }) => {
     graticuleFull: true,
     refractBeads: true,
     rivulet: true
+  });
+  expect(state.postFX).toEqual({
+    enabled: true,
+    bloomScale: 1,
+    finalSamples: 4,
+    bloomSamples: 4,
+    estimatedBytes: expect.any(Number),
+    withinBudget: true
   });
   expect(state.effectiveDprCap).toBe(2);
 });

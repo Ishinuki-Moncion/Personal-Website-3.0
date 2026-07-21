@@ -168,9 +168,46 @@ const task5RainLayers = [
   '{ n: 150, size: 0.24, speed: [4.2, 7.5], op: 0.36, z: [-6, -11], len: 0.55, head: 0.8 }',
   '{ n: 250, size: 0.15, speed: [2.2, 4.2], op: 0.24, z: [-9, -16], len: 0.35, head: 0.65 }'
 ];
+// Task 6 closes the deferred Task 5 audit minor with explicit executable-site
+// allowlists. Standalone LITE is reserved for these nine layout/input choices;
+// substring names such as RAIN_LITE_VEIL and LITE_FLASH_BEAT are deliberately
+// outside this token audit. quality.name is likewise limited to diagnostics,
+// which rejects equality reversals, loose comparisons, includes/switch forms,
+// and other high-name richness gates without touching the required tier-name
+// three-way rain selection below.
+const executableLiteSites = background.split('\n')
+  .map(line => line.replace(/\/\/.*$/, '').trim())
+  .filter(line => /\bLITE\b/.test(line));
+const allowedLiteSites = [
+  'const LITE = coarse || small;',
+  ': LITE ? [5.8, 0.35, -4.5] : [3, 0.4, -2];',
+  'group.scale.setScalar(LITE ? 0.82 : 1);',
+  "const glow = makeGlowSprite('tokyo-halo-glow', LITE ? 0.9 : 1.15);",
+  'size: LITE ? 0.11 : 0.14,',
+  "if (!reduced && !LITE) { el.addEventListener('pointerenter', enter); el.addEventListener('pointerleave', leave); }",
+  'tokyoHalo.spinGroup.rotation.z += 0.0016 * f * (LITE ? 0.5 : 1) + lock * 0.02 * f;',
+  'sp.material.opacity = tokyoFacing * lab * gate * (LITE ? 0.72 : 0.9);',
+  'lite: LITE,',
+];
+const qualityNameSites = background.split('\n')
+  .map(line => line.replace(/\/\/.*$/, '').trim())
+  .filter(line => /quality\s*(?:\.\s*name|\[\s*['"]name['"]\s*\])/.test(line));
+const allowedQualityNameSites = [
+  "const postFxWithinBudget = quality.name !== 'mobile-rich' ||",
+  "if (globeFilled < GLOBE_N) console.warn('[scene] land particle sample underfilled', { quality: quality.name, globeFilled, expected: GLOBE_N });",
+  'quality: quality.name,',
+];
+check(
+  'v3.4 Task 5 deferred audit: LITE and quality.name executable sites are allowlisted',
+  executableLiteSites.length === allowedLiteSites.length &&
+    executableLiteSites.every((site, index) => site === allowedLiteSites[index]) &&
+    qualityNameSites.length === allowedQualityNameSites.length &&
+    qualityNameSites.every((site, index) => site === allowedQualityNameSites[index]),
+  'standalone LITE may only drive the nine audited layout/input sites; quality.name may only appear in the underfill diagnostic, mobile-rich budget gate, and debug publication; tier-name rain selection and law-pinned LITE_* names remain allowed'
+);
 check(
   'v3.4 renderer richness follows explicit capability profiles, not mobile layout',
-  /import \{ classifyTier \} from '\.\/quality-policy\.mjs'/.test(background) &&
+    /import \{ classifyTier, estimatePostFxBytes \} from '\.\/quality-policy\.mjs'/.test(background) &&
     /const LITE = coarse \|\| small/.test(background) &&
     /const tier = classifyTier\(\{[\s\S]*probeTier: tierProbe\?\.tier,[\s\S]*score: probeScore/.test(background) &&
     background.indexOf('const RIVULET_GATE = true') < background.indexOf('const profiles = {') &&
@@ -196,6 +233,26 @@ check(
     /tier === 'mobile-rich'/.test(task5RainDefs) &&
     task5RainLayers.every(layer => task5RainDefs.includes(layer)),
   'the four exact profiles, copied live DPR, three exact rain payloads, capability gates, and expanded debug surface must remain explicit; quality.name high gates are forbidden'
+);
+
+check(
+  'v3.4 Task 6 bounds mobile postFX before allocation and sizes both composers through one path',
+  /const estimatedPostFxBytes = estimatePostFxBytes\(\{[\s\S]*width: w,[\s\S]*height: h,[\s\S]*dpr,[\s\S]*finalSamples: quality\.postFXSamples\.final,[\s\S]*bloomSamples: quality\.postFXSamples\.bloom,[\s\S]*bloomScale: quality\.bloomScale/.test(background) &&
+    /const postFxWithinBudget = quality\.name !== 'mobile-rich' \|\|\s*estimatedPostFxBytes <= 128 \* 1024 \* 1024/.test(background) &&
+    background.indexOf('const postFxWithinBudget =') < background.indexOf('new POST.EffectComposer(renderer)') &&
+    (background.match(/postFX disabled: estimated mobile attachment budget exceeded/g) || []).length === 1 &&
+    /const bloomEnabled = quality\.postFX && postFxWithinBudget && !reduced/.test(background) &&
+    /bloomComposer\.renderTarget1\.samples = quality\.postFXSamples\.bloom/.test(background) &&
+    /bloomComposer\.renderTarget2\.samples = quality\.postFXSamples\.bloom/.test(background) &&
+    /finalComposer\.renderTarget1\.samples = quality\.postFXSamples\.final/.test(background) &&
+    /finalComposer\.renderTarget2\.samples = quality\.postFXSamples\.final/.test(background) &&
+    /function sizeComposers\(width, height, pixelRatio\) \{[\s\S]*bloomComposer\.setPixelRatio\(pixelRatio\);[\s\S]*Math\.round\(width \* quality\.bloomScale\)[\s\S]*Math\.round\(height \* quality\.bloomScale\)[\s\S]*finalComposer\.setPixelRatio\(pixelRatio\);[\s\S]*finalComposer\.setSize\(width, height\);[\s\S]*\}/.test(background) &&
+    (background.match(/bloomComposer\.setSize/g) || []).length === 1 &&
+    (background.match(/finalComposer\.setSize/g) || []).length === 1 &&
+    /sizeComposers\(w, h, dpr\)/.test(background) &&
+    /sizeComposers\(w, h, newDpr\)/.test(background) &&
+    /postFX: \{[\s\S]*enabled: bloomEnabled,[\s\S]*estimatedBytes: estimatedPostFxBytes,[\s\S]*withinBudget: postFxWithinBudget/.test(background),
+  'mobile-rich must fail closed at 128 MiB before EffectComposer construction, samples must remain profile-owned, and initial/resize sizing must share sizeComposers with complete debug publication'
 );
 
 check(
@@ -521,9 +578,10 @@ check('v32d: signals calmed — streaks retired, grid story-driven and de-ambere
 
 check('v32e: black-floor fidelity — CA-pass hash dither, MSAA composer targets, live DPR re-read',
   /fract\(sin\(dot\(gl_FragCoord\.xy, vec2\(12\.9898, 78\.233\)\)\) \* 43758\.5453\) \/ 255\.0/.test(background) &&
-    /renderTarget1\.samples = 4/.test(background) &&
+    /bloomComposer\.renderTarget1\.samples = quality\.postFXSamples\.bloom/.test(background) &&
+    /finalComposer\.renderTarget1\.samples = quality\.postFXSamples\.final/.test(background) &&
     /renderer\.getPixelRatio\(\) !== newDpr/.test(background),
-  'the final CA pass must carry the ±0.5/255 hash dither, the high-tier composer ping-pong targets must be 4x multisampled, and the debounced resize handler must re-read devicePixelRatio');
+  'the final CA pass must carry the ±0.5/255 hash dither, composer samples must follow the pinned capability profile (high remains 4x), and the debounced resize handler must re-read devicePixelRatio');
 
 check(
   'v32f: contact return path — signal row present, address assembled at runtime only',

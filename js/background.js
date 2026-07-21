@@ -1,4 +1,4 @@
-import { classifyTier } from './quality-policy.mjs';
+import { classifyTier, estimatePostFxBytes } from './quality-policy.mjs';
 
 /* Immersive scene: TOKYO DATA-GLOBE — a particle Earth whose points exist only
    where land exists, a pulsing amber Tokyo node with live coordinates, and a
@@ -49,6 +49,22 @@ import { classifyTier } from './quality-policy.mjs';
   };
   const dpr = quality.dpr;
   let w = innerWidth, h = innerHeight;
+  const estimatedPostFxBytes = estimatePostFxBytes({
+    width: w,
+    height: h,
+    dpr,
+    finalSamples: quality.postFXSamples.final,
+    bloomSamples: quality.postFXSamples.bloom,
+    bloomScale: quality.bloomScale,
+  });
+  const postFxWithinBudget = quality.name !== 'mobile-rich' ||
+    estimatedPostFxBytes <= 128 * 1024 * 1024;
+  if (quality.postFX && !postFxWithinBudget) {
+    console.warn('[scene] postFX disabled: estimated mobile attachment budget exceeded', {
+      estimatedBytes: estimatedPostFxBytes,
+      budgetBytes: 128 * 1024 * 1024,
+    });
+  }
   // globe detail scales with device class
   const R = 3.2;                       // globe radius
   const GLOBE_N = quality.globeParticles;  // land particle count
@@ -1811,6 +1827,14 @@ import { classifyTier } from './quality-policy.mjs';
         refractBeads: quality.refractBeads,
         rivulet: quality.rivulet,
       },
+      postFX: {
+        enabled: bloomEnabled,
+        bloomScale: quality.bloomScale,
+        finalSamples: quality.postFXSamples.final,
+        bloomSamples: quality.postFXSamples.bloom,
+        estimatedBytes: estimatedPostFxBytes,
+        withinBudget: postFxWithinBudget,
+      },
       globeParticles: globeFilled,
       expectedGlobeParticles: GLOBE_N,
       activeSection: sceneState.section,
@@ -2026,17 +2050,28 @@ import { classifyTier } from './quality-policy.mjs';
   let resizeTm;
 
   /* ------------------------------------------------------------------ *
-   *  POSTPROCESSING — SP1 bloom + SP4 grade/CA, high tier only.        *
+   *  POSTPROCESSING — SP1 bloom + SP4 grade/CA, rich profiles only.   *
    *  Two-composer selective DARK-MATERIAL-SWAP (NOT camera.layers, R8),*
    *  alpha-preserving via a NoBlending mixPass (R2). Fully decoupled:   *
    *  composers stay null unless enabled; render() falls back to the     *
-   *  direct path on lite/reduced (R7). ON by capability.               *
+   *  direct path on lite/reduced/budget breach (R7). ON by capability.*
    * ------------------------------------------------------------------ */
-  // SP4: bloom is ON by default (high tier). The ?bloom=1 spike flag is retired.
-  const bloomEnabled = quality.postFX && !reduced &&
+  // SP4: bloom is ON for budget-approved rich profiles. The ?bloom=1 spike flag is retired.
+  const bloomEnabled = quality.postFX && postFxWithinBudget && !reduced &&
                        !!(window.POST && window.POST.EffectComposer);
   let bloomComposer = null, finalComposer = null, renderBloomThenFinal = null;
   let gradeUniforms = null;   // v3.3b: loop-visible handle for the uFlash drive — stays null without postFX
+
+  function sizeComposers(width, height, pixelRatio) {
+    if (!bloomComposer || !finalComposer) return;
+    bloomComposer.setPixelRatio(pixelRatio);
+    bloomComposer.setSize(
+      Math.max(1, Math.round(width * quality.bloomScale)),
+      Math.max(1, Math.round(height * quality.bloomScale))
+    );
+    finalComposer.setPixelRatio(pixelRatio);
+    finalComposer.setSize(width, height);
+  }
 
   if (bloomEnabled) {
     const POST = window.POST;
@@ -2063,8 +2098,8 @@ import { classifyTier } from './quality-policy.mjs';
        samples=4 = WebGL2 MSAA, auto-resolved on sample; EffectComposer.setSize
        reallocates targets preserving .samples, so resize keeps it. Set before
        first render — targets allocate lazily on first bind. */
-    bloomComposer.renderTarget1.samples = 4;
-    bloomComposer.renderTarget2.samples = 4;
+    bloomComposer.renderTarget1.samples = quality.postFXSamples.bloom;
+    bloomComposer.renderTarget2.samples = quality.postFXSamples.bloom;
     bloomComposer.renderToScreen = false;
     bloomComposer.addPass(new POST.RenderPass(scene, camera));
     bloomComposer.addPass(new POST.UnrealBloomPass(
@@ -2190,13 +2225,14 @@ import { classifyTier } from './quality-policy.mjs';
 
     // (d) finalComposer — full REAL scene + ADD glow + restore on-screen sRGB (R6).
     finalComposer = new POST.EffectComposer(renderer);
-    finalComposer.renderTarget1.samples = 4;   // v3.2e MSAA — see bloomComposer note
-    finalComposer.renderTarget2.samples = 4;
+    finalComposer.renderTarget1.samples = quality.postFXSamples.final;   // v3.2e MSAA — see bloomComposer note
+    finalComposer.renderTarget2.samples = quality.postFXSamples.final;
     finalComposer.addPass(new POST.RenderPass(scene, camera));
     finalComposer.addPass(mixPass);
     finalComposer.addPass(new POST.OutputPass());   // REQUIRED: composer strips on-screen sRGB otherwise
     finalComposer.addPass(gradePass);               // SP4: grade tone-mapped sRGB display values, keep .a
     finalComposer.addPass(caPass);                  // SP4: lens fringe, centre-alpha, LAST -> writes canvas
+    sizeComposers(w, h, dpr);
 
     // (e) Dark-material-swap (official pattern; depthWrite:false preserves the scene's
     //     real no-occlusion property since every emitter is additive/depthWrite:false).
@@ -2296,7 +2332,6 @@ import { classifyTier } from './quality-policy.mjs';
       if (renderer.getPixelRatio() !== newDpr) {
         renderer.setPixelRatio(newDpr);
         globeMat.uniforms.uPx.value = newDpr;   // land-particle gl_PointSize is uPx-scaled
-        if (bloomComposer) { bloomComposer.setPixelRatio(newDpr); finalComposer.setPixelRatio(newDpr); }
       }
       camera.aspect = w / h; camera.updateProjectionMatrix();
       renderer.setSize(w, h);
@@ -2304,7 +2339,7 @@ import { classifyTier } from './quality-policy.mjs';
         OFF = offsetFor();
         coreGroup.position.set(OFF[0], OFF[1], OFF[2]);
       }
-      if (bloomComposer) { bloomComposer.setSize(w, h); finalComposer.setSize(w, h); }
+      sizeComposers(w, h, newDpr);
       maxScroll = Math.max(1, document.body.scrollHeight - innerHeight);
     }, 150);
   });
@@ -2328,8 +2363,8 @@ import { classifyTier } from './quality-policy.mjs';
   });
 
   const render = (bloomEnabled && renderBloomThenFinal)
-    ? () => renderBloomThenFinal()               // high tier: dark-swap -> bloom composite -> final
-    : () => renderer.render(scene, camera);        // reduced/lite: direct path
+    ? () => renderBloomThenFinal()               // rich path: dark-swap -> bloom composite -> final
+    : () => renderer.render(scene, camera);      // reduced/lite/budget-breach: direct path
 
   if (reduced) {
     // Meaningful static frame: Tokyo rotated to face the camera, journey arc

@@ -25,6 +25,16 @@ test('mobile-rich attachment estimate stays below 128 MiB at the largest phone g
   assert.ok(bytes <= 128 * 1024 * 1024, `${bytes} exceeds budget`);
 });
 
+test('mobile-rich attachment estimate crosses the 128 MiB boundary between adjacent rows', () => {
+  const profile = { width: 430, dpr: 1.75, finalSamples: 2, bloomSamples: 0, bloomScale: 0.5 };
+  const atBoundary = estimatePostFxBytes({ ...profile, height: 1887 });
+  const overBoundary = estimatePostFxBytes({ ...profile, height: 1888 });
+  assert.equal(atBoundary, 134186929);
+  assert.equal(overBoundary, 134258040);
+  assert.ok(atBoundary <= 128 * 1024 * 1024, `${atBoundary} should fit the budget`);
+  assert.ok(overBoundary > 128 * 1024 * 1024, `${overBoundary} should breach the budget`);
+});
+
 test('demoter fires once after four cumulative low-fps seconds and resets on recovery', () => {
   let calls = 0;
   const d = createFpsDemoter({ threshold: 45, holdSeconds: 4, onDemote: () => calls++ });
