@@ -21,6 +21,7 @@ This file is the durable review index for work led by **OpenAI Codex** on the Pe
 | `008c3f2`, `6ffa536` | Pure tier policy, 128 MiB estimate, one-way FPS demoter, and yielded leak-free WebGL2 capability probe | Independent task review approved after corrective pass; unit 12/12, real-probe Chromium/WebKit 4/4 each, hardening 64/64, zero 404/console/page errors |
 | `3ce13c3` | Explicit reduced/lite/mobile-rich/high profiles, capability-owned richness gates, three-way rain payload, and expanded scene debug | Independent task review approved; Chromium/WebKit 5/5 each, six-profile runtime sweep error-free, desktop high values preserved; one non-blocking hardening allowlist gap deferred to Task 6 |
 | `08add25` | Memory-bounded mobile postprocessing, profile-owned samples, half-scale mobile bloom, fail-closed allocation gate, and immutable-reference comparator | Independent task review approved with no findings; unit 13/13, hardening 67/67, Chromium/WebKit 5/5 each, six layout ratios at 0.014%–0.058%, desktop high preserved; Task 5 hardening gap closed |
+| `c4e2b81`, `bba3e92`, `b90e106` | Deterministic one-way mobile-rich demotion, live 1.5 DPR cap, persisted lite fallback, direct-render switch, and complete postFX disposal/reference severing | Final independent review approved after two Important lifecycle corrections; 13/13 named disposals exact once, retained graphs empty, Chromium/WebKit focused behavior green, actual DSF 3 DPR remains 1.5 through rotation, zero page/console errors |
 
 This table is updated after each reviewed task. Every integrated commit on this
 branch is authored and committed as `OpenAI Codex <noreply@openai.com>` so the
@@ -89,5 +90,17 @@ remains responsible for the decisions, integration, and final verification.
   sizes and the zero-allocation breach path, reran Chromium/WebKit, verified all
   six layout ratios below 0.005, visually approved all six full-scene pairs,
   and returned no findings. The deferred Task 5 hardening gap is closed.
+- Task 7 deterministic demotion and disposal: complete. A measured or
+  debug-injected sustained low-FPS mobile-rich scene demotes once, caps live
+  DPR at 1.5 through resize, switches to direct rendering, and persists a lite
+  session result without rebuilding geometry. Initial review found retained
+  composer/pass graphs; the first correction explicitly severed every pass,
+  target, buffer, uniform, material, scene/camera, and composer reference after
+  real disposal. Fresh re-review then found that pinned Three r158 omits the
+  UnrealBloom high-pass material from its own `dispose()`; the second correction
+  registered and disposed it explicitly. Final review verified 13/13 named
+  resources exactly once, empty externally retained graphs in Chromium and
+  WebKit, actual DSF 3 DPR at 1.5 before/after rotation, no errors, and no open
+  findings.
 - Production site code changes remain isolated to this Codex worktree and have
   not been pushed, proposed as a PR, deployed, or merged into production.
