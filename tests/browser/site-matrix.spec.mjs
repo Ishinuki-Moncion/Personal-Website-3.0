@@ -1,4 +1,5 @@
 import { test, expect, chromium } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -11,7 +12,7 @@ const viewports = [
   { width: 430, height: 932, touch: true },
   { width: 480, height: 800, touch: true },
   { width: 667, height: 375, touch: true },
-  { width: 768, height: 1024, touch: false },
+  { width: 768, height: 1024, touch: true },
   { width: 844, height: 390, touch: true },
   { width: 1440, height: 900, touch: false }
 ];
@@ -64,6 +65,11 @@ async function expectEssentialApp(page) {
   await expect(page.locator('.gallery-grid .shot').first()).toHaveAttribute('aria-label', /NAGANO/);
 }
 
+async function expectDecodedSource(image, source) {
+  await expect(image).toHaveAttribute('src', source);
+  await expect.poll(() => image.evaluate(element => element.complete && element.naturalWidth > 0)).toBe(true);
+}
+
 test('closed lightbox defers its image until the first photograph opens', async ({ page, context }) => {
   await localOnly(context);
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -84,9 +90,39 @@ test('closed lightbox defers its image until the first photograph opens', async 
   await first.click();
   await expect(page.locator('.lightbox')).toHaveClass(/\bopen\b/);
   const lightboxImage = page.locator('.lb-img');
-  await expect(lightboxImage).toHaveAttribute('src', 'images/gallery-07.jpg');
-  await expect.poll(() => lightboxImage.evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
+  await expectDecodedSource(lightboxImage, 'images/gallery-07.jpg');
+  await page.locator('.lb-next').click();
+  await expectDecodedSource(lightboxImage, 'images/gallery-03.jpg');
+  await page.locator('.lb-prev').click();
+  await expectDecodedSource(lightboxImage, 'images/gallery-07.jpg');
   expect(requestedPaths).toContain('/images/gallery-07.jpg');
+});
+
+test('view-transition lightbox opens and navigates decoded photographs', async ({ page, context }) => {
+  await localOnly(context);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => {
+    window.__VIEW_TRANSITION_COUNT = 0;
+    Object.defineProperty(document, 'startViewTransition', {
+      configurable: true,
+      value: update => {
+        window.__VIEW_TRANSITION_COUNT++;
+        update();
+        return { finished: Promise.resolve() };
+      }
+    });
+  });
+  await returningVisit(page);
+
+  await page.locator('.gallery-grid .shot').first().click();
+  await expect(page.locator('.lightbox')).toHaveClass(/\bopen\b/);
+  const lightboxImage = page.locator('.lb-img');
+  await expect.poll(() => page.evaluate(() => window.__VIEW_TRANSITION_COUNT)).toBe(1);
+  await expectDecodedSource(lightboxImage, 'images/gallery-07.jpg');
+  await page.locator('.lb-next').click();
+  await expectDecodedSource(lightboxImage, 'images/gallery-03.jpg');
+  await page.locator('.lb-prev').click();
+  await expectDecodedSource(lightboxImage, 'images/gallery-07.jpg');
 });
 
 for (const viewport of viewports) {
@@ -104,6 +140,13 @@ for (const viewport of viewports) {
     try {
       await returningVisit(page);
       await expectEssentialApp(page);
+
+      const pointerMedia = await page.evaluate(() => ({
+        coarse: matchMedia('(pointer: coarse)').matches,
+        fine: matchMedia('(pointer: fine)').matches
+      }));
+      expect(pointerMedia.coarse).toBe(viewport.touch);
+      expect(pointerMedia.fine).toBe(!viewport.touch);
 
       const overflow = await page.evaluate(() => ({
         document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -187,6 +230,50 @@ test('reduced motion keeps content static and bypasses the tier probe', async ({
   }
 });
 
+test('reduced-motion calibration exports an explicit non-applicable FPS result', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: 'reduce',
+    acceptDownloads: true
+  });
+  await localOnly(context);
+  const page = await context.newPage();
+  try {
+    await page.goto('/tests/device/mobile-rich-calibration.html?fpsWindowMs=400');
+    await expect(page.getByRole('heading', { name: 'Mobile-rich calibration' })).toBeVisible();
+    await page.getByRole('button', { name: /RUN 5 PROBES/ }).click();
+    await expect(page.locator('#status')).toContainText('FPS not applicable', { timeout: 35_000 });
+
+    const packet = JSON.parse(await page.locator('#packet').textContent());
+    expect(packet.selectionPolicy).toMatchObject({
+      forcedTier: false,
+      userAgentRole: 'diagnostic-label-only',
+      userAgentUsedForTierSelection: false
+    });
+    expect(packet.environment.reducedMotion).toBe(true);
+    expect(packet.fps15s).toEqual({
+      applicable: false,
+      reason: 'reduced-motion-static-scene',
+      durationMs: 0,
+      sampleCount: 0,
+      min: null,
+      median: null
+    });
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'EXPORT JSON' }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^mobile-rich-calibration-.*\.json$/);
+    const exportedPacket = JSON.parse(await readFile(await download.path(), 'utf8'));
+    expect(exportedPacket.selectionPolicy).toEqual(packet.selectionPolicy);
+    expect(exportedPacket.fps15s).toEqual(packet.fps15s);
+  } finally {
+    await context.close();
+  }
+});
+
 for (const failure of [
   { name: 'aborted background.js', pattern: '**/js/background.js*' },
   { name: 'aborted three.module.min.js', pattern: '**/three.module.min.js*' }
@@ -263,13 +350,17 @@ test('JavaScript-disabled page exposes static navigation content and gallery nam
   const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   await localOnly(context);
   const page = await context.newPage();
+  const initialRequests = [];
+  page.on('request', request => initialRequests.push(new URL(request.url()).pathname));
   try {
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'networkidle' });
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Ishinuki Daikie');
     await expect(page.locator('#work h3')).toHaveCount(3);
     await expect(page.locator('.gallery-grid .shot')).toHaveCount(12);
     await expect(page.locator('.gallery-grid .shot').first()).toHaveAccessibleName(/NAGANO/);
     await expect(page.locator('.gallery-grid .shot').last()).toHaveAccessibleName(/OKINAWA/);
+    expect(initialRequests).not.toContain('/images/tiles/gallery-07.jpg');
+    expect(initialRequests).not.toContain('/images/gallery-07.jpg');
     await page.locator('.brand').click();
     await expect(page).toHaveURL(/#home$/);
   } finally {
@@ -341,16 +432,22 @@ test('touch lightbox swipe moves forward and backward', async ({ browser }) => {
   }
 });
 
-test('deliberate WEBGL_lose_context keeps content available and resumes or falls back', async ({ page, context }) => {
+test('deliberate WEBGL_lose_context keeps content available and pauses then resumes', async ({ page, context }) => {
   await localOnly(context);
   await page.goto('/?tier=lite&sceneDebug=1');
-  await expect.poll(() => page.evaluate(() => window.__SCENE_STATUS?.ok ?? null)).not.toBeNull();
+  await expect.poll(() => page.evaluate(() => window.__SCENE_STATUS?.ok ?? null)).toBe(true);
+  const totalRenderCount = () => page.evaluate(() => {
+    const counts = window.__sceneDebug?.().renderCounts;
+    return counts ? counts.direct + counts.postfx : 0;
+  });
+  await expect.poll(totalRenderCount).toBeGreaterThan(2);
   const supported = await page.evaluate(() => {
     const canvas = document.querySelector('#scene-root canvas');
     const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
     return Boolean(gl?.getExtension('WEBGL_lose_context'));
   });
   test.skip(!supported, 'WEBGL_lose_context is unavailable in this engine');
+  const beforeLoss = await totalRenderCount();
   await page.evaluate(() => {
     const canvas = document.querySelector('#scene-root canvas');
     const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
@@ -358,9 +455,13 @@ test('deliberate WEBGL_lose_context keeps content available and resumes or falls
     window.__LOSE_CONTEXT.loseContext();
   });
   await page.waitForTimeout(200);
+  const lostCount = await totalRenderCount();
+  expect(lostCount).toBeGreaterThanOrEqual(beforeLoss);
+  await page.waitForTimeout(300);
+  expect(await totalRenderCount()).toBe(lostCount);
   await expectEssentialApp(page);
   await page.evaluate(() => window.__LOSE_CONTEXT.restoreContext());
-  await page.waitForTimeout(300);
+  await expect.poll(totalRenderCount).toBeGreaterThan(lostCount);
   await expectEssentialApp(page);
   await expect(page.locator('body')).not.toHaveAttribute('data-booting', '');
 });

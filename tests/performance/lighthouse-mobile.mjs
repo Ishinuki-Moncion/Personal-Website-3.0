@@ -5,28 +5,21 @@ import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import lighthouse, { desktopConfig } from 'lighthouse';
 import * as chromeLauncher from 'chrome-launcher';
+import {
+  desktopPasses,
+  displayMetrics,
+  extractMetrics,
+  medianMetrics,
+  mobilePasses
+} from './lighthouse-policy.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const url = 'http://127.0.0.1:4173/';
 const outputDirectory = await mkdtemp(join(tmpdir(), 'daikie-lh-'));
+const networkMode = process.env.LIGHTHOUSE_NETWORK_MODE === 'production-network';
+const mode = networkMode ? 'production-network' : 'deterministic-first-party';
 let server;
 let chrome;
-
-function metric(lhr, id) {
-  const value = lhr.audits[id]?.numericValue;
-  if (!Number.isFinite(value)) throw new Error(`Lighthouse audit ${id} has no numeric value`);
-  return value;
-}
-
-function summarize(lhr) {
-  return {
-    performance: Math.round((lhr.categories.performance.score ?? 0) * 100),
-    FCP: Math.round(metric(lhr, 'first-contentful-paint')),
-    LCP: Math.round(metric(lhr, 'largest-contentful-paint')),
-    CLS: Number(metric(lhr, 'cumulative-layout-shift').toFixed(4)),
-    TBT: Math.round(metric(lhr, 'total-blocking-time'))
-  };
-}
 
 function failingAuditIds(lhr) {
   return lhr.categories.performance.auditRefs
@@ -37,17 +30,6 @@ function failingAuditIds(lhr) {
     })
     .map(reference => reference.id)
     .sort();
-}
-
-function median(values) {
-  const sorted = [...values].sort((a, b) => a - b);
-  return sorted[Math.floor(sorted.length / 2)];
-}
-
-function mobileMedian(runs) {
-  return Object.fromEntries(
-    ['performance', 'FCP', 'LCP', 'CLS', 'TBT'].map(key => [key, median(runs.map(run => run.summary[key]))])
-  );
 }
 
 async function waitForServer() {
@@ -64,27 +46,33 @@ async function waitForServer() {
 }
 
 async function runAudit(label, config) {
+  const chromeFlags = [
+    '--headless=new',
+    '--no-sandbox',
+    '--disable-dev-shm-usage'
+  ];
+  if (!networkMode) {
+    chromeFlags.push('--host-resolver-rules=MAP * 0.0.0.0, EXCLUDE 127.0.0.1');
+  }
   chrome = await chromeLauncher.launch({
-    chromeFlags: [
-      '--headless=new',
-      '--no-sandbox',
-      '--disable-dev-shm-usage',
-      '--host-resolver-rules=MAP * 0.0.0.0, EXCLUDE 127.0.0.1'
-    ]
+    chromeFlags
   });
   try {
-    const result = await lighthouse(`${url}?lighthouse=${encodeURIComponent(label)}`, {
+    const lighthouseOptions = {
       port: chrome.port,
       output: 'json',
       logLevel: 'error',
-      onlyCategories: ['performance'],
-      blockedUrlPatterns: ['https://fonts.googleapis.com/*', 'https://fonts.gstatic.com/*']
-    }, config);
+      onlyCategories: ['performance']
+    };
+    if (!networkMode) {
+      lighthouseOptions.blockedUrlPatterns = ['https://fonts.googleapis.com/*', 'https://fonts.gstatic.com/*'];
+    }
+    const result = await lighthouse(`${url}?lighthouse=${encodeURIComponent(label)}`, lighthouseOptions, config);
     if (!result?.lhr) throw new Error(`Lighthouse returned no report for ${label}`);
     await writeFile(join(outputDirectory, `${label}.json`), String(result.report));
     return {
       label,
-      summary: summarize(result.lhr),
+      metrics: extractMetrics(result.lhr),
       environment: {
         formFactor: result.lhr.configSettings.formFactor,
         viewport: result.lhr.configSettings.screenEmulation
@@ -97,15 +85,17 @@ async function runAudit(label, config) {
   }
 }
 
-function mobilePasses(values) {
-  return values.performance >= 80 && values.LCP <= 2500 && values.CLS <= 0.10 && values.TBT <= 200;
-}
-
-function desktopPasses(values) {
-  return values.performance >= 85 && values.LCP <= 2500 && values.CLS <= 0.10;
+function printableRun(run) {
+  return { ...run, metrics: displayMetrics(run.metrics) };
 }
 
 try {
+  console.log(JSON.stringify({
+    label: 'lighthouse-mode',
+    mode,
+    googleFonts: networkMode ? 'live network' : 'excluded',
+    productionNetworkEvidence: networkMode
+  }));
   server = spawn(process.execPath, ['tests/helpers/serve.mjs'], {
     cwd: root,
     env: { ...process.env, HOST: '127.0.0.1', PORT: '4173' },
@@ -119,37 +109,48 @@ try {
   for (let index = 1; index <= 3; index++) {
     const run = await runAudit(`mobile-cold-${index}`);
     mobileRuns.push(run);
-    console.log(JSON.stringify(run));
+    console.log(JSON.stringify(printableRun(run)));
   }
-  const medians = mobileMedian(mobileRuns);
-  console.log(JSON.stringify({ label: 'mobile-median', sortedMedian: medians }));
+  const medians = medianMetrics(mobileRuns.map(run => run.metrics));
+  console.log(JSON.stringify({ label: 'mobile-median', mode, sortedMedian: displayMetrics(medians) }));
 
   const desktop = await runAudit('desktop-cold-1', desktopConfig);
   if (desktop.environment.formFactor !== 'desktop' || desktop.environment.viewport.mobile !== false) {
     throw new Error(`Desktop Lighthouse config did not apply: ${JSON.stringify(desktop.environment)}`);
   }
-  console.log(JSON.stringify(desktop));
+  console.log(JSON.stringify(printableRun(desktop)));
 
   const failed = [];
   if (!mobilePasses(medians)) {
     failed.push({
       gate: 'mobile-median',
-      values: medians,
+      values: displayMetrics(medians),
+      rawValues: medians,
       failingAuditIds: [...new Set(mobileRuns.flatMap(run => run.failingAuditIds))].sort()
     });
   }
-  if (!desktopPasses(desktop.summary)) {
-    failed.push({ gate: 'desktop', values: desktop.summary, failingAuditIds: desktop.failingAuditIds });
+  if (!desktopPasses(desktop.metrics)) {
+    failed.push({
+      gate: 'desktop',
+      values: displayMetrics(desktop.metrics),
+      rawValues: desktop.metrics,
+      failingAuditIds: desktop.failingAuditIds
+    });
   }
   if (failed.length) {
-    console.error(JSON.stringify({ lighthouseGate: 'FAIL', reports: outputDirectory, failed }));
+    console.error(JSON.stringify({ lighthouseGate: 'FAIL', mode, reports: outputDirectory, failed }));
     process.exitCode = 1;
   } else {
-    console.log(JSON.stringify({ lighthouseGate: 'PASS', reports: outputDirectory }));
+    console.log(JSON.stringify({ lighthouseGate: 'PASS', mode, reports: outputDirectory }));
   }
   if (server.exitCode !== null && server.exitCode !== 0) throw new Error(serverStderr || `QA server exited ${server.exitCode}`);
 } finally {
-  if (chrome) await chrome.kill().catch(() => {});
+  if (chrome) {
+    try {
+      await chrome.kill();
+    } catch {}
+    chrome = null;
+  }
   if (server && server.exitCode === null) {
     server.kill('SIGTERM');
     await Promise.race([

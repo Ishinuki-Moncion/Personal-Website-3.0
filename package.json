@@ -14,6 +14,7 @@
     "qa:browser": "npm run test:browser",
     "qa:matrix": "playwright test tests/browser/site-matrix.spec.mjs",
     "qa:perf": "node tests/performance/lighthouse-mobile.mjs",
+    "qa:perf:network": "LIGHTHOUSE_NETWORK_MODE=production-network node tests/performance/lighthouse-mobile.mjs",
     "qa:all": "npm run qa:static && npm run qa:browser"
   },
   "devDependencies": {

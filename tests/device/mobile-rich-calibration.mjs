@@ -1,6 +1,10 @@
 const CACHE_KEY = 'v34.tierProbe';
 const SAMPLE_COUNT = 5;
-const FPS_WINDOW_MS = 15_000;
+const requestedWindow = new URLSearchParams(location.search).get('fpsWindowMs');
+const parsedWindow = requestedWindow === null ? NaN : Number(requestedWindow);
+const FPS_WINDOW_MS = Number.isFinite(parsedWindow)
+  ? Math.max(250, Math.min(15_000, parsedWindow))
+  : 15_000;
 const frame = document.querySelector('#site');
 const runButton = document.querySelector('#run');
 const clearButton = document.querySelector('#clear');
@@ -58,15 +62,48 @@ async function loadIndependentSample(index) {
   };
 }
 
-async function measureFps() {
+function totalRenderCount() {
+  const counts = frame.contentWindow.__sceneDebug?.().renderCounts;
+  return counts ? counts.direct + counts.postfx : null;
+}
+
+async function measureFps(reducedMotion) {
+  if (reducedMotion) {
+    return {
+      applicable: false,
+      reason: 'reduced-motion-static-scene',
+      durationMs: 0,
+      sampleCount: 0,
+      min: null,
+      median: null
+    };
+  }
   const readings = [];
   const started = performance.now();
+  let previousCount = totalRenderCount();
   while (performance.now() - started < FPS_WINDOW_MS) {
+    await wait(Math.min(250, Math.max(0, FPS_WINDOW_MS - (performance.now() - started))));
+    const currentCount = totalRenderCount();
     const fps = frame.contentWindow.__sceneDebug?.().fps;
-    if (Number.isFinite(fps)) readings.push(fps);
-    await wait(250);
+    if (Number.isFinite(currentCount) && Number.isFinite(previousCount) &&
+        currentCount > previousCount && Number.isFinite(fps)) {
+      readings.push(fps);
+    }
+    previousCount = currentCount;
+  }
+  if (!readings.length) {
+    return {
+      applicable: false,
+      reason: 'render-loop-did-not-advance',
+      durationMs: Math.round(performance.now() - started),
+      sampleCount: 0,
+      min: null,
+      median: null
+    };
   }
   return {
+    applicable: true,
+    reason: null,
     durationMs: Math.round(performance.now() - started),
     sampleCount: readings.length,
     min: readings.length ? Math.min(...readings) : null,
@@ -130,9 +167,12 @@ runButton.addEventListener('click', async () => {
       activeSample = await loadIndependentSample(index);
       samples.push({ index, ...activeSample.raw });
     }
-    setStatus('FPS WINDOW // 15 seconds, keep this tab foregrounded');
-    const fps = await measureFps();
     const win = frame.contentWindow;
+    const reducedMotion = win.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setStatus(reducedMotion
+      ? 'FPS POLICY // reduced-motion scene is static; FPS is not applicable'
+      : `FPS WINDOW // ${(FPS_WINDOW_MS / 1_000).toFixed(FPS_WINDOW_MS % 1_000 ? 2 : 0)} seconds, keep this tab foregrounded`);
+    const fps = await measureFps(reducedMotion);
     packet = {
       schema: 'codex-v34-owner-calibration/1',
       capturedAt: new Date().toISOString(),
@@ -148,14 +188,16 @@ runButton.addEventListener('click', async () => {
       environment: {
         viewport: { width: win.innerWidth, height: win.innerHeight },
         devicePixelRatio: win.devicePixelRatio,
-        reducedMotion: win.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        reducedMotion,
         userAgentLabel: win.navigator.userAgent
       }
     };
     packetView.textContent = JSON.stringify(packet, null, 2);
     copyButton.disabled = false;
     exportButton.disabled = false;
-    setStatus(`COMPLETE // FPS min ${fps.min ?? 'n/a'} · median ${fps.median ?? 'n/a'} · losses ${packet.contextLossCount}`);
+    setStatus(fps.applicable
+      ? `COMPLETE // FPS min ${fps.min} · median ${fps.median} · losses ${packet.contextLossCount}`
+      : `COMPLETE // FPS not applicable (${fps.reason}) · losses ${packet.contextLossCount}`);
   } catch (error) {
     setStatus(`ERROR // ${error.message}`);
   } finally {

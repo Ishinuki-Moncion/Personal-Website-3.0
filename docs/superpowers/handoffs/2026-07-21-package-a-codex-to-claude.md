@@ -1,7 +1,12 @@
 # Package A Codex to Claude Code Handoff
 
-**Status:** WIP stopping point, not a Package A completion claim  
-**Prepared:** 2026-07-23 by OpenAI Codex  
+> **SUPERSEDED AS AN ACTIVE HANDOFF — CONTINUED 2026-07-23.**
+> The owner resumed this Codex task after the stopping point. The material below
+> remains a historical WIP record; it is not the current execution state.
+> Task 9 will produce the next final handoff after Task 8 closes.
+
+**Status:** WIP stopping point, not a Package A completion claim
+**Prepared:** 2026-07-23 by OpenAI Codex
 **Owner direction:** Continue the remaining work in Claude Code
 
 ## Repository identity
@@ -223,4 +228,3 @@ unforced cold scores and the 15-second owner-device result are reviewed.
 - No merge.
 - No deployment or GitHub Pages setting change.
 - No claim that Package A, mobile-rich, or the website program is complete.
-
