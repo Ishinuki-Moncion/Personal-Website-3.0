@@ -64,6 +64,31 @@ async function expectEssentialApp(page) {
   await expect(page.locator('.gallery-grid .shot').first()).toHaveAttribute('aria-label', /NAGANO/);
 }
 
+test('closed lightbox defers its image until the first photograph opens', async ({ page, context }) => {
+  await localOnly(context);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const requestedPaths = [];
+  page.on('request', request => {
+    const url = new URL(request.url());
+    if (url.pathname.endsWith('/images/tiles/gallery-07.jpg') ||
+        url.pathname.endsWith('/images/gallery-07.jpg')) {
+      requestedPaths.push(url.pathname);
+    }
+  });
+
+  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(250);
+  expect(requestedPaths).toEqual([]);
+
+  const first = page.locator('.gallery-grid .shot').first();
+  await first.click();
+  await expect(page.locator('.lightbox')).toHaveClass(/\bopen\b/);
+  const lightboxImage = page.locator('.lb-img');
+  await expect(lightboxImage).toHaveAttribute('src', 'images/gallery-07.jpg');
+  await expect.poll(() => lightboxImage.evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
+  expect(requestedPaths).toContain('/images/gallery-07.jpg');
+});
+
 for (const viewport of viewports) {
   const pointer = viewport.touch ? 'coarse touch' : 'fine pointer';
   test(`engine project viewport ${viewport.width}x${viewport.height} (${pointer}) completes the interaction matrix`, async ({ browser }) => {
