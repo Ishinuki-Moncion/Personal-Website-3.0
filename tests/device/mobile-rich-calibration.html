@@ -8,7 +8,15 @@
     :root { color-scheme: dark; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #030407; color: #dffcff; }
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 80% 0, #0a2530 0, #030407 42%); }
-    main { width: min(1120px, calc(100% - 28px)); margin: 0 auto; padding: 34px 0 56px; }
+    main {
+      width: min(1148px, 100%);
+      margin: 0 auto;
+      padding:
+        max(34px, calc(env(safe-area-inset-top) + 14px))
+        max(14px, env(safe-area-inset-right))
+        max(56px, calc(env(safe-area-inset-bottom) + 20px))
+        max(14px, env(safe-area-inset-left));
+    }
     header { display: grid; gap: 8px; padding-bottom: 22px; border-bottom: 1px solid #1d5360; }
     .eyebrow { color: #ffb35c; font-size: 11px; letter-spacing: .16em; }
     h1 { margin: 0; font: 500 clamp(25px, 6vw, 52px)/1.05 ui-sans-serif, system-ui, sans-serif; letter-spacing: -.035em; }
