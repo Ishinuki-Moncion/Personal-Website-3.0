@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Mobile-rich owner calibration</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #030407; color: #dffcff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 80% 0, #0a2530 0, #030407 42%); }
+    main { width: min(1120px, calc(100% - 28px)); margin: 0 auto; padding: 34px 0 56px; }
+    header { display: grid; gap: 8px; padding-bottom: 22px; border-bottom: 1px solid #1d5360; }
+    .eyebrow { color: #ffb35c; font-size: 11px; letter-spacing: .16em; }
+    h1 { margin: 0; font: 500 clamp(25px, 6vw, 52px)/1.05 ui-sans-serif, system-ui, sans-serif; letter-spacing: -.035em; }
+    .lede { margin: 0; max-width: 78ch; color: #8eb9c0; line-height: 1.55; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0; }
+    button { min-height: 44px; padding: 0 15px; border: 1px solid #287383; background: #061218; color: #bdf8ff; font: inherit; letter-spacing: .06em; cursor: pointer; }
+    button:hover, button:focus-visible { border-color: #39f0ff; outline: none; box-shadow: 0 0 0 2px #39f0ff33; }
+    button.primary { background: #0c3038; border-color: #39f0ff; }
+    button:disabled { opacity: .45; cursor: wait; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); gap: 14px; }
+    .panel { border: 1px solid #153d46; background: #03080bcc; min-width: 0; }
+    .panel h2 { margin: 0; padding: 12px 14px; border-bottom: 1px solid #153d46; color: #ffb35c; font-size: 11px; letter-spacing: .13em; }
+    iframe { display: block; width: 100%; height: min(64vh, 720px); border: 0; background: #05060a; }
+    pre { min-height: 360px; max-height: 64vh; overflow: auto; margin: 0; padding: 14px; color: #a9dae0; font-size: 11px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+    .status { min-height: 22px; margin: 8px 0 0; color: #73f6ac; font-size: 12px; }
+    .notice { margin-top: 14px; padding: 12px 14px; border-left: 2px solid #ff9e2c; background: #ff9e2c0d; color: #d8c0a2; font-size: 12px; line-height: 1.5; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } iframe { height: 58vh; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <span class="eyebrow">CODEX // OWNER DEVICE EVIDENCE</span>
+      <h1>Mobile-rich calibration</h1>
+      <p class="lede">Run this page on the owner iPhone over the local network. It performs five independent, unforced tier probes, then samples live scene FPS for 15 seconds and packages the evidence as one JSON object.</p>
+    </header>
+    <div class="actions">
+      <button class="primary" id="run" type="button">RUN 5 PROBES + 15S FPS</button>
+      <button id="clear" type="button">CLEAR TIER CACHE</button>
+      <button id="copy" type="button" disabled>COPY JSON</button>
+      <button id="export" type="button" disabled>EXPORT JSON</button>
+    </div>
+    <p class="status" id="status" role="status">READY // no measurements yet</p>
+    <div class="grid">
+      <section class="panel" aria-labelledby="preview-title">
+        <h2 id="preview-title">SAME-ORIGIN UNFORCED HOME</h2>
+        <iframe id="site" title="Personal Website 3.0 calibration preview"></iframe>
+      </section>
+      <section class="panel" aria-labelledby="packet-title">
+        <h2 id="packet-title">ONE JSON EVIDENCE PACKET</h2>
+        <pre id="packet">{}</pre>
+      </section>
+    </div>
+    <p class="notice"><strong>Selection rule:</strong> user-agent is diagnostic labeling only. UA is never input to tier selection. Clearing is explicit and removes only <code>v34.tierProbe</code>.</p>
+  </main>
+  <script type="module" src="mobile-rich-calibration.mjs"></script>
+</body>
+</html>

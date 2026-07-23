@@ -499,16 +499,19 @@
         if (copyStatus) copyStatus.textContent = '';
       }, 1600);
     };
-    const fallbackCopy = () => {
+    const fallbackCopy = returnFocus => {
       const ta = document.createElement('textarea');
       ta.value = addr; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
       document.body.appendChild(ta); ta.select();
       try { if (document.execCommand('copy')) copied(); } catch (e) {}
       document.body.removeChild(ta);
+      if (returnFocus && returnFocus.focus) returnFocus.focus();
     };
     sigRow.addEventListener('click', () => {
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(addr).then(copied, fallbackCopy);
-      else fallbackCopy();
+      const returnFocus = document.activeElement;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(addr).then(copied, () => fallbackCopy(returnFocus));
+      } else fallbackCopy(returnFocus);
     });
   }
 
