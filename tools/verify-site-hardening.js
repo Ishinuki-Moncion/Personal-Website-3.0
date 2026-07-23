@@ -209,7 +209,7 @@ check(
 );
 check(
   'v3.4 renderer richness follows explicit capability profiles, not mobile layout',
-    /import \{ classifyTier, createFpsDemoter, estimatePostFxBytes \} from '\.\/quality-policy\.mjs'/.test(background) &&
+    /import \{ classifyTier, createFpsDemoter, estimatePostFxBytes \} from '\.\/quality-policy\.mjs\?v=1'/.test(background) &&
     /const LITE = coarse \|\| small/.test(background) &&
     /const tier = classifyTier\(\{[\s\S]*probeTier: tierProbe\?\.tier,[\s\S]*score: probeScore/.test(background) &&
     background.indexOf('const RIVULET_GATE = true') < background.indexOf('const profiles = {') &&

@@ -12,17 +12,49 @@ This file is the durable review index for work led by **OpenAI Codex** on the Pe
 
 ## Codex-authored work
 
-| Commit | Artifact | Status |
+Every commit below has author and committer
+`OpenAI Codex <noreply@openai.com>`. “Approved” means an independent agent
+review found no open Critical or Important finding.
+
+| Commit | Task / purpose | Review state |
 |---|---|---|
-| `2bb3038` | `docs/superpowers/specs/2026-07-21-v34-corrective-completion-program-design.md` plus worktree isolation rule | Owner approved; implementation seed |
-| `bee58dd`, `3db5161` | Reproducible Node/Playwright QA harness, pinned local Nu validator, and immutable desktop/mobile `before` references | Independent task review approved; hardening 48/48, unit 1/1, Chromium 2/2 and WebKit 2/2 smoke; HTML/Nu baseline debt recorded for Task 2 |
-| `5b52ce5`, `d449888` | Mobile menu/contact repair, valid static semantics, modal sibling inertness, and deterministic lightbox race regressions | Independent task review approved after corrective pass; Chromium 7/7, WebKit 7/7, hardening 53/53, HTML/Nu clean |
-| `28b60bb`, `4902840`, `3ac9526` | Progressive app-first startup, optional scene boundary, mobile boot pacing, reduced cursor/probe shutdown, and terminal instant boot | Independent task review approved after two corrective passes; progressive Chromium/WebKit 4/4 each, smoke 2/2, Task 2 preservation 7/7 each, hardening 61/61 |
-| `008c3f2`, `6ffa536` | Pure tier policy, 128 MiB estimate, one-way FPS demoter, and yielded leak-free WebGL2 capability probe | Independent task review approved after corrective pass; unit 12/12, real-probe Chromium/WebKit 4/4 each, hardening 64/64, zero 404/console/page errors |
-| `3ce13c3` | Explicit reduced/lite/mobile-rich/high profiles, capability-owned richness gates, three-way rain payload, and expanded scene debug | Independent task review approved; Chromium/WebKit 5/5 each, six-profile runtime sweep error-free, desktop high values preserved; one non-blocking hardening allowlist gap deferred to Task 6 |
-| `08add25` | Memory-bounded mobile postprocessing, profile-owned samples, half-scale mobile bloom, fail-closed allocation gate, and immutable-reference comparator | Independent task review approved with no findings; unit 13/13, hardening 67/67, Chromium/WebKit 5/5 each, six layout ratios at 0.014%–0.058%, desktop high preserved; Task 5 hardening gap closed |
-| `c4e2b81`, `bba3e92`, `b90e106` | Deterministic one-way mobile-rich demotion, live 1.5 DPR cap, persisted lite fallback, direct-render switch, and complete postFX disposal/reference severing | Final independent review approved after two Important lifecycle corrections; 13/13 named disposals exact once, retained graphs empty, Chromium/WebKit focused behavior green, actual DSF 3 DPR remains 1.5 through rotation, zero page/console errors |
-| `69e6a31` | Task 8 WIP viewport/failure matrix, corrected Lighthouse runner, owner-device calibration surface, QA-server gzip/host support, and clipboard-denial focus repair | Codex stopping-point commit for Claude Code; not independently reviewed and not complete. Chromium matrix 26/26 and focused clipboard Chromium/WebKit 4/4; true desktop Lighthouse green; mobile median LCP 2926ms remains above the 2500ms gate |
+| `2bb3038` | Corrective-program specification and isolation rule | Owner approved |
+| `3195220` | Package A plan and technical pre-flight | Approved after six Important plan corrections |
+| `bee58dd` | Task 1 reproducible QA harness and immutable references | Corrected by `3db5161` |
+| `3db5161` | Task 1 reference and structural-lint corrections | Approved |
+| `b035730` | Task 1 reviewed closure; Task 2 validation refinement | Audit marker |
+| `5b52ce5` | Task 2 mobile menu, contact, semantics, and modal baseline | Corrected by `d449888` |
+| `d449888` | Task 2 lightbox async-race correction | Approved |
+| `b015754` | Task 2 reviewed closure | Audit marker |
+| `28b60bb` | Task 3 progressive app-first startup and optional WebGL | Corrected by `4902840` and `3ac9526` |
+| `4902840` | Task 3 instant/reduced startup correction | Corrected by `3ac9526` |
+| `3ac9526` | Task 3 terminal instant boot | Approved |
+| `632a7ab` | Task 3 reviewed closure | Audit marker |
+| `008c3f2` | Task 4 measured tier policy and leak-free yielded probe | Corrected by `6ffa536` |
+| `6ffa536` | Task 4 cache normalization and resource proof | Approved |
+| `7991c9f` | Task 4 reviewed closure | Audit marker |
+| `3ce13c3` | Task 5 explicit capability profiles and mobile-rich payload | Approved; one Minor verifier gap assigned to Task 6 |
+| `be14794` | Task 5 reviewed closure | Audit marker |
+| `08add25` | Task 6 bounded mobile postprocessing | Approved; Task 5 Minor closed |
+| `39c9349` | Task 6 reviewed closure | Audit marker |
+| `c4e2b81` | Task 7 demotion and GPU disposal | Corrected by `bba3e92` and `b90e106` |
+| `bba3e92` | Task 7 disposed-graph reference severing | Corrected by `b90e106` |
+| `b90e106` | Task 7 Three r158 high-pass material disposal | Approved |
+| `792b3d8` | Task 7 reviewed closure | Audit marker |
+| `69e6a31` | Task 8 WIP failure/performance battery | Historical stopping point |
+| `8620e62` | Task 8 stopping-point record | Historical audit marker |
+| `ab5f3d2` | Task 8 deferred closed-lightbox image | Corrected simulated LCP blocker |
+| `ae9da60` | Task 8 server, matrix, lifecycle, calibration, and Lighthouse review corrections | One Important iPhone safe-area finding remained |
+| `783541d` | Task 8 iPhone calibration safe-area correction and regression | Approved with no Critical, Important, or Minor findings |
+| Task 9 close-out commit (current branch tip) | Cache burns, final audit, and Claude Fable handoff | Initial review found one Important unversioned renderer-policy import; correction re-review approved with no findings |
+
+Task reports and review diff packages are local, ignored evidence under
+`.superpowers/sdd/`: `task-1-report.md` through `task-9-report.md`,
+`review-3195220..3db5161.diff`, `review-b035730..d449888.diff`,
+`review-b015754..3ac9526.diff`, `review-632a7ab..6ffa536.diff`,
+`review-7991c9f..3ce13c3.diff`, `review-be14794..08add25.diff`,
+`review-bba3e92..b90e106.diff`, and `review-792b3d8..ae9da60.diff`.
+Task 8’s final safe-area re-review covered `ae9da60..783541d`.
 
 This table is updated after each reviewed task. Every integrated commit on this
 branch is authored and committed as `OpenAI Codex <noreply@openai.com>` so the
@@ -37,7 +69,59 @@ remains responsible for the decisions, integration, and final verification.
 3. Compare `v34-mobile-rich...codex/v34-corrective-completion` for implementation-only changes.
 4. Compare `origin/main...codex/v34-corrective-completion` for the full proposed program.
 5. Read `.superpowers/sdd/progress.md` for task completion and review status.
-6. Read task briefs, implementer reports, and reviewer reports under `.superpowers/sdd/codex-v34/` in the local worktree.
+6. Read task briefs, implementer reports, and reviewer diff packages under
+   `.superpowers/sdd/` in the local worktree.
+
+## Verification and evidence index
+
+The close-out battery is:
+
+```bash
+npm run qa:all
+npm run qa:matrix -- --project=chromium
+npm run qa:matrix -- --project=webkit
+npm run qa:perf
+git diff --check
+git status --short
+```
+
+The fresh 2026-07-23 close-out results are:
+
+- `npm run qa:all`: 97 passed, one intentional WebKit skip for the
+  Chromium-only `file://` case. This includes unit 21/21, hardening 70/70,
+  HTML Validate, pinned W3C Nu, and both full browser projects.
+- `npm run qa:matrix -- --project=chromium`: 29/29 passed.
+- `npm run qa:matrix -- --project=webkit`: 28 passed, one intentional
+  Chromium-only skip.
+- `npm run qa:perf`: PASS. Mobile median performance 96, FCP 1727.6ms,
+  LCP 2103.4ms, CLS 0.04539, TBT 135.5ms; desktop performance 100,
+  FCP 397.8ms, LCP 462.8ms, CLS 0.0394, TBT 10ms.
+
+`qa:perf` is explicitly a deterministic-first-party release gate. It blocks
+Google Fonts so the result measures the repository-controlled graph and must
+not be described as production-network evidence.
+
+`npm run qa:perf:network` was also run once as separate diagnostic evidence.
+It failed the unchanged mobile release thresholds at performance 70,
+FCP 4175.4ms, LCP 4857.9ms, CLS 0.05902, and TBT 150ms. Its desktop reference
+was performance 97 and LCP 1014.2ms. The dominant Slow-4G graph cost is the
+live Google Fonts stylesheet and Japanese font shards. No typography or
+desktop-composition change was made under Package A’s visual lock, and this
+result is intentionally not represented as green.
+
+The immutable visual evidence is local and ignored at
+`.superpowers/gates/codex-v34/package-a-reference/`. It contains matching
+`before/` and `after/` sets for all six full-scene sections, six scene-hidden
+layouts, control deck, lightbox, and 390x844 mobile menu. Independent review
+opened every full-scene pair, found the globe seat, deep-black floor, rain
+language, cyan/amber bloom, typography, and layout visually comparable, and
+measured scene-hidden layout ratios between 0.014% and 0.058%.
+
+Open automated findings: none. Open external evidence: actual owner iPhone
+normal/cold, Low Power, warm/thermal, rotation, background/restore,
+context-loss, and visual-quality verdicts. `RICH_THRESHOLD_MS = 4.5` remains
+provisional pending those packets and an explicit owner keep/change decision.
+No push, PR, merge, deployment, or GitHub Pages setting change has occurred.
 
 ## Binding decisions
 
@@ -103,14 +187,22 @@ remains responsible for the decisions, integration, and final verification.
   resources exactly once, empty externally retained graphs in Chromium and
   WebKit, actual DSF 3 DPR at 1.5 before/after rotation, no errors, and no open
   findings.
-- Task 8 full failure/performance battery: committed as an explicit WIP at
-  `69e6a31` for Claude Code continuation. The retained browser matrix is green
-  26/26 in Chromium and the clipboard paths are green 4/4 across Chromium and
-  WebKit. The corrected Lighthouse runner proves the desktop gate at
-  performance 100 / LCP 601ms / CLS 0.0394 / TBT 9ms, but the three-run mobile
-  median remains performance 92 / LCP 2926ms / CLS 0.0595 / TBT 122ms. Task 8
-  has no final independent review and is not complete. The exact continuation,
-  rejected experiments, and owner-device loop are in
-  `docs/superpowers/handoffs/2026-07-21-package-a-codex-to-claude.md`.
+- Task 8 full failure/performance battery: complete through `783541d`. Lantern
+  graph forensics traced the prior simulated LCP failure to the parser-requested
+  image source on the closed lightbox, not the visibly painted hero. Deferring
+  that source until open lowered the deterministic mobile median below the
+  unchanged 2500ms gate. Review corrections then hardened the LAN server,
+  pointer matrix, context-loss proof, raw Lighthouse thresholds, lightbox
+  decoding paths, reduced/static calibration semantics, and explicit
+  deterministic-versus-production-network labeling. The final safe-area pass
+  protects all four iPhone cutout edges. Chromium is green 29/29; WebKit is
+  green 28 passed plus one intentional Chromium-only `file://` skip. Final
+  independent review found no Critical, Important, or Minor finding.
+- Task 9 Package A close-out: cache versions match the approved tuple;
+  both production policy importers carry `?v=1`, and a unit regression locks
+  the complete cache graph. The final audit and Claude Fable handoff are
+  prepared. Independent re-review approved the correction with no Critical,
+  Important, or Minor finding. Automated close-out remains distinct from the
+  external owner-device threshold decision.
 - Production site code changes remain isolated to this Codex worktree and have
   not been pushed, proposed as a PR, deployed, or merged into production.

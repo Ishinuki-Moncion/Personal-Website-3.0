@@ -3,7 +3,7 @@
 window.__TIER_PROBE = null;
 window.__CURSOR_ACTIVE = false;
 
-const V = { bg: '6.1', boot: '3.2', cursor: '3.2', fx: '3.8', app: '4.4', probe: '1' };
+const V = { bg: '7.0', boot: '3.2', cursor: '3.2', fx: '3.8', app: '4.4', probe: '1' };
 
 await import(`./app.js?v=${V.app}`);
 await import(`./effects.js?v=${V.fx}`);
