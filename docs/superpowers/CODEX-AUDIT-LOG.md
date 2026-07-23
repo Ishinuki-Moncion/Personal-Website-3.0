@@ -22,6 +22,7 @@ This file is the durable review index for work led by **OpenAI Codex** on the Pe
 | `3ce13c3` | Explicit reduced/lite/mobile-rich/high profiles, capability-owned richness gates, three-way rain payload, and expanded scene debug | Independent task review approved; Chromium/WebKit 5/5 each, six-profile runtime sweep error-free, desktop high values preserved; one non-blocking hardening allowlist gap deferred to Task 6 |
 | `08add25` | Memory-bounded mobile postprocessing, profile-owned samples, half-scale mobile bloom, fail-closed allocation gate, and immutable-reference comparator | Independent task review approved with no findings; unit 13/13, hardening 67/67, Chromium/WebKit 5/5 each, six layout ratios at 0.014%–0.058%, desktop high preserved; Task 5 hardening gap closed |
 | `c4e2b81`, `bba3e92`, `b90e106` | Deterministic one-way mobile-rich demotion, live 1.5 DPR cap, persisted lite fallback, direct-render switch, and complete postFX disposal/reference severing | Final independent review approved after two Important lifecycle corrections; 13/13 named disposals exact once, retained graphs empty, Chromium/WebKit focused behavior green, actual DSF 3 DPR remains 1.5 through rotation, zero page/console errors |
+| `69e6a31` | Task 8 WIP viewport/failure matrix, corrected Lighthouse runner, owner-device calibration surface, QA-server gzip/host support, and clipboard-denial focus repair | Codex stopping-point commit for Claude Code; not independently reviewed and not complete. Chromium matrix 26/26 and focused clipboard Chromium/WebKit 4/4; true desktop Lighthouse green; mobile median LCP 2926ms remains above the 2500ms gate |
 
 This table is updated after each reviewed task. Every integrated commit on this
 branch is authored and committed as `OpenAI Codex <noreply@openai.com>` so the
@@ -102,5 +103,14 @@ remains responsible for the decisions, integration, and final verification.
   resources exactly once, empty externally retained graphs in Chromium and
   WebKit, actual DSF 3 DPR at 1.5 before/after rotation, no errors, and no open
   findings.
+- Task 8 full failure/performance battery: committed as an explicit WIP at
+  `69e6a31` for Claude Code continuation. The retained browser matrix is green
+  26/26 in Chromium and the clipboard paths are green 4/4 across Chromium and
+  WebKit. The corrected Lighthouse runner proves the desktop gate at
+  performance 100 / LCP 601ms / CLS 0.0394 / TBT 9ms, but the three-run mobile
+  median remains performance 92 / LCP 2926ms / CLS 0.0595 / TBT 122ms. Task 8
+  has no final independent review and is not complete. The exact continuation,
+  rejected experiments, and owner-device loop are in
+  `docs/superpowers/handoffs/2026-07-21-package-a-codex-to-claude.md`.
 - Production site code changes remain isolated to this Codex worktree and have
   not been pushed, proposed as a PR, deployed, or merged into production.
