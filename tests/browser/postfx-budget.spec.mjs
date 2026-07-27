@@ -84,16 +84,26 @@ test('a context-loss gap does not by itself satisfy the sustained-low-FPS demoti
 
     /* Inject a below-threshold FPS so the demoter is actually sampled on the
        first frame after restore. Without the fix that frame carries ~6s of
-       elapsed time and demotes immediately; with it, it carries one frame. */
+       elapsed time and demotes immediately; with it, it carries one frame.
+
+       The observation window is deliberately short. Injected FPS below the
+       threshold makes lowSeconds accumulate in WALL time, so a long window
+       eventually demotes legitimately and the test would report the bug it is
+       meant to detect — flaky for the same reason Codex's WebKit smoke test was.
+       The defect demotes on the FIRST frame (~16ms), so 300ms detects it with a
+       13x margin against the 4s rule, and the healthy value is restored
+       immediately afterwards so nothing accumulates while later assertions run. */
     await page.evaluate(() => window.__sceneTest?.setFps(30));
     await page.evaluate(() => window.__loseContext.restoreContext());
-    await page.waitForTimeout(700);
-
+    await page.waitForTimeout(300);
     const after = await readSceneState(page);
+    await page.evaluate(() => window.__sceneTest?.setFps(60));
+
     expect(
       after.demoted,
       'the lost interval was counted as sustained low FPS — a context loss must not demote on its own'
     ).toBe(false);
+    expect(after.demotionCount, 'no demotion may have fired').toBe(0);
   } finally {
     await context.close();
   }

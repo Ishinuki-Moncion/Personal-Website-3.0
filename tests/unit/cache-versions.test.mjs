@@ -15,7 +15,7 @@ test('Package A production modules use the complete approved cache tuple', async
     readSiteFile('js/gpu-probe.mjs')
   ]);
 
-  assert.match(index, /src="js\/boot\.mjs\?v=31"/);
+  assert.match(index, /src="js\/boot\.mjs\?v=32"/);
   assert.match(boot, /bg: '7\.0'/);
   assert.match(boot, /boot: '3\.2'/);
   assert.match(boot, /cursor: '3\.2'/);

@@ -257,11 +257,39 @@
     checkLit();
   }
 
+  /* v3.4b: carry THIS photograph's intrinsic size onto the element.
+     .lb-img shipped with a hardcoded width="640" height="426" — the intrinsic
+     size of the 640x426 THUMBNAIL TILE, applied to the element that displays the
+     2000x1333 full photograph. Since .lb-img is sized only by max-width/
+     max-height plus object-fit: contain, those attributes became the layout box:
+     every photograph rendered at 640x426 instead of ~1080x720, 35% of its area,
+     adrift in an empty stage — and the two portrait photographs (1417x2000,
+     1080x1350) were letterboxed inside a landscape box.
+
+     Both open paths must call this. The View Transition branch assigns
+     lbImg.src directly from the decoded preload, so a sizing step living only
+     inside show() would be skipped on exactly the browsers that take it — which
+     is every Chromium and Safari 18+, i.e. the default path. */
+  function sizeLbImgFor(index) {
+    if (!lbImg) return;
+    const shot = shots[(index + shots.length) % shots.length];
+    const naturalW = shot && shot.dataset.w;
+    const naturalH = shot && shot.dataset.h;
+    if (naturalW && naturalH) {
+      lbImg.setAttribute('width', naturalW);
+      lbImg.setAttribute('height', naturalH);
+    } else {
+      lbImg.removeAttribute('width');
+      lbImg.removeAttribute('height');
+    }
+  }
+
   function show(i) {
     lbIndex = (i + sources.length) % sources.length;
     if (lbImg) {
       lbImg.classList.add('swapping');
       setTimeout(() => {
+        sizeLbImgFor(lbIndex);
         lbImg.src = sources[lbIndex];
         const t = shots[lbIndex] && shots[lbIndex].getAttribute('data-title');
         lbImg.alt = (t ? t + ' — ' : '') + 'gallery photograph ' + (lbIndex + 1) + ' of ' + sources.length;
@@ -369,6 +397,7 @@
           media.style.viewTransitionName = '';
           lbImg.style.viewTransitionName = 'lb-photo';
           openNow();
+          sizeLbImgFor(i);                     // this branch bypasses show()'s sizing step
           lbImg.src = pre.src;                 // already decoded — snapshot gets the real photograph
           lbImg.classList.remove('swapping');  // skip the fade show() armed; the morph IS the entrance
         });

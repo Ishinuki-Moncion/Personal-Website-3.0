@@ -408,7 +408,12 @@ body.menu-open .mm-links a:nth-child(6) { transition-delay: .42s; }
 
 @media (max-height: 520px) and (max-width: 820px) {
   .mobile-menu { display: block; }
-  .mm-head { position: sticky; top: 0; padding-bottom: 12px; background: rgba(3,4,7,0.97); }
+  /* v3.4b: z-index 2, not the base 1. .mm-links also carries `position:
+     relative; z-index: 1` (css/site.css:378) and comes LATER in DOM order
+     (index.html:107 vs :103), so at equal z-index it painted over this sticky
+     header — the CLOSE control was visually covered and hit-blocked by the
+     destination links exactly where scrolling is required to reach them. */
+  .mm-head { position: sticky; top: 0; z-index: 2; padding-bottom: 12px; background: rgba(3,4,7,0.97); }
   .mm-links { display: block; margin-block: 20px; }
   .mm-links a { padding: 10px 0; }
   .mm-label { font-size: clamp(30px, 9vh, 42px); }
@@ -746,7 +751,15 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
 .lightbox.open { opacity: 1; pointer-events: auto; visibility: visible;
   transition: opacity .4s var(--ease-out), visibility 0s; }
 .lb-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: clamp(40px,6vw,90px) 20px 20px; position: relative; }
-.lb-img { max-height: 80vh; max-width: 92vw; object-fit: contain; border: 1px solid var(--line);
+/* v3.4b: width/height MUST stay auto. The width/height content attributes on
+   .lb-img exist to give the browser this photograph's aspect ratio before decode
+   (no layout shift), but they map into CSS as real width/height in the
+   presentational-hints origin — and max-width/max-height then clamp the two axes
+   INDEPENDENTLY, so the ratio is only honoured while both are auto. With the
+   attributes fixed but the axes still constrained, a 2000x1333 photograph
+   rendered 1325x720 (92vw x 80vh) instead of 1080x720. `auto` lets the
+   attributes contribute the ratio and lets max-* scale it proportionally. */
+.lb-img { max-height: 80vh; max-width: 92vw; width: auto; height: auto; object-fit: contain; border: 1px solid var(--line);
   box-shadow: 0 0 60px rgba(0,0,0,0.7); transition: opacity .35s, transform .5s var(--ease-out); }
 .lb-img.swapping { opacity: 0; transform: scale(0.98); }
 .lb-corner { position: absolute; width: 30px; height: 30px; border: 1px solid var(--line-strong); }
@@ -1016,4 +1029,32 @@ body.proj-rail .proj-tech { text-align: right; max-width: none; min-width: 30ch;
     from { transform: scaleX(0); }
     to   { transform: scaleX(1); }
   }
+}
+
+/* ============================================================
+   v3.4b — POINTER RESTORATION. This block must stay LAST.
+   ============================================================
+   body { cursor: none } plus twelve element-level `cursor: none` rules hide the
+   system pointer so the custom HUD reticle (js/cursor.js) can stand in for it.
+   js/cursor.js draws that reticle only when `!reduced && !coarse`, so in every
+   other case the pointer must come back — otherwise a real mouse simply has no
+   visible cursor.
+
+   The existing restorations (css/site.css:122 for coarse, :480 for reduced
+   motion) name the right selectors but are declared at lines 122 and 480, while
+   the element-level `cursor: none` rules they target live at 716-890. Equal
+   specificity, and media queries add none, so SOURCE ORDER decided it and
+   `cursor: none` won. Measured with prefers-reduced-motion on: body/.nav-burger
+   /.mm-close correctly reported `auto` (declared before the override) while
+   .shot/.lb-close/.signal-row/.pill/.deck-toggle/.seg button all reported
+   `none` (declared after it) — so a user who enables a motion accommodation lost
+   their pointer over the gallery, the lightbox and the contact button, with no
+   reticle drawn to replace it.
+
+   Restated here, after every `cursor: none`, so order works FOR the rule rather
+   than against it. `.scramble-on` is included; the older lists omitted it. */
+@media (prefers-reduced-motion: reduce), (hover: none), (pointer: coarse) {
+  body, .boot-skip, .nav-burger, .mm-close, .shot, .lb-close, .lb-thumb,
+  .lb-nav button, .signal-row, .pill, .deck-toggle, .seg button, .switch,
+  .scramble-on { cursor: auto; }
 }
