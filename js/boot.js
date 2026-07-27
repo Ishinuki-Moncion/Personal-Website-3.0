@@ -116,7 +116,17 @@
   if (reduced || already) { instant(); }
   else {
     run();
-    const capDelay = coarse ? Math.max(0, hardCap - performance.now()) : hardCap;
+    /* v3.4b: anchor BOTH caps to navigation start. The desktop branch used to be
+       `capDelay = hardCap`, i.e. 9000ms measured from whenever boot.js EVALUATES,
+       while index.html's catastrophic watchdog is `setTimeout(reveal, 10000)`
+       from HTML parse. Any load where boot.js evaluates more than ~1s in — an
+       ordinary cold cache — inverted their order: the watchdog fired first, set
+       its `fired` flag, and the later boot:done then skipped removing
+       `.revealed` (index.html only removes it `if (!fired)`), leaving the CSS
+       force-reveal latched on and permanently killing the scroll choreography,
+       with boot:done dispatched twice. Navigation-anchoring keeps finish() at
+       9000ms absolute, always inside the 10000ms watchdog. */
+    const capDelay = Math.max(0, hardCap - performance.now());
     timers.push(setTimeout(finish, capDelay));
   }   // hard cap — boot never hangs
 })();
