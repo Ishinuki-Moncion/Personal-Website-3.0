@@ -88,16 +88,27 @@ check(
   'import-map + versioned boot.mjs is the only Three.js path; the 651KB global build must stay deleted and unreferenced'
 );
 
+/* v3.4b: match the actual load() CALL SITES rather than bare substring positions.
+   The old form used bootModule.indexOf('boot.js'), which any prose mentioning
+   "js/boot.js" in a comment would satisfy at the wrong offset — a check that
+   ordinary documentation could silently break or, worse, silently satisfy. */
+const bootLoadOrder = [...bootModule.matchAll(/load\(`\.\/([a-z-]+\.js)\?v=/g)].map(match => match[1]);
+const bootLoadSite = name => bootModule.indexOf('load(`./' + name + '?v=');
 check(
-  'essential DOM modules initialize before the optional scene',
-  ['app.js', 'effects.js', 'cursor.js', 'boot.js'].every(name => bootModule.indexOf(name) >= 0) &&
-    bootModule.indexOf('window.__TIER_PROBE = null') < bootModule.indexOf('app.js') &&
-    bootModule.indexOf('window.__CURSOR_ACTIVE = false') < bootModule.indexOf('app.js') &&
-    bootModule.indexOf('app.js') < bootModule.indexOf('effects.js') &&
-    bootModule.indexOf('effects.js') < bootModule.indexOf('cursor.js') &&
-    bootModule.indexOf('cursor.js') < bootModule.indexOf('boot.js') &&
-    bootModule.indexOf('boot.js') < bootModule.indexOf('scene-bootstrap.mjs'),
-  'boot.mjs must initialize observable sentinels, then app/effects/cursor/boot, before importing scene-bootstrap.mjs'
+  'essential DOM modules initialize before the optional scene, each isolated',
+  bootLoadOrder.join(',') === 'app.js,effects.js,cursor.js,boot.js' &&
+    bootModule.indexOf('window.__TIER_PROBE = null') < bootLoadSite('app.js') &&
+    bootModule.indexOf('window.__CURSOR_ACTIVE = false') < bootLoadSite('app.js') &&
+    bootLoadSite('boot.js') < bootModule.indexOf('scene-bootstrap.mjs') &&
+    /* Every module must go through the isolating loader — a bare `await import(`
+       for one of these would reinstate the serial chain in which a failed
+       DECORATIVE module stopped js/boot.js from ever revealing the page. */
+    /async function load\(specifier, label\) \{\s*try \{\s*await import\(specifier\);\s*return true;\s*\} catch/.test(bootModule) &&
+    !/await import\(`\.\/(app|effects|cursor|boot)\.js/.test(bootModule) &&
+    /* boot.js owns the reveal, so its own failure needs an explicit terminal
+       fallback rather than a ten-second wait for the index.html watchdog. */
+    /if \(!\(await load\(`\.\/boot\.js[\s\S]*removeAttribute\('data-booting'\)[\s\S]*dispatchEvent\(new Event\('boot:done'\)\)/.test(bootModule),
+  'boot.mjs must initialize observable sentinels, then load app/effects/cursor/boot in that order through an isolating loader that no single optional module failure can defeat, before importing scene-bootstrap.mjs'
 );
 
 check(
