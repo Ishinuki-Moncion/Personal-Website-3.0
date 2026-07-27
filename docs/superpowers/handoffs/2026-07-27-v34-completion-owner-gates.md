@@ -119,6 +119,25 @@ licence before that page is public.
 
 Unchanged and untouched. Everything above is local.
 
+**Read this before pushing.** An earlier commit on this branch
+(`5bd1d15`) contains a test that hard-coded the names of the two PRIVATE
+employer-tooling repositories, as a list of strings it was asserting must NOT
+appear on the public case study. The current tree no longer contains them — the
+test now asserts the property instead of enumerating the secret — but the names
+are still reachable in that commit's objects.
+
+Nothing has been pushed, so this is entirely recoverable. Options, in order of
+preference:
+
+1. Squash or rebase this branch before pushing (it is a linear 14-commit branch
+   with no dependents), which removes the strings from history entirely.
+2. Decide the repository names are not sensitive — they are names, not contents —
+   and push as-is.
+
+That judgement is yours; it depends on whether the repository *names* are
+themselves considered confidential at SeenThis. I have not rewritten history,
+because doing so unilaterally to a branch you may have inspected is not my call.
+
 ## 4. Deliberately not done
 
 - **Package C2 — semantic `picture`/`img` for the gallery.** The photographs are
