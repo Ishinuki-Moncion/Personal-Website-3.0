@@ -3,7 +3,11 @@
   "generatedFrom": [
     "index.html",
     "404.html",
-    "css/site.css"
+    "css/site.css",
+    "ja/index.html",
+    "case/daikieos/index.html",
+    "case/tokyo-data-globe/index.html",
+    "case/open-web-production/index.html"
   ],
   "unicodeRange": "U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4E8B, U+4EAC, U+4ED9, U+4EF6, U+4F4F, U+4F5C, U+4F8B, U+4F9D, U+5009, U+5199, U+5236, U+5272, U+529B, U+5317, U+53F0, U+54C1, U+5728, U+58EB, U+5927, U+5BB6, U+5BCC, U+5CA1, U+5F71, U+5F79, U+627F-6280, U+62E0, U+64AE, U+65E5, U+672C, U+6771, U+6848, U+6982, U+6B53, U+6B74, U+6C96, U+6D45, U+6D77, U+6E0B, U+70B9, U+767A, U+76F8, U+771F, U+798F, U+7D4C, U+7D61, U+7DD2, U+7E04, U+8005, U+80FD, U+8349, U+8853, U+8981, U+898B, U+8A9E, U+8AC7, U+8C37, U+8D8A, U+8FCE, U+901F, U+9023, U+9053, U+90FD, U+91CE, U+938C, U+9577, U+958B, U+962A, U+983C, U+9AD8, U+FF01-FF5E, U+FFE0-FFE6",
   "codepointCount": 703,

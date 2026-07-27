@@ -51,7 +51,17 @@ export const FACES = [
    rather than parsed text is deliberate: it is a superset (tag names only add
    ASCII, which costs nothing) and it cannot miss a translated string hidden in a
    data-ja/aria-label/alt/content attribute. */
-export const SCAN_FILES = ['index.html', '404.html', 'css/site.css', 'ja/index.html'];
+export const SCAN_FILES = [
+  'index.html', '404.html', 'css/site.css', 'ja/index.html',
+  /* Generated pages are scanned too: a case study written in Japanese would
+     otherwise render in a system face with nothing failing. They are listed
+     explicitly rather than globbed so the input set stays deterministic — and
+     `npm run build` generates them BEFORE this tool runs, so the subset always
+     reflects the pages actually committed. */
+  'case/daikieos/index.html',
+  'case/tokyo-data-globe/index.html',
+  'case/open-web-production/index.html',
+];
 
 /* Always-on floor, independent of today's copy. Kana are ~190 glyphs and a few KB;
    including them wholesale means routine Japanese copy edits do not silently

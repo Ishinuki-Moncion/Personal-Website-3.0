@@ -22,7 +22,7 @@
     "check:cases": "node tools/build-cases.mjs --check",
     "build:locale": "node tools/build-locale.mjs",
     "build:discovery": "node tools/build-discovery.mjs",
-    "build": "npm run fonts:build && npm run build:cases && npm run build:locale && npm run build:discovery",
+    "build": "npm run build:cases && npm run build:locale && npm run fonts:build && npm run build:discovery",
     "check:locale": "node tools/build-locale.mjs --check",
     "check:discovery": "node tools/build-discovery.mjs --check"
   },
