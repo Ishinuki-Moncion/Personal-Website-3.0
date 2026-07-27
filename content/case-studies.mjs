@@ -84,7 +84,7 @@ export const CASE_STUDIES = [
       {
         heading: 'Delivery is not design',
         body: [
-          'The two Japanese typefaces were loaded from a third-party CDN behind a render-blocking stylesheet, on the recorded assumption that subsetting Japanese was impractical. Measurement disproved it: the committed pages use fewer than 200 distinct CJK codepoints, so both faces subset to under 52KB each — a 98.4% reduction.',
+          'The two Japanese typefaces were loaded from a third-party CDN behind a render-blocking stylesheet, on the recorded assumption that subsetting Japanese was impractical. Measurement disproved it: the committed pages use fewer than 200 distinct CJK codepoints, so both faces subset to well under 60KB each — around a 98% reduction.',
           'Because the Japanese fallback stack was a Latin face, Japanese text painted in a system font and then reflowed when the CDN face arrived. One wrong assumption was therefore producing two failing metrics at once. Self-hosting content-driven subsets fixed both, changed nothing about the type design, and removed the last third-party origin from the page.',
         ],
         metrics: {

@@ -130,8 +130,16 @@
   }
 
   /* ---------------- LANGUAGE SWAP ---------------- */
-  let lang = 'en';
-  try { const s = localStorage.getItem('daikie-lang'); if (s === 'en' || s === 'ja') lang = s; } catch (e) {}
+  /* v3.4c: the SERVED locale wins. ja/index.html is delivered with lang="ja";
+     starting from 'en' and applying the stored preference flipped that page back
+     to English on boot, undoing the point of having a static locale URL at all.
+     The stored preference still applies on the canonical English page, so an
+     in-page toggle is remembered as before. */
+  const servedLang = document.documentElement.lang === 'ja' ? 'ja' : 'en';
+  let lang = servedLang;
+  if (servedLang === 'en') {
+    try { const s = localStorage.getItem('daikie-lang'); if (s === 'en' || s === 'ja') lang = s; } catch (e) {}
+  }
 
   function applyLang(animate) {
     const els = $$('[data-en]');

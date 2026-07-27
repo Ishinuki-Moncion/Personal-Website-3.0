@@ -19,7 +19,6 @@
 <meta name="twitter:image:alt" content="daikieOS — Ishinuki Daikie, developer and photographer, Tokyo" />
 <link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="../../images/apple-touch-icon.png" />
-<link rel="preload" href="../../fonts/mplus-rounded-1c-400.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
 <link rel="stylesheet" href="../../css/site.css?v=3.33" />
 <link rel="stylesheet" href="../../css/case.css?v=1" />
 </head>
@@ -105,7 +104,7 @@
 
       <section class="packet-section" id="delivery-is-not-design">
         <h2><a class="anchor" href="#delivery-is-not-design">Delivery is not design</a></h2>
-        <p>The two Japanese typefaces were loaded from a third-party CDN behind a render-blocking stylesheet, on the recorded assumption that subsetting Japanese was impractical. Measurement disproved it: the committed pages use fewer than 200 distinct CJK codepoints, so both faces subset to under 52KB each — a 98.4% reduction.</p>
+        <p>The two Japanese typefaces were loaded from a third-party CDN behind a render-blocking stylesheet, on the recorded assumption that subsetting Japanese was impractical. Measurement disproved it: the committed pages use fewer than 200 distinct CJK codepoints, so both faces subset to well under 60KB each — around a 98% reduction.</p>
         <p>Because the Japanese fallback stack was a Latin face, Japanese text painted in a system font and then reflowed when the CDN face arrived. One wrong assumption was therefore producing two failing metrics at once. Self-hosting content-driven subsets fixed both, changed nothing about the type design, and removed the last third-party origin from the page.</p>
       <figure class="packet-metrics">
         <table>

@@ -54,9 +54,44 @@ test('a failed DECORATIVE module never traps the page under the boot overlay', a
   expect(scrollLocked, 'the page must not be left scroll-locked').toBe(false);
 });
 
-test('a failed effects module leaves navigation and language usable', async ({ page }) => {
+test('a failed effects module leaves the page VISIBLE, not merely attached', async ({ page }) => {
   await bootWithModuleAborted(page, /\/js\/effects\.js(\?|$)/);
-  await expect(page.locator('#gallery')).toBeAttached();
+
+  /* js/effects.js owns the scroll reveal: its line 104 is the only code anywhere
+     that adds `.seen`, which lifts `[data-reveal]{opacity:0}`. Losing it must not
+     leave a page that scrolls but shows nothing.
+
+     The first version of this test asserted toBeAttached(), which a page with all
+     34 revealed elements at opacity 0 satisfies perfectly — so it passed while the
+     site was blank. Assert what a visitor can actually SEE. */
+  /* The safety-net class lands a microtask after data-booting clears, and the
+     helper returns on the earlier signal — so poll for the settled state rather
+     than sampling mid-transition. A genuine regression still fails, on timeout. */
+  await expect
+    .poll(() => page.evaluate(() =>
+      [...document.querySelectorAll('[data-reveal]')].filter(el => Number(getComputedStyle(el).opacity) === 0).length
+    ), { timeout: 6_000 })
+    .toBe(0);
+
+  const visibility = await page.evaluate(() => {
+    const revealed = [...document.querySelectorAll('[data-reveal]')];
+    return {
+      total: revealed.length,
+      invisible: revealed.filter(el => Number(getComputedStyle(el).opacity) === 0).length,
+      gallery: getComputedStyle(document.querySelector('.shot')).opacity,
+      contact: getComputedStyle(document.querySelector('#contact h2')).opacity,
+    };
+  });
+
+  expect(visibility.total, 'the page should have revealed elements to check').toBeGreaterThan(10);
+  expect(
+    visibility.invisible,
+    `${visibility.invisible}/${visibility.total} revealed elements are at opacity 0 — ` +
+    'losing the reveal module left a blank scrolling page'
+  ).toBe(0);
+  expect(Number(visibility.gallery)).toBeGreaterThan(0);
+  expect(Number(visibility.contact)).toBeGreaterThan(0);
+
   await page.locator('.lang-btn').first().click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
 });

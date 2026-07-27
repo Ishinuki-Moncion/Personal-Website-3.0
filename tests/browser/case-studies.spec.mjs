@@ -85,10 +85,12 @@ test('the client-work case study leaks nothing it should not', async ({ page }) 
 
   expect(page.locator('.packet-link'), 'client work must carry no repository link').toHaveCount(0);
 
-  /* Private repositories that must never be referenced from a public page. */
-  for (const forbidden of ['REDACTED-INTERNAL-REPO', 'REDACTED-INTERNAL-REPO', 'REDACTED-INTERNAL-REPO']) {
-    expect(html.toLowerCase(), `must not reference the private repository "${forbidden}"`).not.toContain(forbidden);
-  }
+  /* No repository reference of ANY kind may appear on the client-work page.
+     An earlier version of this test enumerated the private repository names it
+     was guarding against — which committed those names to a public repo, i.e.
+     performed the disclosure it existed to prevent. Assert the property, never
+     the secret. */
+  expect(html, 'client work must reference no repository at all').not.toContain('github.com');
 
   /* No invented metrics: the only quantity may be the 100+ already published on
      the site. Guards against a future edit adding a business outcome. */

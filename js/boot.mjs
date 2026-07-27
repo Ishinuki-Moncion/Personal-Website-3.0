@@ -4,7 +4,12 @@ window.__TIER_PROBE = null;
 window.__CURSOR_ACTIVE = false;
 window.__SCENE_READY_FIRED = false;
 
-const V = { bg: '7.0', boot: '3.2', cursor: '3.2', fx: '3.8', app: '4.4', probe: '1' };
+/* Bumped for every module this branch modified: js/background.js (postFX
+   re-gate + timebase reset), js/boot.js (navigation-anchored cap) and
+   js/app.js (ownership-scoped inert + per-photo lightbox sizing). Without
+   these, a returning visitor keeps the CACHED module and none of the fixes —
+   including the Critical inert lockout — ever reach them. */
+const V = { bg: '7.1', boot: '3.3', cursor: '3.2', fx: '3.8', app: '4.5', probe: '1' };
 
 /* v3.4b: this is a COORDINATOR, not a serial dependency chain (spec 2026-07-21
    §A3). It shipped as four unguarded sequential `await import()` calls, so a
@@ -27,9 +32,19 @@ async function load(specifier, label) {
 /* Essential interactive behavior first, so its handlers exist before the reveal. */
 await load(`./app.js?v=${V.app}`, 'app');
 
-/* Decorative and mutually independent — neither may delay the reveal, so they
-   load concurrently and their failures are absorbed. */
-await Promise.all([
+/* Mutually independent, so they load concurrently.
+   js/cursor.js IS decorative — it draws the HUD reticle and nothing else.
+   js/effects.js is NOT: it owns the scroll reveal, and js/effects.js:104 is the
+   only code anywhere that adds `.seen`, which is what lifts
+   `[data-reveal]{opacity:0}`. Absorbing its failure silently was a REGRESSION
+   introduced by making this file a coordinator: previously the failure aborted
+   boot.mjs, `data-booting` stayed set, index.html's 10s watchdog fired and
+   latched `body.revealed`, and `body.revealed [data-reveal]{opacity:1!important}`
+   force-showed the page. Now boot.js clears data-booting first, which
+   permanently disarms that watchdog (reveal() early-returns once the attribute
+   is gone), so all 34 revealed elements would sit at opacity 0 for the whole
+   session — a blank scrolling page. */
+const [effectsOk] = await Promise.all([
   load(`./effects.js?v=${V.fx}`, 'effects'),
   load(`./cursor.js?v=${V.cursor}`, 'cursor'),
 ]);
@@ -41,6 +56,15 @@ if (!(await load(`./boot.js?v=${V.boot}`, 'boot'))) {
   document.body.removeAttribute('data-booting');
   document.getElementById('boot')?.remove();
   document.dispatchEvent(new Event('boot:done'));
+}
+
+/* Restore the safety net effects.js would otherwise have provided. This runs
+   AFTER boot:done has been dispatched on purpose: index.html strips `revealed`
+   in its own boot:done handler (`if (!fired)`), so adding the class earlier
+   would be undone. With no .seen writer alive, this class is the only thing
+   standing between the visitor and a permanently blank scrolling page. */
+if (!effectsOk) {
+  document.body.classList.add('revealed');
 }
 
 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));

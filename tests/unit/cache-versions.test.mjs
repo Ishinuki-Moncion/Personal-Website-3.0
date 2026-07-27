@@ -16,10 +16,10 @@ test('Package A production modules use the complete approved cache tuple', async
   ]);
 
   assert.match(index, /src="js\/boot\.mjs\?v=32"/);
-  assert.match(boot, /bg: '7\.0'/);
-  assert.match(boot, /boot: '3\.2'/);
+  assert.match(boot, /bg: '7\.1'/);
+  assert.match(boot, /boot: '3\.3'/);
   assert.match(boot, /cursor: '3\.2'/);
-  assert.match(boot, /app: '4\.4'/);
+  assert.match(boot, /app: '4\.5'/);
   assert.match(boot, /probe: '1'/);
   assert.match(boot, /import\('\.\/scene-bootstrap\.mjs\?v=1'\)/);
   assert.match(probe, /from '\.\/quality-policy\.mjs\?v=1'/);

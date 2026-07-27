@@ -9,6 +9,10 @@
  * scene, because the job of this page is to be read.
  */
 
+/* Single source for the shared stylesheet token: hard-coding it here put a
+   second copy outside the cache-version pin, so the two could drift apart. */
+export const SITE_CSS_VERSION = '3.33';
+
 const escape = value => String(value)
   .replace(/&/g, '&amp;')
   .replace(/</g, '&lt;')
@@ -91,8 +95,7 @@ export function renderCaseStudy(study, profile) {
 <meta name="twitter:image:alt" content="daikieOS — ${escape(profile.name)}, developer and photographer, Tokyo" />
 <link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="../../images/apple-touch-icon.png" />
-<link rel="preload" href="../../fonts/mplus-rounded-1c-400.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
-<link rel="stylesheet" href="../../css/site.css?v=3.33" />
+<link rel="stylesheet" href="../../css/site.css?v=${SITE_CSS_VERSION}" />
 <link rel="stylesheet" href="../../css/case.css?v=1" />
 </head>
 <body class="packet-body">
