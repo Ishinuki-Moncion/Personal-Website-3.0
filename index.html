@@ -28,7 +28,7 @@
      400 face paints on the English page — Zen Kaku is scoped to html[lang="ja"]
      (site.css) and stays unfetched here, so it is deliberately not preloaded. -->
 <link rel="preload" href="fonts/mplus-rounded-1c-400.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
-<link rel="stylesheet" href="css/site.css?v=3.32" />
+<link rel="stylesheet" href="css/site.css?v=3.33" />
 <noscript>
   <style>
     /* No-JS truth: kill the boot screen and reveal everything the engine would */
@@ -141,8 +141,12 @@
       <span class="line amberline" data-line="Daikie" aria-hidden="true">Daikie</span>
     </h1>
     <p class="hero-sub">
-      <span class="hero-sub-text" data-text="Developer & photographer turning ideas into things people actually use — across the stack and through the lens."></span><span class="typ-caret"></span>
+      <span class="hero-sub-text" data-text="Technical Producer & creative developer in Tokyo — high-performance open-web work, across the stack and through the lens."></span><span class="typ-caret"></span>
     </p>
+    <div class="hero-cta" data-reveal data-reveal-delay="0.35s">
+      <a class="cta" href="#projects" data-cursor="read →" data-en="View case studies" data-ja="制作事例を見る">View case studies</a>
+      <a class="cta cta-ghost" href="#contact" data-cursor="expand" data-en="Start a conversation" data-ja="ご相談はこちら">Start a conversation</a>
+    </div>
     <div class="hero-foot">
       <div class="scroll-cue"><span class="track"></span><span data-en="Scroll to explore" data-ja="スクロール">Scroll to explore</span></div>
       <div class="sys-online" translate="no">● SYS//ONLINE</div>
@@ -261,37 +265,37 @@
   <!-- ============ PROJECTS ============ -->
   <section class="projects" id="projects">
     <div class="shell">
-      <div class="sec-label"><span class="idx">[ 04 ]</span><span class="txt" data-en="Projects / Selected" data-ja="制作 / 選抜">Projects / Selected</span><span class="rule"></span></div>
-      <h2 class="heading-xl" data-reveal data-en="Selected Work" data-ja="代表作">Selected Work</h2>
+      <div class="sec-label"><span class="idx">[ 04 ]</span><span class="txt" data-en="Projects / Case studies" data-ja="制作 / 事例">Projects / Case studies</span><span class="rule"></span></div>
+      <h2 class="heading-xl" data-reveal data-en="Case Studies" data-ja="制作事例">Case Studies</h2>
       <div data-stagger>
-        <a class="row" href="https://github.com/Ishinuki-Moncion" target="_blank" rel="noopener" data-reveal data-cursor="open ↗">
+        <a class="row" href="case/daikieos/" data-reveal data-cursor="read →">
           <div class="proj-grid">
             <span class="proj-idx">01</span>
             <div>
-              <h3 class="row-title">Degree Planning Audit Tool</h3>
-              <p class="row-sub">Automated redundant degree-audit reporting, cutting manual calculation time — parsing source PDFs into clean generated documents.</p>
+              <h3 class="row-title">daikieOS — Personal Website 3.0</h3>
+              <p class="row-sub">This site. A zero-build portfolio running a real-time WebGL scene as progressive enhancement — measured device tiering, a bounded postprocessing budget, and a page that stays usable when every optional module fails.</p>
             </div>
-            <div class="proj-end"><span class="proj-tech">JavaScript · Node.js · Express</span><span class="proj-year">2022 <span class="row-arrow" aria-hidden="true">↗</span></span></div>
+            <div class="proj-end"><span class="proj-tech">three.js · GLSL · ES modules</span><span class="proj-year">2026 <span class="row-arrow" aria-hidden="true">→</span></span></div>
           </div>
         </a>
-        <a class="row" href="https://github.com/Ishinuki-Moncion" target="_blank" rel="noopener" data-reveal data-cursor="open ↗">
+        <a class="row" href="case/tokyo-data-globe/" data-reveal data-cursor="read →">
           <div class="proj-grid">
             <span class="proj-idx">02</span>
             <div>
-              <h3 class="row-title">TimeFlies</h3>
-              <p class="row-sub">Real-time data transfer from a PostgreSQL backend to the front-end, using MikroORM for the data layer at HackUTD VIII.</p>
+              <h3 class="row-title">Tokyo Data Globe</h3>
+              <p class="row-sub">A particle Earth built from land-only points, with a great-circle arc that draws itself Dallas to Tokyo. The standalone scene lab behind this site’s centrepiece.</p>
             </div>
-            <div class="proj-end"><span class="proj-tech">TypeScript · PostgreSQL · MikroORM</span><span class="proj-year">2021 <span class="row-arrow" aria-hidden="true">↗</span></span></div>
+            <div class="proj-end"><span class="proj-tech">three.js · GLSL · Natural Earth</span><span class="proj-year">2026 <span class="row-arrow" aria-hidden="true">→</span></span></div>
           </div>
         </a>
-        <a class="row" href="https://github.com/Ishinuki-Moncion" target="_blank" rel="noopener" data-reveal data-cursor="open ↗">
+        <a class="row" href="case/open-web-production/" data-reveal data-cursor="read →">
           <div class="proj-grid">
             <span class="proj-idx">03</span>
             <div>
-              <h3 class="row-title">Debug</h3>
-              <p class="row-sub">A full-stack app for real-time collaborative code sharing — syntax highlighting and live sync backed by Firebase.</p>
+              <h3 class="row-title">Open-Web Campaign Production</h3>
+              <p class="row-sub">Technical Producer at SeenThis Japan — building and converting advertising creative into open-web display formats inside strict weight budgets, across 100+ campaign lifecycles.</p>
             </div>
-            <div class="proj-end"><span class="proj-tech">React · Node.js · Firebase</span><span class="proj-year">2020 <span class="row-arrow" aria-hidden="true">↗</span></span></div>
+            <div class="proj-end"><span class="proj-tech">HTML · CSS · JavaScript</span><span class="proj-year">2025 — <span class="row-arrow" aria-hidden="true">→</span></span></div>
           </div>
         </a>
       </div>
@@ -304,6 +308,7 @@
     <div class="shell">
       <div class="sec-label"><span class="idx">[ 05 ]</span><span class="txt" data-en="Contact" data-ja="連絡">Contact</span><span class="rule"></span></div>
       <h2 data-reveal data-en="Let’s make something." data-ja="一緒に作りましょう。">Let’s make <em>something.</em></h2>
+      <p class="contact-guide" data-reveal data-reveal-delay="0.03s" data-en="Open to Technical Producer and front-end roles in Tokyo, and to freelance work on high-performance open-web or interactive projects. Photography commissions welcome." data-ja="東京での技術プロデューサー・フロントエンドの役割、および高速なオープンウェブ／インタラクティブ案件のご相談を歓迎します。撮影のご依頼も承ります。">Open to Technical Producer and front-end roles in Tokyo, and to freelance work on high-performance open-web or interactive projects. Photography commissions welcome.</p>
       <!-- WCAG 2.5.3 Label in Name: the accessible name must CONTAIN the visible
            text. An aria-label of "Copy email address to clipboard" replaced it
            entirely, so a speech-input user saying the address they can see, or a

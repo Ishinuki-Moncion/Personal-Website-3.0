@@ -40,7 +40,7 @@ test('every versioned reference the site serves is pinned', async () => {
     readSiteFile('js/background.js')
   ]);
 
-  assert.match(index, /href="css\/site\.css\?v=3\.32"/, 'css/site.css must carry its cache token');
+  assert.match(index, /href="css\/site\.css\?v=3\.33"/, 'css/site.css must carry its cache token');
   assert.match(boot, /fx: '3\.8'/, 'js/effects.js version must stay pinned');
   assert.match(background, /import\('\.\/rivulet\.mjs\?v=1'\)/, 'js/rivulet.mjs must carry its cache token');
 

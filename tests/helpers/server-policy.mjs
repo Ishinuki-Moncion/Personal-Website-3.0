@@ -1,7 +1,11 @@
 import { posix } from 'node:path';
 
 const PUBLIC_FILES = new Set(['/', '/index.html', '/404.html', '/favicon.svg']);
-const PUBLIC_ROOTS = ['/css/', '/fonts/', '/images/', '/js/', '/tests/device/'];
+/* '/case/' serves the generated case studies (Package B). Adding a root here
+   grants read access to that subtree only — the dot-path, traversal, backslash
+   and NUL rejections in normalizeSitePath, and the final realpath containment
+   check in serve.mjs, all still apply unchanged. */
+const PUBLIC_ROOTS = ['/case/', '/css/', '/fonts/', '/images/', '/js/', '/tests/device/'];
 
 export function normalizeSitePath(rawPathname) {
   let decoded;

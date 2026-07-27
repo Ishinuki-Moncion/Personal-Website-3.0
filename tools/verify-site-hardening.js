@@ -734,10 +734,19 @@ check(
   (index.match(/lang="ja"/g) || []).length >= 10 &&
     /<h2 class="heading-xl"[^>]*data-ja="作品"/.test(index) &&
     /data-ja="レンズ越しに"/.test(index) &&
-    /data-ja="代表作"/.test(index) &&
+    /* v3.4c: the projects headline became "Case Studies" (制作事例) when the three
+       unverifiable profile links were replaced with real case studies. The lock
+       moves with it — the invariant is that display headlines fully translate,
+       not that this one keeps its original wording. */
+    /data-ja="制作事例"/.test(index) &&
+    /* B2 conversion copy must translate too, or the Japanese page silently
+       degrades to a half-English call to action. */
+    /data-ja="制作事例を見る"/.test(index) &&
+    /data-ja="ご相談はこちら"/.test(index) &&
+    /class="contact-guide"[^>]*data-ja="/.test(index) &&
     /Switch to Japanese/.test(app) &&
     /html\[lang="ja"\] \.heading-xl/.test(css),
-  'always-JP text nodes need lang="ja"; Work/Through the lens/Selected Work translate via data-ja; the toggle label announces its target'
+  'always-JP text nodes need lang="ja"; Work/Through the lens/Case Studies and the B2 hero actions and contact guidance translate via data-ja; the toggle label announces its target'
 );
 
 check(

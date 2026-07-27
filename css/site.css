@@ -36,16 +36,16 @@
    the shipped bytes. Regenerate both together with `npm run fonts:build`. */
 @font-face { font-family: 'M PLUS Rounded 1c'; font-style: normal; font-weight: 400; font-display: swap;
   src: url('../fonts/mplus-rounded-1c-400.woff2') format('woff2');
-  unicode-range: U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4EAC, U+4ED9, U+4EE3, U+4F4F, U+4F5C, U+5009, U+5199, U+5236, U+529B, U+5317, U+53F0, U+54C1, U+5728, U+58EB, U+5927, U+5BB6, U+5BCC, U+5CA1, U+5F71, U+629C, U+62E0, U+64AE, U+65E5, U+672C, U+6771, U+6982, U+6B74, U+6C96, U+6D45, U+6D77, U+6E0B, U+70B9, U+767A, U+771F, U+798F, U+7D4C, U+7D61, U+7DD2, U+7E04, U+8005, U+80FD, U+8349, U+8868, U+8981, U+8A9E, U+8C37, U+8D8A, U+9023, U+9053, U+9078, U+90FD, U+91CE, U+938C, U+9577, U+958B, U+962A, U+FF01-FF5E, U+FFE0-FFE6; }
+  unicode-range: U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4E8B, U+4EAC, U+4ED9, U+4EF6, U+4F4F, U+4F5C, U+4F8B, U+4F9D, U+5009, U+5199, U+5236, U+5272, U+529B, U+5317, U+53F0, U+54C1, U+5728, U+58EB, U+5927, U+5BB6, U+5BCC, U+5CA1, U+5F71, U+5F79, U+627F-6280, U+62E0, U+64AE, U+65E5, U+672C, U+6771, U+6848, U+6982, U+6B53, U+6B74, U+6C96, U+6D45, U+6D77, U+6E0B, U+70B9, U+767A, U+76F8, U+771F, U+798F, U+7D4C, U+7D61, U+7DD2, U+7E04, U+8005, U+80FD, U+8349, U+8853, U+8981, U+898B, U+8A9E, U+8AC7, U+8C37, U+8D8A, U+8FCE, U+901F, U+9023, U+9053, U+90FD, U+91CE, U+938C, U+9577, U+958B, U+962A, U+983C, U+9AD8, U+FF01-FF5E, U+FFE0-FFE6; }
 @font-face { font-family: 'M PLUS Rounded 1c'; font-style: normal; font-weight: 500; font-display: swap;
   src: url('../fonts/mplus-rounded-1c-500.woff2') format('woff2');
-  unicode-range: U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4EAC, U+4ED9, U+4EE3, U+4F4F, U+4F5C, U+5009, U+5199, U+5236, U+529B, U+5317, U+53F0, U+54C1, U+5728, U+58EB, U+5927, U+5BB6, U+5BCC, U+5CA1, U+5F71, U+629C, U+62E0, U+64AE, U+65E5, U+672C, U+6771, U+6982, U+6B74, U+6C96, U+6D45, U+6D77, U+6E0B, U+70B9, U+767A, U+771F, U+798F, U+7D4C, U+7D61, U+7DD2, U+7E04, U+8005, U+80FD, U+8349, U+8868, U+8981, U+8A9E, U+8C37, U+8D8A, U+9023, U+9053, U+9078, U+90FD, U+91CE, U+938C, U+9577, U+958B, U+962A, U+FF01-FF5E, U+FFE0-FFE6; }
+  unicode-range: U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4E8B, U+4EAC, U+4ED9, U+4EF6, U+4F4F, U+4F5C, U+4F8B, U+4F9D, U+5009, U+5199, U+5236, U+5272, U+529B, U+5317, U+53F0, U+54C1, U+5728, U+58EB, U+5927, U+5BB6, U+5BCC, U+5CA1, U+5F71, U+5F79, U+627F-6280, U+62E0, U+64AE, U+65E5, U+672C, U+6771, U+6848, U+6982, U+6B53, U+6B74, U+6C96, U+6D45, U+6D77, U+6E0B, U+70B9, U+767A, U+76F8, U+771F, U+798F, U+7D4C, U+7D61, U+7DD2, U+7E04, U+8005, U+80FD, U+8349, U+8853, U+8981, U+898B, U+8A9E, U+8AC7, U+8C37, U+8D8A, U+8FCE, U+901F, U+9023, U+9053, U+90FD, U+91CE, U+938C, U+9577, U+958B, U+962A, U+983C, U+9AD8, U+FF01-FF5E, U+FFE0-FFE6; }
 @font-face { font-family: 'Zen Kaku Gothic New'; font-style: normal; font-weight: 500; font-display: swap;
   src: url('../fonts/zen-kaku-gothic-new-500.woff2') format('woff2');
-  unicode-range: U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4EAC, U+4ED9, U+4EE3, U+4F4F, U+4F5C, U+5009, U+5199, U+5236, U+529B, U+5317, U+53F0, U+54C1, U+5728, U+58EB, U+5927, U+5BB6, U+5BCC, U+5CA1, U+5F71, U+629C, U+62E0, U+64AE, U+65E5, U+672C, U+6771, U+6982, U+6B74, U+6C96, U+6D45, U+6D77, U+6E0B, U+70B9, U+767A, U+771F, U+798F, U+7D4C, U+7D61, U+7DD2, U+7E04, U+8005, U+80FD, U+8349, U+8868, U+8981, U+8A9E, U+8C37, U+8D8A, U+9023, U+9053, U+9078, U+90FD, U+91CE, U+938C, U+9577, U+958B, U+962A, U+FF01-FF5E, U+FFE0-FFE6; }
+  unicode-range: U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4E8B, U+4EAC, U+4ED9, U+4EF6, U+4F4F, U+4F5C, U+4F8B, U+4F9D, U+5009, U+5199, U+5236, U+5272, U+529B, U+5317, U+53F0, U+54C1, U+5728, U+58EB, U+5927, U+5BB6, U+5BCC, U+5CA1, U+5F71, U+5F79, U+627F-6280, U+62E0, U+64AE, U+65E5, U+672C, U+6771, U+6848, U+6982, U+6B53, U+6B74, U+6C96, U+6D45, U+6D77, U+6E0B, U+70B9, U+767A, U+76F8, U+771F, U+798F, U+7D4C, U+7D61, U+7DD2, U+7E04, U+8005, U+80FD, U+8349, U+8853, U+8981, U+898B, U+8A9E, U+8AC7, U+8C37, U+8D8A, U+8FCE, U+901F, U+9023, U+9053, U+90FD, U+91CE, U+938C, U+9577, U+958B, U+962A, U+983C, U+9AD8, U+FF01-FF5E, U+FFE0-FFE6; }
 @font-face { font-family: 'Zen Kaku Gothic New'; font-style: normal; font-weight: 700; font-display: swap;
   src: url('../fonts/zen-kaku-gothic-new-700.woff2') format('woff2');
-  unicode-range: U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4EAC, U+4ED9, U+4EE3, U+4F4F, U+4F5C, U+5009, U+5199, U+5236, U+529B, U+5317, U+53F0, U+54C1, U+5728, U+58EB, U+5927, U+5BB6, U+5BCC, U+5CA1, U+5F71, U+629C, U+62E0, U+64AE, U+65E5, U+672C, U+6771, U+6982, U+6B74, U+6C96, U+6D45, U+6D77, U+6E0B, U+70B9, U+767A, U+771F, U+798F, U+7D4C, U+7D61, U+7DD2, U+7E04, U+8005, U+80FD, U+8349, U+8868, U+8981, U+8A9E, U+8C37, U+8D8A, U+9023, U+9053, U+9078, U+90FD, U+91CE, U+938C, U+9577, U+958B, U+962A, U+FF01-FF5E, U+FFE0-FFE6; }
+  unicode-range: U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4E8B, U+4EAC, U+4ED9, U+4EF6, U+4F4F, U+4F5C, U+4F8B, U+4F9D, U+5009, U+5199, U+5236, U+5272, U+529B, U+5317, U+53F0, U+54C1, U+5728, U+58EB, U+5927, U+5BB6, U+5BCC, U+5CA1, U+5F71, U+5F79, U+627F-6280, U+62E0, U+64AE, U+65E5, U+672C, U+6771, U+6848, U+6982, U+6B53, U+6B74, U+6C96, U+6D45, U+6D77, U+6E0B, U+70B9, U+767A, U+76F8, U+771F, U+798F, U+7D4C, U+7D61, U+7DD2, U+7E04, U+8005, U+80FD, U+8349, U+8853, U+8981, U+898B, U+8A9E, U+8AC7, U+8C37, U+8D8A, U+8FCE, U+901F, U+9023, U+9053, U+90FD, U+91CE, U+938C, U+9577, U+958B, U+962A, U+983C, U+9AD8, U+FF01-FF5E, U+FFE0-FFE6; }
 
 :root {
   --void: #05060a;    /* v3.1 deep-black floor: owner-directed revert to deep space black; matches scene fog 0x05060a */
@@ -1057,4 +1057,21 @@ body.proj-rail .proj-tech { text-align: right; max-width: none; min-width: 30ch;
   body, .boot-skip, .nav-burger, .mm-close, .shot, .lb-close, .lb-thumb,
   .lb-nav button, .signal-row, .pill, .deck-toggle, .seg button, .switch,
   .scramble-on { cursor: auto; }
+}
+
+/* v3.4c — hero actions (spec §B2). Two only, and deliberately quiet: the hero's
+   job is still the name and the scene, so these read as instrument controls
+   rather than as marketing buttons. */
+.hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: clamp(22px, 3.5vw, 34px); }
+.cta {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--void); background: var(--cyan);
+  border: 1px solid var(--cyan); padding: 12px 20px; transition: .25s;
+}
+.cta:hover, .cta:focus-visible { box-shadow: var(--bloom-cyan); }
+.cta-ghost { color: var(--cyan); background: transparent; border-color: var(--line-strong); }
+.cta-ghost:hover, .cta-ghost:focus-visible { border-color: var(--cyan); box-shadow: var(--bloom-cyan); }
+.contact-guide {
+  max-width: 56ch; margin-top: 14px; font-size: 14px; line-height: 1.7;
+  color: var(--muted);
 }

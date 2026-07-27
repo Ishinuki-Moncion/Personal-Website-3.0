@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>daikieOS — Personal Website 3.0 — Ishinuki Daikie</title>
+<meta name="description" content="How a zero-build, no-framework portfolio runs a real-time WebGL scene as progressive enhancement — measured device tiering, a bounded postprocessing budget, and a site that stays usable when every optional module fails." />
+<link rel="canonical" href="https://ishinuki-moncion.github.io/Personal-Website-3.0/case/daikieos/" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="daikieOS — Personal Website 3.0" />
+<meta property="og:description" content="How a zero-build, no-framework portfolio runs a real-time WebGL scene as progressive enhancement — measured device tiering, a bounded postprocessing budget, and a site that stays usable when every optional module fails." />
+<meta property="og:url" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/case/daikieos/" />
+<meta property="og:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
+<meta property="og:image:alt" content="daikieOS — Ishinuki Daikie, developer and photographer, Tokyo" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="daikieOS — Personal Website 3.0" />
+<meta name="twitter:description" content="How a zero-build, no-framework portfolio runs a real-time WebGL scene as progressive enhancement — measured device tiering, a bounded postprocessing budget, and a site that stays usable when every optional module fails." />
+<meta name="twitter:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
+<meta name="twitter:image:alt" content="daikieOS — Ishinuki Daikie, developer and photographer, Tokyo" />
+<link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="../../images/apple-touch-icon.png" />
+<link rel="preload" href="../../fonts/mplus-rounded-1c-400.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+<link rel="stylesheet" href="../../css/site.css?v=3.33" />
+<link rel="stylesheet" href="../../css/case.css?v=1" />
+</head>
+<body class="packet-body">
+<a class="skip-link" href="#packet-main">Skip to content</a>
+
+<header class="packet-head">
+  <a class="packet-home" href="../../">← <span>Ishinuki Daikie</span></a>
+  <span class="packet-idx" translate="no">CASE_01</span>
+</header>
+
+<main class="packet" id="packet-main">
+  <article>
+    <p class="packet-kicker">Engineering case study</p>
+    <h1>daikieOS — Personal Website 3.0</h1>
+    <p class="packet-summary">A zero-build portfolio whose centrepiece is a real-time WebGL scene, engineered so that losing the scene costs the scene and nothing else.</p>
+
+    <dl class="packet-meta">
+      <div><dt>Period</dt><dd>2026</dd></div>
+      <div><dt>Role</dt><dd>Sole designer and engineer.</dd></div>
+      <div><dt>Stack</dt><dd>JavaScript (ES modules) · three.js r158 · GLSL · Playwright · Lighthouse</dd></div>
+    </dl>
+
+    <p class="packet-links">
+          <a class="packet-link" href="https://github.com/Ishinuki-Moncion/Personal-Website-3.0" rel="noopener" target="_blank">Repository ↗</a>
+        </p>
+
+    <aside class="packet-evidence">
+      <h2>Evidence boundary</h2>
+      <p>Everything below is verifiable in the public repository: the code, the test suite that constrains it, and the design records that explain why each decision was made.</p>
+    </aside>
+
+    <nav class="packet-contents" aria-label="Sections">
+      <h2>Contents</h2>
+      <ol>
+            <li><a href="#context">Context</a></li>
+            <li><a href="#constraint-the-scene-is-optional">Constraint: the scene is optional</a></li>
+            <li><a href="#deciding-what-a-device-can-afford">Deciding what a device can afford</a></li>
+            <li><a href="#spending-a-memory-budget-you-can-actually-compute">Spending a memory budget you can actually compute</a></li>
+            <li><a href="#when-the-measurement-was-wrong">When the measurement was wrong</a></li>
+            <li><a href="#rendering-identically-in-two-engines">Rendering identically in two engines</a></li>
+            <li><a href="#delivery-is-not-design">Delivery is not design</a></li>
+            <li><a href="#what-i-would-do-differently">What I would do differently</a></li>
+      </ol>
+    </nav>
+
+      <section class="packet-section" id="context">
+        <h2><a class="anchor" href="#context">Context</a></h2>
+        <p>A portfolio for a developer and photographer needs to do two things that pull against each other: prove engineering capability, and load fast enough that nobody leaves before it has proved anything.</p>
+        <p>The site ships no build step. The browser receives the same ES modules that are committed, resolved through an import map. There is no bundler, no framework, and no runtime dependency beyond a vendored copy of three.js.</p>
+      </section>
+
+      <section class="packet-section" id="constraint-the-scene-is-optional">
+        <h2><a class="anchor" href="#constraint-the-scene-is-optional">Constraint: the scene is optional</a></h2>
+        <p>The WebGL scene is the most expensive thing on the page and the least essential. So it is treated as progressive enhancement rather than as the application: navigation, language switching, the gallery, the lightbox and the contact action all initialise before it and never depend on it.</p>
+        <p>That is enforced, not asserted. The browser suite aborts individual module requests — three.js, the scene module, the scene failure boundary itself, and the purely decorative custom-cursor module — and requires that the page still reveals, still scrolls, and still answers every essential interaction.</p>
+      </section>
+
+      <section class="packet-section" id="deciding-what-a-device-can-afford">
+        <h2><a class="anchor" href="#deciding-what-a-device-can-afford">Deciding what a device can afford</a></h2>
+        <p>Render quality is decided by measurement, never by identity. User-agent strings, GPU renderer strings and device-memory hints are all excluded on principle: they describe what a device claims to be, not what it can currently do.</p>
+        <p>Instead a short WebGL2 probe runs after first paint, draws an instanced workload representative of the real scene, and uses a synchronous pixel read as a completion fence so the timing reflects GPU work rather than command submission. It yields between iterations so it cannot block the main thread, and releases every buffer, texture, framebuffer, shader and program by identity before losing its temporary context — on success, on allocation failure, on read failure, on timeout, and on exception.</p>
+        <p>Reduced motion wins over all of it and never runs the probe at all.</p>
+      </section>
+
+      <section class="packet-section" id="spending-a-memory-budget-you-can-actually-compute">
+        <h2><a class="anchor" href="#spending-a-memory-budget-you-can-actually-compute">Spending a memory budget you can actually compute</a></h2>
+        <p>Postprocessing is where a mobile GPU runs out of memory. The attachment cost is computed before anything is allocated — half-float colour targets, multisample storage plus its resolve texture, and the bloom mip chain — and compared against a fixed budget. Over budget, the scene fails closed to direct rendering rather than allocating and hoping.</p>
+        <p>A resize is an allocation point too, not just boot: growing a window reallocates every target at the new size, so the budget is re-evaluated there and fails closed the same way.</p>
+      </section>
+
+      <section class="packet-section" id="when-the-measurement-was-wrong">
+        <h2><a class="anchor" href="#when-the-measurement-was-wrong">When the measurement was wrong</a></h2>
+        <p>A sustained-low-framerate watchdog demotes the scene once per session: it disposes the postprocessing chain, drops a live device-pixel-ratio cap that survives rotation, switches to direct rendering, and never re-promotes.</p>
+        <p>Getting that right required disposing resources the upstream library does not — three.js r158 omits one internal bloom material from its own dispose method, so it is registered and released explicitly, and every reference is severed afterwards so nothing stays reachable through a retained debug handle.</p>
+      </section>
+
+      <section class="packet-section" id="rendering-identically-in-two-engines">
+        <h2><a class="anchor" href="#rendering-identically-in-two-engines">Rendering identically in two engines</a></h2>
+        <p>The scene once looked correct in Chrome and washed out in Safari. The cause was compositing, not shading: canvases composite as premultiplied alpha, and WebKit clamps colour channels to the alpha channel while Chromium passes out-of-range values through. An additive scene routinely produces colour above its own alpha, so every glow and every low-alpha raindrop was being crushed on iOS.</p>
+        <p>Clearing the buffer at full alpha, in linear space, makes every composited pixel valid premultiplied colour — and both engines then display identical bytes.</p>
+      </section>
+
+      <section class="packet-section" id="delivery-is-not-design">
+        <h2><a class="anchor" href="#delivery-is-not-design">Delivery is not design</a></h2>
+        <p>The two Japanese typefaces were loaded from a third-party CDN behind a render-blocking stylesheet, on the recorded assumption that subsetting Japanese was impractical. Measurement disproved it: the committed pages use fewer than 200 distinct CJK codepoints, so both faces subset to under 52KB each — a 98.4% reduction.</p>
+        <p>Because the Japanese fallback stack was a Latin face, Japanese text painted in a system font and then reflowed when the CDN face arrived. One wrong assumption was therefore producing two failing metrics at once. Self-hosting content-driven subsets fixed both, changed nothing about the type design, and removed the last third-party origin from the page.</p>
+      <figure class="packet-metrics">
+        <table>
+          <caption>Production-network Lighthouse, mobile, median of three cold runs</caption>
+          <thead><tr><th scope="col">Metric</th><th scope="col">Before</th><th scope="col">After</th></tr></thead>
+          <tbody>
+        <tr>
+          <th scope="row">Performance</th>
+          <td>60</td>
+          <td>94</td>
+        </tr>
+        <tr>
+          <th scope="row">First Contentful Paint</th>
+          <td>4185 ms</td>
+          <td>1503 ms</td>
+        </tr>
+        <tr>
+          <th scope="row">Largest Contentful Paint</th>
+          <td>4859 ms</td>
+          <td>2327 ms</td>
+        </tr>
+        <tr>
+          <th scope="row">Cumulative Layout Shift</th>
+          <td>0.172</td>
+          <td>0.059</td>
+        </tr>
+          </tbody>
+        </table>
+      </figure>
+      </section>
+
+      <section class="packet-section" id="what-i-would-do-differently">
+        <h2><a class="anchor" href="#what-i-would-do-differently">What I would do differently</a></h2>
+        <p>The structural checks that guard this codebase match source text rather than behaviour. They are effective at preventing a safety gate from being quietly deleted, but they fail on correct refactors and they read like behavioural coverage when they are not. I would separate the two concerns explicitly.</p>
+        <p>The deterministic performance gate blocked the third-party font request to make runs repeatable — which also removed the single largest real-world cost from the measurement. A gate that excludes the dominant production variable measures a site nobody receives. Both modes are now run, and the honest one is the one that has to pass.</p>
+      </section>
+  </article>
+
+  <p class="packet-foot">
+    <a href="../../#projects">← All case studies</a>
+    <a href="../../#contact">Start a conversation →</a>
+  </p>
+</main>
+</body>
+</html>

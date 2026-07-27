@@ -10,14 +10,16 @@
     "fonts:build": "node tools/build-fonts.mjs",
     "test:browser": "playwright test",
     "test:hardening": "node tools/verify-site-hardening.js",
-    "test:html": "html-validate index.html 404.html",
+    "test:html": "html-validate index.html 404.html \"case/**/index.html\"",
     "test:w3c": "node tools/validate-w3c.mjs",
-    "qa:static": "npm run test:unit && npm run test:hardening && npm run test:html && npm run test:w3c",
+    "qa:static": "npm run test:unit && npm run check:cases && npm run test:hardening && npm run test:html && npm run test:w3c",
     "qa:browser": "npm run test:browser",
     "qa:matrix": "playwright test tests/browser/site-matrix.spec.mjs",
     "qa:perf": "node tests/performance/lighthouse-mobile.mjs",
     "qa:perf:network": "LIGHTHOUSE_NETWORK_MODE=production-network node tests/performance/lighthouse-mobile.mjs",
-    "qa:all": "npm run qa:static && npm run qa:browser"
+    "qa:all": "npm run qa:static && npm run qa:browser",
+    "build:cases": "node tools/build-cases.mjs",
+    "check:cases": "node tools/build-cases.mjs --check"
   },
   "devDependencies": {
     "@playwright/test": "1.61.1",

@@ -79,7 +79,18 @@ test('returning visit completes language and reveal initialization with instant 
         bootDoneCount: window.__CODEX_BOOT_DONE_COUNT,
         language: document.documentElement.lang,
         heroStarted: document.querySelector('.hero')?.dataset.started ?? null,
-        revealDelay: document.querySelector('[data-reveal-delay]')?.style.getPropertyValue('--d') ?? null
+        /* Assert the TRANSFORM, not a constant: effects.js copies
+           data-reveal-delay into the --d custom property. Hardcoding '0.05s'
+           silently bound this to DOM order, so adding any earlier revealed
+           element broke it with no behaviour change. */
+        revealDelay: (() => {
+          const el = document.querySelector('[data-reveal-delay]');
+          if (!el) return null;
+          return {
+            applied: el.style.getPropertyValue('--d'),
+            declared: el.getAttribute('data-reveal-delay')
+          };
+        })()
       };
       observer.disconnect();
     });
@@ -93,12 +104,18 @@ test('returning visit completes language and reveal initialization with instant 
 
   await page.goto('/');
   await expect.poll(() => page.evaluate(() => window.__CODEX_INSTANT_SNAPSHOT ?? null)).not.toBeNull();
-  expect(await page.evaluate(() => window.__CODEX_INSTANT_SNAPSHOT)).toEqual({
+  const snapshot = await page.evaluate(() => window.__CODEX_INSTANT_SNAPSHOT);
+  expect({ ...snapshot, revealDelay: undefined }).toEqual({
     bootDoneCount: 1,
     language: 'ja',
     heroStarted: '1',
-    revealDelay: '0.05s'
+    revealDelay: undefined
   });
+  expect(snapshot.revealDelay?.declared, 'a revealed element with a delay must exist').toBeTruthy();
+  expect(
+    snapshot.revealDelay.applied,
+    'reveal initialization must copy data-reveal-delay into --d'
+  ).toBe(snapshot.revealDelay.declared);
 
   await page.evaluate(() => {
     window.__CODEX_SCENE_WARP_COUNT = 0;

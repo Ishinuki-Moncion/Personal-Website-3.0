@@ -1,0 +1,177 @@
+/* ============================================================
+   CASE_PACKET — case-study reading surface
+   ============================================================
+   Same instrument language as the home page, deliberately fewer effects. These
+   pages exist to be read: no WebGL scene, no boot choreography, no custom
+   cursor, no scroll-driven reveal. Design tokens come from site.css so the two
+   surfaces cannot drift apart; everything here is layout and reading rhythm.
+   ============================================================ */
+
+.packet-body {
+  cursor: auto;                 /* no custom reticle on this surface */
+  overflow-x: hidden;
+  background: var(--void);
+  color: var(--fg);
+}
+
+/* ---------- chrome ---------- */
+.packet-head {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 14px clamp(20px, 5vw, 64px);
+  background: rgba(5, 6, 10, 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.packet-home {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: var(--track-11, 0.12em);
+  text-transform: uppercase; color: var(--muted); transition: color .25s;
+}
+.packet-home:hover, .packet-home:focus-visible { color: var(--cyan); }
+.packet-idx {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.24em;
+  color: var(--cyan); text-shadow: 0 0 12px rgba(57, 240, 255, 0.4);
+}
+
+/* ---------- measure ----------
+   Long-form prose wants a reading measure, not the home page's full-bleed grid.
+   66ch keeps line length inside the range where the eye reliably finds the next
+   line without a return sweep. */
+.packet {
+  max-width: 72ch;
+  margin: 0 auto;
+  padding: clamp(40px, 8vw, 96px) clamp(20px, 5vw, 32px) clamp(64px, 10vw, 140px);
+}
+
+.packet-kicker {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.24em;
+  text-transform: uppercase; color: var(--cyan); margin-bottom: 14px;
+}
+.packet h1 {
+  font-size: clamp(30px, 6vw, 52px); line-height: 1.08; letter-spacing: -0.01em;
+  margin-bottom: 18px;
+}
+.packet-summary {
+  font-size: clamp(16px, 2.2vw, 20px); line-height: 1.5; color: var(--fg);
+  opacity: 0.86; margin-bottom: 36px;
+}
+
+/* ---------- metadata ledger ---------- */
+.packet-meta {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px 28px; padding: 20px 0; margin-bottom: 28px;
+  border-block: 1px solid var(--line);
+}
+.packet-meta dt {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+}
+.packet-meta dd { font-size: 13px; line-height: 1.5; }
+
+.packet-links { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 32px; }
+.packet-link {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--cyan);
+  border: 1px solid var(--line); padding: 9px 16px; transition: .25s;
+}
+.packet-link:hover, .packet-link:focus-visible {
+  border-color: var(--cyan); box-shadow: var(--bloom-cyan);
+}
+
+/* ---------- evidence boundary ----------
+   Given prominence on purpose: stating plainly what is and is not being claimed
+   is part of the work, not a disclaimer bolted to the end of it. */
+.packet-evidence {
+  border-left: 2px solid var(--amber); background: rgba(255, 158, 44, 0.045);
+  padding: 18px 22px; margin-bottom: 40px;
+}
+.packet-evidence h2 {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--amber); margin-bottom: 10px;
+}
+.packet-evidence p { font-size: 13.5px; line-height: 1.65; color: var(--muted); }
+
+/* ---------- contents ---------- */
+.packet-contents { margin-bottom: 52px; }
+.packet-contents h2 {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
+}
+.packet-contents ol {
+  list-style: none; counter-reset: toc;
+  display: grid; gap: 7px;
+}
+.packet-contents li { counter-increment: toc; }
+.packet-contents li::before {
+  content: counter(toc, decimal-leading-zero) " ";
+  font-family: var(--font-mono); font-size: 10px; color: var(--cyan); margin-right: 10px;
+}
+.packet-contents a { font-size: 14px; color: var(--muted); transition: color .2s; }
+.packet-contents a:hover, .packet-contents a:focus-visible { color: var(--fg); }
+
+/* ---------- body ---------- */
+.packet-section { margin-bottom: 44px; scroll-margin-top: 80px; }
+.packet-section h2 {
+  font-size: clamp(19px, 3vw, 25px); line-height: 1.2; margin-bottom: 14px;
+}
+.packet-section h2 .anchor { color: var(--fg); }
+/* The anchor mark is decorative and must not be announced or focusable-by-text. */
+.packet-section h2 .anchor::after {
+  content: " #"; color: var(--cyan); opacity: 0;
+  transition: opacity .2s; font-family: var(--font-mono); font-size: 0.6em;
+}
+.packet-section h2 .anchor:hover::after,
+.packet-section h2 .anchor:focus-visible::after { opacity: 0.7; }
+.packet-section p {
+  font-size: 15px; line-height: 1.72; color: var(--fg); opacity: 0.9;
+  margin-bottom: 14px;
+}
+
+/* ---------- measurement table ---------- */
+.packet-metrics { margin: 22px 0 6px; overflow-x: auto; }
+.packet-metrics table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.packet-metrics caption {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted);
+  text-align: left; padding-bottom: 10px;
+}
+.packet-metrics th, .packet-metrics td {
+  text-align: left; padding: 9px 14px 9px 0; border-bottom: 1px solid var(--line);
+}
+.packet-metrics thead th {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--muted);
+}
+.packet-metrics tbody th { font-weight: 400; color: var(--muted); }
+.packet-metrics td { font-family: var(--font-mono); font-variant-numeric: slashed-zero tabular-nums; }
+/* The improved column is the point of the table; let it carry the signal. */
+.packet-metrics td:last-child { color: var(--cyan); }
+
+/* ---------- foot ---------- */
+.packet-foot {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px;
+  margin-top: 64px; padding-top: 26px; border-top: 1px solid var(--line);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.packet-foot a { color: var(--muted); transition: color .25s; }
+.packet-foot a:hover, .packet-foot a:focus-visible { color: var(--cyan); }
+
+/* ---------- print ----------
+   Spec §B1 asks for print support. A case study is the one page on this site
+   somebody plausibly prints or exports to PDF for a hiring conversation, so it
+   inverts to ink-on-paper and prints link destinations rather than dead text. */
+@media print {
+  .packet-body { background: #fff; color: #111; }
+  .packet-head, .packet-foot, .skip-link { display: none; }
+  .packet { max-width: none; padding: 0; }
+  .packet h1, .packet-section h2 .anchor { color: #000; }
+  .packet-section p, .packet-summary { color: #111; opacity: 1; }
+  .packet-kicker, .packet-idx { color: #444; }
+  .packet-evidence { border-left-color: #888; background: #f4f4f4; }
+  .packet-evidence p, .packet-meta dt, .packet-contents a { color: #333; }
+  .packet-link::after, .packet-links a::after { content: " (" attr(href) ")"; font-size: 0.8em; color: #555; }
+  .packet-metrics td:last-child { color: #000; font-weight: 600; }
+  .packet-section { break-inside: avoid; }
+  .packet-section h2 .anchor::after { content: ""; }
+}

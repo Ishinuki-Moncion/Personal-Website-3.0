@@ -158,6 +158,29 @@ function main() {
     faces: entries.map(({ out, family, weight, bytes, sha256: hash }) => ({ file: out, family, weight, bytes, sha256: hash })),
   }, null, 2) + '\n');
 
+  /* Re-sync the declared unicode-range in css/site.css. It must equal the
+     subsets' EXACT coverage: over-claiming advertises glyphs the file lacks, and
+     the browser then renders tofu instead of falling through to a system JP
+     face. Doing it here means the declaration cannot drift from the shipped
+     bytes even by one edit — tests/unit/font-coverage.test.mjs pins the pair, but
+     a tool that keeps them in step beats a test that reports they diverged. */
+    const cssPath = join(ROOT, 'css/site.css');
+  const css = readFileSync(cssPath, 'utf8');
+  const rangeText = rangesToText(ranges);
+  let synced = 0;
+  const updated = css.replace(
+    /(@font-face \{[^}]*url\('\.\.\/fonts\/(?:mplus-rounded-1c|zen-kaku-gothic-new)-\d+\.woff2'\)[^}]*unicode-range:\s*)([^;]+)(;)/g,
+    (whole, head, current, tail) => {
+      if (current.trim() === rangeText) return whole;
+      synced++;
+      return head + rangeText + tail;
+    }
+  );
+  if (synced) {
+    writeFileSync(cssPath, updated);
+    console.log(`[build-fonts] re-synced unicode-range on ${synced} @font-face rule(s) in css/site.css`);
+  }
+
   const total = entries.reduce((n, e) => n + e.bytes, 0);
   console.log(`[build-fonts] total committed webfont payload: ${(total / 1024).toFixed(1)} KB`);
 }
