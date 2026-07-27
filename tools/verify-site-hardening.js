@@ -194,7 +194,7 @@ const qualityNameSites = background.split('\n')
   .map(line => line.replace(/\/\/.*$/, '').trim())
   .filter(line => /quality\s*(?:\.\s*name|\[\s*['"]name['"]\s*\])/.test(line));
 const allowedQualityNameSites = [
-  "const postFxWithinBudget = quality.name !== 'mobile-rich' ||",
+  "quality.name !== 'mobile-rich' || postFxBytesFor(width, height, pixelRatio) <= POSTFX_BUDGET_BYTES;",
   "if (globeFilled < GLOBE_N) console.warn('[scene] land particle sample underfilled', { quality: quality.name, globeFilled, expected: GLOBE_N });",
   'quality: quality.name,',
   "if (quality.name === 'mobile-rich' && (query.get('tier') !== 'rich' || injectedFps !== null)) {",
@@ -239,10 +239,18 @@ check(
 
 check(
   'v3.4 Task 6 bounds mobile postFX before allocation and sizes both composers through one path',
-  /const estimatedPostFxBytes = estimatePostFxBytes\(\{[\s\S]*width: w,[\s\S]*height: h,[\s\S]*dpr,[\s\S]*finalSamples: quality\.postFXSamples\.final,[\s\S]*bloomSamples: quality\.postFXSamples\.bloom,[\s\S]*bloomScale: quality\.bloomScale/.test(background) &&
-    /const postFxWithinBudget = quality\.name !== 'mobile-rich' \|\|\s*estimatedPostFxBytes <= 128 \* 1024 \* 1024/.test(background) &&
-    background.indexOf('const postFxWithinBudget =') < background.indexOf('new POST.EffectComposer(renderer)') &&
+  /const POSTFX_BUDGET_BYTES = 128 \* 1024 \* 1024;/.test(background) &&
+    /const postFxBytesFor = \(width, height, pixelRatio\) => estimatePostFxBytes\(\{[\s\S]*width,[\s\S]*height,[\s\S]*dpr: pixelRatio,[\s\S]*finalSamples: quality\.postFXSamples\.final,[\s\S]*bloomSamples: quality\.postFXSamples\.bloom,[\s\S]*bloomScale: quality\.bloomScale/.test(background) &&
+    /const postFxFitsBudget = \(width, height, pixelRatio\) =>\s*quality\.name !== 'mobile-rich' \|\| postFxBytesFor\(width, height, pixelRatio\) <= POSTFX_BUDGET_BYTES;/.test(background) &&
+    /let postFxWithinBudget = postFxFitsBudget\(w, h, dpr\)/.test(background) &&
+    background.indexOf('let postFxWithinBudget =') < background.indexOf('new POST.EffectComposer(renderer)') &&
     (background.match(/postFX disabled: estimated mobile attachment budget exceeded/g) || []).length === 1 &&
+    /* v3.4b: a resize reallocates both composers at the new dimensions, so it is
+       an allocation point exactly like boot. It MUST re-gate and fail closed —
+       the boot-only gate let an iPad leaving Split View allocate 152.6 MiB
+       against a 128 MiB budget. */
+    /postFxWithinBudget = postFxFitsBudget\(w, h, newDpr\);[\s\S]*if \(postFxWithinBudget\) \{[\s\S]*sizeComposers\(w, h, newDpr\);[\s\S]*\} else \{[\s\S]*disposePostFX\(\);/.test(background) &&
+    (background.match(/postFX disposed: resize exceeded the mobile attachment budget/g) || []).length === 1 &&
     /const bloomEnabled = quality\.postFX && postFxWithinBudget && !reduced/.test(background) &&
     /bloomComposer\.renderTarget1\.samples = quality\.postFXSamples\.bloom/.test(background) &&
     /bloomComposer\.renderTarget2\.samples = quality\.postFXSamples\.bloom/.test(background) &&
@@ -278,8 +286,14 @@ check(
     /if \(sceneDebug\) \{\s*window\.__sceneTest = \{[\s\S]*setFps\(value\)/.test(background) &&
     (background.match(/window\.__sceneTest/g) || []).length === 1 &&
     /Math\.min\(window\.devicePixelRatio \|\| 1, effectiveDprCap\)/.test(background) &&
-    /if \(usePost && !postDisposed\) sizeComposers\(w, h, newDpr\)/.test(background) &&
+    /if \(usePost && !postDisposed\) \{[\s\S]*postFxWithinBudget = postFxFitsBudget\(w, h, newDpr\)/.test(background) &&
     /else if \(!running\) \{\s*running = true;\s*last = performance\.now\(\);[^\n]*\n\s*raf = requestAnimationFrame\(loop\)/.test(background) &&
+    /* v3.4b: EVERY resume path must reset the timebase. webglcontextrestored was
+       the one that did not, so the first frame after a restore carried the whole
+       lost interval as one elapsed delta and the demoter's four-second
+       "sustained" rule was satisfied by that single frame — a context loss alone
+       permanently demoted the scene. */
+    /addEventListener\('webglcontextrestored'[\s\S]*?last = performance\.now\(\);\s*running = true;\s*raf = requestAnimationFrame\(loop\)/.test(background) &&
     /function render\(\) \{\s*if \(usePost && renderBloomThenFinal\)/.test(background) &&
     /postFX: \{[\s\S]*enabled: usePost,[\s\S]*disposed: postDisposed,[\s\S]*expected: \[\.\.\.disposalExpected\]\.sort\(\)/.test(background),
   'one pure demoter must own the one-way 1.5 DPR transition, persisted lite result, debug-only injected FPS, complete named pass/composer/material disposal, live render/resize guards, and non-rebuilding demotion callback'

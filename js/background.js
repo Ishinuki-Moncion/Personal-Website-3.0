@@ -49,20 +49,31 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
   };
   const dpr = quality.dpr;
   let w = innerWidth, h = innerHeight;
-  const estimatedPostFxBytes = estimatePostFxBytes({
-    width: w,
-    height: h,
-    dpr,
+  /* v3.4b: the attachment budget is a FUNCTION of the live viewport, not a
+     boot-time constant. It used to be evaluated once here, and sizeComposers()
+     then reallocated both composers on every resize with no re-check — so a
+     coarse device that boots small and grows allocated straight through the gate
+     meant to stop it. Measured on an iPad leaving Split View: 55.6 MiB at boot,
+     152.6 MiB after expanding, against a 128 MiB budget. */
+  const POSTFX_BUDGET_BYTES = 128 * 1024 * 1024;
+  const postFxBytesFor = (width, height, pixelRatio) => estimatePostFxBytes({
+    width,
+    height,
+    dpr: pixelRatio,
     finalSamples: quality.postFXSamples.final,
     bloomSamples: quality.postFXSamples.bloom,
     bloomScale: quality.bloomScale,
   });
-  const postFxWithinBudget = quality.name !== 'mobile-rich' ||
-    estimatedPostFxBytes <= 128 * 1024 * 1024;
+  /* Only mobile-rich is gated: desktop high is a locked, separately verified
+     payload and phones are the surface this budget protects. */
+  const postFxFitsBudget = (width, height, pixelRatio) =>
+    quality.name !== 'mobile-rich' || postFxBytesFor(width, height, pixelRatio) <= POSTFX_BUDGET_BYTES;
+  let estimatedPostFxBytes = postFxBytesFor(w, h, dpr);
+  let postFxWithinBudget = postFxFitsBudget(w, h, dpr);
   if (quality.postFX && !postFxWithinBudget) {
     console.warn('[scene] postFX disabled: estimated mobile attachment budget exceeded', {
       estimatedBytes: estimatedPostFxBytes,
-      budgetBytes: 128 * 1024 * 1024,
+      budgetBytes: POSTFX_BUDGET_BYTES,
     });
   }
   // globe detail scales with device class
@@ -2508,7 +2519,24 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
         OFF = offsetFor();
         coreGroup.position.set(OFF[0], OFF[1], OFF[2]);
       }
-      if (usePost && !postDisposed) sizeComposers(w, h, newDpr);
+      /* Re-gate before reallocating: setSize() on both composers allocates new
+         attachments at the new dimensions, so a resize is as much an allocation
+         point as boot is. Over budget fails closed to direct rendering exactly
+         like the boot path, and stays there for the session — consistent with
+         the one-way demotion law. */
+      if (usePost && !postDisposed) {
+        estimatedPostFxBytes = postFxBytesFor(w, h, newDpr);
+        postFxWithinBudget = postFxFitsBudget(w, h, newDpr);
+        if (postFxWithinBudget) {
+          sizeComposers(w, h, newDpr);
+        } else {
+          console.warn('[scene] postFX disposed: resize exceeded the mobile attachment budget', {
+            estimatedBytes: estimatedPostFxBytes,
+            budgetBytes: POSTFX_BUDGET_BYTES,
+          });
+          disposePostFX();
+        }
+      }
       maxScroll = Math.max(1, document.body.scrollHeight - innerHeight);
     }, 150);
   });
@@ -2528,7 +2556,19 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
   });
   renderer.domElement.addEventListener('webglcontextrestored', () => {
     if (reduced) { render(); return; }   // re-draw the single static frame
-    if (!document.hidden && !running) { running = true; raf = requestAnimationFrame(loop); }
+    if (!document.hidden && !running) {
+      /* v3.4b: reset the timebase, like every other resume path (the debug
+         resume and visibilitychange, the latter commented "don't lerp across the
+         hidden gap"). This one was missed. Without it the first frame after a
+         restore reports the WHOLE lost interval as one elapsed delta, and the
+         demoter accumulates that raw delta against its four-second sustained
+         rule — so a single context loss, which is precisely what mobile Safari
+         does under memory pressure and the reason this handler exists,
+         permanently demoted the scene to lite for the session. */
+      last = performance.now();
+      running = true;
+      raf = requestAnimationFrame(loop);
+    }
   });
 
   function render() {
