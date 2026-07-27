@@ -291,7 +291,33 @@
     if (document.activeElement !== el && tries > 0) setTimeout(() => focusWhenFocusable(el, tries - 1), 80);
   }
   const overlayInertState = new Map();
+  /* v3.4b: the inert bookkeeping is OWNED, so it cannot be re-baselined.
+     Previously every openLb() re-saved each sibling's CURRENT inert value. A
+     second open while the first was still pending therefore recorded `true` as
+     the baseline, and the eventual close "restored" the entire page to inert —
+     nav, gallery, contact, menu and skip-link all dead until a reload.
+
+     That second open was ordinarily reachable. openLb() sets inert synchronously
+     but defers the visible open behind Promise.race([decode, 250ms]); during
+     that window the lightbox has no `.open` class, so background.js's tap-select
+     guard does not bail, and because the body is already inert
+     elementFromPoint returns BODY so its `closest(...)` guard does not bail
+     either. selectPlace() then calls domRef.click(), and HTMLElement.click()
+     fires listeners INSIDE an inert subtree. An impatient double-tap on a globe
+     photo marker was enough.
+
+     Refusing re-acquisition fixes the whole class, not just that one path, and
+     scoping release to the owner keeps the mobile menu and the lightbox from
+     releasing each other's state. */
+  let overlayInertOwner = null;
   function setOverlaySiblingsInert(container, open) {
+    if (open) {
+      if (overlayInertOwner) return;              // already held — never re-baseline
+      overlayInertOwner = container;
+    } else {
+      if (overlayInertOwner !== container) return; // not ours to release
+      overlayInertOwner = null;
+    }
     [...document.body.children].forEach(el => {
       if (el === container || el.tagName === 'SCRIPT' || el.tagName === 'TEMPLATE') return;
       if (open) {
