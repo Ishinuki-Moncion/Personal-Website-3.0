@@ -22,10 +22,13 @@
 <meta name="twitter:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png" />
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/site.css?v=3.31" />
+<!-- v3.4a: no third-party font origin. Both JP faces are self-hosted WOFF2 subsets
+     (tools/build-fonts.mjs); the retired Google Fonts stylesheet was render-blocking
+     and its late arrival reflowed JP text into a failing 0.172 CLS. Only the M PLUS
+     400 face paints on the English page — Zen Kaku is scoped to html[lang="ja"]
+     (site.css) and stays unfetched here, so it is deliberately not preloaded. -->
+<link rel="preload" href="fonts/mplus-rounded-1c-400.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+<link rel="stylesheet" href="css/site.css?v=3.32" />
 <noscript>
   <style>
     /* No-JS truth: kill the boot screen and reveal everything the engine would */

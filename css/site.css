@@ -5,9 +5,7 @@
 
 /* v3.2j — self-hosted Latin instrument faces (Google Fonts CDN retired for
    Latin). css2 serves one variable woff2 per family for both requested weights;
-   the font-weight descriptor selects the instance. JP faces (Zen Kaku Gothic
-   New, M PLUS Rounded 1c) stay on the CDN — JP glyph subsetting impractical
-   to self-host (recorded exception, law addendum). */
+   the font-weight descriptor selects the instance. */
 @font-face { font-family: 'Hanken Grotesk'; font-style: normal; font-weight: 200; font-display: swap;
   src: url('../fonts/hanken-grotesk-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
@@ -20,6 +18,34 @@
 @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap;
   src: url('../fonts/jetbrains-mono-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+/* v3.4a — self-hosted JAPANESE faces. This retires the last Google Fonts
+   dependency and the "JP glyph subsetting impractical" exception recorded above
+   it, which measurement falsified: the committed pages use well under 200
+   distinct CJK codepoints, so both faces subset to WOFF2 at ~98.4% reduction.
+
+   The retired CDN request was render-blocking and, because --font-jp fell back to
+   a Latin face, JP text painted in system Hiragino and then reflowed when the CDN
+   face arrived. Measured cost on Slow-4G (3/3 cold Lighthouse runs, 2026-07-27):
+   mobile performance 60, LCP 4858.9ms, CLS 0.17235 — CLS failing its 0.10 gate.
+
+   unicode-range is the EXACT coverage of each generated subset, not a superset:
+   a codepoint the subset lacks then falls through to the next family in the stack
+   (system JP) instead of rendering tofu. tests/unit/font-coverage.test.mjs pins
+   this list to fonts/jp-subset-manifest.json so the declaration cannot drift from
+   the shipped bytes. Regenerate both together with `npm run fonts:build`. */
+@font-face { font-family: 'M PLUS Rounded 1c'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('../fonts/mplus-rounded-1c-400.woff2') format('woff2');
+  unicode-range: U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4EAC, U+4ED9, U+4EE3, U+4F4F, U+4F5C, U+5009, U+5199, U+5236, U+529B, U+5317, U+53F0, U+54C1, U+5728, U+58EB, U+5927, U+5BB6, U+5BCC, U+5CA1, U+5F71, U+629C, U+62E0, U+64AE, U+65E5, U+672C, U+6771, U+6982, U+6B74, U+6C96, U+6D45, U+6D77, U+6E0B, U+70B9, U+767A, U+771F, U+798F, U+7D4C, U+7D61, U+7DD2, U+7E04, U+8005, U+80FD, U+8349, U+8868, U+8981, U+8A9E, U+8C37, U+8D8A, U+9023, U+9053, U+9078, U+90FD, U+91CE, U+938C, U+9577, U+958B, U+962A, U+FF01-FF5E, U+FFE0-FFE6; }
+@font-face { font-family: 'M PLUS Rounded 1c'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('../fonts/mplus-rounded-1c-500.woff2') format('woff2');
+  unicode-range: U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4EAC, U+4ED9, U+4EE3, U+4F4F, U+4F5C, U+5009, U+5199, U+5236, U+529B, U+5317, U+53F0, U+54C1, U+5728, U+58EB, U+5927, U+5BB6, U+5BCC, U+5CA1, U+5F71, U+629C, U+62E0, U+64AE, U+65E5, U+672C, U+6771, U+6982, U+6B74, U+6C96, U+6D45, U+6D77, U+6E0B, U+70B9, U+767A, U+771F, U+798F, U+7D4C, U+7D61, U+7DD2, U+7E04, U+8005, U+80FD, U+8349, U+8868, U+8981, U+8A9E, U+8C37, U+8D8A, U+9023, U+9053, U+9078, U+90FD, U+91CE, U+938C, U+9577, U+958B, U+962A, U+FF01-FF5E, U+FFE0-FFE6; }
+@font-face { font-family: 'Zen Kaku Gothic New'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('../fonts/zen-kaku-gothic-new-500.woff2') format('woff2');
+  unicode-range: U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4EAC, U+4ED9, U+4EE3, U+4F4F, U+4F5C, U+5009, U+5199, U+5236, U+529B, U+5317, U+53F0, U+54C1, U+5728, U+58EB, U+5927, U+5BB6, U+5BCC, U+5CA1, U+5F71, U+629C, U+62E0, U+64AE, U+65E5, U+672C, U+6771, U+6982, U+6B74, U+6C96, U+6D45, U+6D77, U+6E0B, U+70B9, U+767A, U+771F, U+798F, U+7D4C, U+7D61, U+7DD2, U+7E04, U+8005, U+80FD, U+8349, U+8868, U+8981, U+8A9E, U+8C37, U+8D8A, U+9023, U+9053, U+9078, U+90FD, U+91CE, U+938C, U+9577, U+958B, U+962A, U+FF01-FF5E, U+FFE0-FFE6; }
+@font-face { font-family: 'Zen Kaku Gothic New'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('../fonts/zen-kaku-gothic-new-700.woff2') format('woff2');
+  unicode-range: U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4EAC, U+4ED9, U+4EE3, U+4F4F, U+4F5C, U+5009, U+5199, U+5236, U+529B, U+5317, U+53F0, U+54C1, U+5728, U+58EB, U+5927, U+5BB6, U+5BCC, U+5CA1, U+5F71, U+629C, U+62E0, U+64AE, U+65E5, U+672C, U+6771, U+6982, U+6B74, U+6C96, U+6D45, U+6D77, U+6E0B, U+70B9, U+767A, U+771F, U+798F, U+7D4C, U+7D61, U+7DD2, U+7E04, U+8005, U+80FD, U+8349, U+8868, U+8981, U+8A9E, U+8C37, U+8D8A, U+9023, U+9053, U+9078, U+90FD, U+91CE, U+938C, U+9577, U+958B, U+962A, U+FF01-FF5E, U+FFE0-FFE6; }
 
 :root {
   --void: #05060a;    /* v3.1 deep-black floor: owner-directed revert to deep space black; matches scene fog 0x05060a */

@@ -6,6 +6,8 @@
     "serve": "node tests/helpers/serve.mjs",
     "serve:device": "HOST=0.0.0.0 node tests/helpers/serve.mjs",
     "test:unit": "node --test tests/unit/*.test.mjs",
+    "fonts:fetch": "node tools/fetch-font-sources.mjs",
+    "fonts:build": "node tools/build-fonts.mjs",
     "test:browser": "playwright test",
     "test:hardening": "node tools/verify-site-hardening.js",
     "test:html": "html-validate index.html 404.html",

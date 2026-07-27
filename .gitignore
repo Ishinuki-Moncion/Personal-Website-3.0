@@ -26,3 +26,8 @@ playwright-report/
 
 # Codex v3.4 corrective-completion QA evidence (immutable local gate captures)
 .superpowers/gates/codex-v34/
+
+# Upstream OFL source faces for tools/build-fonts.mjs (~11MB of TTF, refetchable
+# with `npm run fonts:fetch`). Only the generated fonts/*.woff2 subsets and the
+# OFL license files are committed.
+.fontsrc/
