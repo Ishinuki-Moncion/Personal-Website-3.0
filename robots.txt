@@ -1,0 +1,10 @@
+# https://ishinuki-moncion.github.io/Personal-Website-3.0
+User-agent: *
+Allow: /
+
+# Verification artefacts and development tooling are not content.
+Disallow: /tests/
+Disallow: /shots/
+Disallow: /docs/
+
+Sitemap: https://ishinuki-moncion.github.io/Personal-Website-3.0/sitemap.xml
