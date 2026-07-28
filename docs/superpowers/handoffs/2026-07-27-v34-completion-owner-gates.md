@@ -178,3 +178,57 @@ npm run qa:perf:network
 
 `npm run build` is idempotent; `qa:static` fails if any generated file has
 drifted from its source.
+
+## 7. Next session — exactly where to resume
+
+Everything below survives a context compaction. Start here.
+
+### 7.1 State
+
+Branch `v34-completion` @ `5187e5e`, clean tree, 14 commits ahead of Codex's
+`dfc282e`. Last verified battery: unit 27/27, hardening 70/70, browser **151
+passed + 1 intentional skip, 0 failures**, production-network Lighthouse **PASS**.
+Nothing pushed.
+
+### 7.2 Open work, in priority order
+
+1. **Package D** — deploy-artifact allowlist + CI. Not started. Model the
+   artifact allowlist on `tests/helpers/server-policy.mjs`, which already
+   enumerates exactly the public surface (`/`, `/index.html`, `/404.html`,
+   `/favicon.svg`, `/robots.txt`, `/sitemap.xml`, and the `/case/ /ja/ /css/
+   /fonts/ /images/ /js/` roots). CI must run `npm run qa:all` — which now
+   includes the cases/locale/discovery drift checks — plus `qa:perf`.
+2. **~12 Minor findings from the second review** (against my own work). The full
+   text with file:line and reproduction is in the workflow journal:
+   `~/.claude/projects/-Users-daikieishinuki-Claude-Code-Projects-Personal-Website/8486d76f-cf10-4446-bee8-63ae5bf4b2ab/subagents/workflows/wf_848bc4bd-447/journal.jsonl`
+   The ones worth doing:
+   - `robots.txt`/`sitemap.xml` are never fetched at a GitHub Pages *project*
+     path (`/Personal-Website-3.0/`), and the `Disallow:` paths are wrong for it.
+     Either move to a user-site root or drop the file and rely on meta robots.
+   - `ja/index.html` keeps English `<title>`, `description` and `og:` copy, and
+     its JSON-LD still asserts `inLanguage: "en"`.
+   - `tools/build-locale.mjs` `applyJapaneseText` drops element content when an
+     attribute *after* `data-ja` contains a `>`. No current input triggers it.
+   - The sr-only copy hint ships in English on the Japanese page with no `lang`.
+   - The case-study anchor `#` is announced by screen readers, contradicting its
+     own comment.
+   - Three weak tests: the sticky-CLOSE test never scrolls the menu; the
+     `claimsGlyphs` assertion is vacuous; the cache-version test cannot detect
+     the stale-asset regression its comment claims it prevents.
+3. **Package C2** (semantic `picture`/`img`) — blocked on §3.3 photo labels.
+4. **Scene-construction chunking** — TBT headroom only, passes at 190/200ms.
+
+### 7.3 Audit journals
+
+Both reviews' full findings, verdicts and reproductions are on disk:
+
+- Codex Package A audit (37 raw / 25 confirmed): `.../workflows/wf_72ce0f47-405/journal.jsonl`
+- Review of this branch's own work (26 raw / 18 confirmed): `.../workflows/wf_848bc4bd-447/journal.jsonl`
+
+### 7.4 Operational note
+
+Do not run two `npm run qa:all` batteries concurrently — the second dies instantly
+on `port 4173 is already used`. And any wait-loop condition must match failure as
+well as success (`passed|failed|Error:`); a success-only pattern against an
+errored run polls forever. That mistake cost 8 hours of idle background polling
+in the session that produced this branch.
