@@ -192,13 +192,20 @@ Nothing pushed.
 
 ### 7.2 Open work, in priority order
 
-1. **Package D** — deploy-artifact allowlist + CI. Not started. Model the
-   artifact allowlist on `tests/helpers/server-policy.mjs`, which already
-   enumerates exactly the public surface (`/`, `/index.html`, `/404.html`,
-   `/favicon.svg`, `/robots.txt`, `/sitemap.xml`, and the `/case/ /ja/ /css/
-   /fonts/ /images/ /js/` roots). CI must run `npm run qa:all` — which now
-   includes the cases/locale/discovery drift checks — plus `qa:perf`.
-2. **~12 Minor findings from the second review** (against my own work). The full
+**Package D is DONE** — `tools/build-artifact.mjs` (85 files, 8.34 MB,
+allowlisted), `tests/unit/artifact.test.mjs`, `.github/workflows/ci.yml`.
+**Japanese is DONE** — 43 rendered strings, localised metadata and JSON-LD.
+
+What actually remains:
+
+1. **Package C2 — semantic `picture`/`img` for the 12 gallery photographs.**
+   Still the largest open item, and still coupled to §3.3: the spec requires alt
+   text that "describes visible content, not only a city label or ordinal", which
+   cannot be written without looking at each photograph and knowing what it
+   shows. Do it in the same pass as confirming the city labels.
+2. **Scene-construction chunking** — TBT headroom only. Passes at 190/200 ms;
+   one 304 ms task in scene init is the whole margin.
+3. **Remaining Minor findings** (against my own work). The full
    text with file:line and reproduction is in the workflow journal:
    `~/.claude/projects/-Users-daikieishinuki-Claude-Code-Projects-Personal-Website/8486d76f-cf10-4446-bee8-63ae5bf4b2ab/subagents/workflows/wf_848bc4bd-447/journal.jsonl`
    The ones worth doing:
