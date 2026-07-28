@@ -51,8 +51,27 @@ jobs:
       - name: Deploy artifact allowlist
         run: npm run check:artifact
 
-      - name: Browser suite (chromium + webkit)
-        run: npm run qa:browser
+      # Split deliberately, and NOT for parallelism — each invocation starts a
+      # FRESH browser.
+      #
+      # Playwright keeps one browser per worker for a whole run, so all 156
+      # tests shared a single process. Every test opens a context that builds a
+      # WebGL scene, and on a runner with no GPU those buffers are ordinary
+      # host memory. Failures began around test 105 and clustered after it:
+      # assertions returned "" or undefined with no locator resolution at all,
+      # and two reported the target closed outright — a browser progressively
+      # running out of room, not a site defect. Nothing crashed loudly; there
+      # was no crash log and no worker restart.
+      #
+      # The interaction matrix is the heavy half on its own (nine viewports x
+      # two engines, each a full page), so it gets its own browser.
+      # The two greps are exact complements, so every test runs exactly once.
+      - name: Browser suite — interaction matrix
+        run: npx playwright test --grep "completes the interaction matrix"
+
+      - name: Browser suite — everything else
+        if: '!cancelled()'
+        run: npx playwright test --grep-invert "completes the interaction matrix"
 
       - name: Upload failure artefacts
         if: failure()

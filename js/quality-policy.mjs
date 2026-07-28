@@ -5,6 +5,15 @@ export const RICH_THRESHOLD_MS = 4.5;
    these override the desktop profile — see classifyTier. */
 export const INCAPABLE_PROBE_REASONS = ['no-webgl2', 'error', 'budget'];
 
+/* A desktop ceiling, not a quality bar. RICH_THRESHOLD_MS (4.5) asks "is this
+   phone fast enough for the rich tier"; this asks the much cruder "did this
+   machine render at all". It sits an order of magnitude above the phone bar
+   precisely so that ordinary desktops — including old integrated graphics,
+   which land in the teens — never approach it. A machine needing 60ms for a
+   workload a mid-range phone finishes in 4.5ms is rasterising in software, and
+   the full scene will not merely be slow there, it will stop the page. */
+export const DESKTOP_LITE_THRESHOLD_MS = 60;
+
 export function classifyTier({ reduced, coarse, small, forced, probeTier, probeReason, score }) {
   if (reduced) return 'reduced';
   if (coarse) {
@@ -30,7 +39,26 @@ export function classifyTier({ reduced, coarse, small, forced, probeTier, probeR
      desktops and stale drivers all land here.
 
      Measured, never identity: no UA, renderer string or deviceMemory (spec 3). */
-  return INCAPABLE_PROBE_REASONS.includes(probeReason) ? 'lite' : 'high';
+  /* KNOWN GAP, deliberately not closed here (2026-07-28). The owner approved
+     letting the measurement gate desktop, and these two constants encode what
+     that decision should read — but js/gpu-probe.mjs:56 returns null for any
+     non-coarse pointer, so no desktop ever HAS a probe result to read. Wiring
+     one up means running the probe on the desktop critical path, and it yields
+     across animation frames for ~200ms; desktop LCP is already over its 2500ms
+     gate at ~2700ms. Buying desktop tiering with more LCP is a trade the owner
+     should make deliberately, not one I should slip in while fixing CI.
+
+     The cheaper alternative — letting the existing sustained-FPS watchdog
+     demote 'high' as it already demotes 'mobile-rich' — costs nothing at boot
+     and needs no probe, but it rescues a struggling desktop only after four
+     seconds rather than before the first frame.
+
+     Until then desktop keeps the locked profile unless explicitly overridden,
+     which is exactly the behaviour that shipped before this branch. */
+  return INCAPABLE_PROBE_REASONS.includes(probeReason) ||
+    (Number.isFinite(score) && score > DESKTOP_LITE_THRESHOLD_MS)
+    ? 'lite'
+    : 'high';
 }
 
 export function estimatePostFxBytes({ width, height, dpr, finalSamples, bloomSamples, bloomScale }) {

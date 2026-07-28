@@ -1,4 +1,4 @@
-import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-policy.mjs?v=3';
+import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-policy.mjs?v=4';
 
 /* Immersive scene: TOKYO DATA-GLOBE — a particle Earth whose points exist only
    where land exists, a pulsing amber Tokyo node with live coordinates, and a

@@ -1,4 +1,4 @@
-import { RICH_THRESHOLD_MS } from './quality-policy.mjs?v=3';
+import { RICH_THRESHOLD_MS } from './quality-policy.mjs?v=4';
 
 const CACHE_KEY = 'v34.tierProbe';
 const FRAMES = 10;

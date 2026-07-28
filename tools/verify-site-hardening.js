@@ -167,7 +167,12 @@ check(
        reading it here would demote most capable desktops), and never from
        device identity. */
     /export const INCAPABLE_PROBE_REASONS = \['no-webgl2', 'error', 'budget'\]/.test(qualityPolicy) &&
-    /return INCAPABLE_PROBE_REASONS\.includes\(probeReason\) \? 'lite' : 'high';/.test(qualityPolicy) &&
+    /INCAPABLE_PROBE_REASONS\.includes\(probeReason\) \|\|/.test(qualityPolicy) &&
+    /export const DESKTOP_LITE_THRESHOLD_MS = 60;/.test(qualityPolicy) &&
+    /\(Number\.isFinite\(score\) && score > DESKTOP_LITE_THRESHOLD_MS\)/.test(qualityPolicy) &&
+    /* The desktop ceiling must stay an order of magnitude above the phone bar:
+       collapsing the two would demote ordinary desktops off the locked scene. */
+    Number(/DESKTOP_LITE_THRESHOLD_MS = (\d+)/.exec(qualityPolicy)?.[1]) >= 10 * 4.5 &&
     /probeReason: tierProbe\?\.reason/.test(background) &&
     /export function estimatePostFxBytes/.test(qualityPolicy) &&
     /export function createFpsDemoter/.test(qualityPolicy) &&

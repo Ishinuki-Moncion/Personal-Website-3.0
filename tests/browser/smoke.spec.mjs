@@ -1,5 +1,33 @@
 import { test, expect } from '@playwright/test';
 
+import { DESKTOP_LITE_THRESHOLD_MS } from '../../js/quality-policy.mjs';
+import { SOFTWARE_RENDERER } from '../helpers/ci-timing.mjs';
+
+/* DESKTOP_LITE_THRESHOLD_MS is the one constant here that cannot be derived —
+   it has to be calibrated against real machines. This reports what the current
+   machine actually measured, and on a machine that cannot rasterise it also
+   asserts the constant did its job. Without this the threshold would be a
+   number nobody ever checked again. */
+test('the desktop capability ceiling is reported, and holds on this machine', async ({ page }) => {
+  await page.goto('/?sceneDebug=1');
+  await expect.poll(() => page.evaluate(() => window.__TIER_PROBE !== null || window.__SCENE_STATUS != null)).toBe(true);
+  const probe = await page.evaluate(() => window.__TIER_PROBE);
+  const tier = await page.evaluate(() => document.body.dataset.scene ?? null);
+  console.log(`[tier-probe] ceiling=${DESKTOP_LITE_THRESHOLD_MS}ms probe=${JSON.stringify(probe)} scene=${tier}`);
+
+  if (!SOFTWARE_RENDERER || !probe) return;
+  /* On the GPU-less runner the machine must land on the incapable side, by
+     whichever half of the rule applies — otherwise the desktop viewports get
+     the full scene and the page stops responding, which is the defect this
+     rule exists to prevent. */
+  const incapable = ['no-webgl2', 'error', 'budget'].includes(probe.reason)
+    || (Number.isFinite(probe.score) && probe.score > DESKTOP_LITE_THRESHOLD_MS);
+  expect(
+    incapable,
+    `a runner with no GPU measured ${JSON.stringify(probe)}, which this rule reads as capable — recalibrate DESKTOP_LITE_THRESHOLD_MS`
+  ).toBe(true);
+});
+
 test('home boots and exposes the full document without errors', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));

@@ -4,7 +4,9 @@ import {
   classifyTier,
   createFpsDemoter,
   estimatePostFxBytes,
-  INCAPABLE_PROBE_REASONS
+  DESKTOP_LITE_THRESHOLD_MS,
+  INCAPABLE_PROBE_REASONS,
+  RICH_THRESHOLD_MS
 } from '../../js/quality-policy.mjs';
 import { resolveTier } from '../../js/gpu-probe.mjs';
 
@@ -21,9 +23,16 @@ test('desktop keeps the locked profile unless the probe could not complete', () 
   const desktop = { reduced: false, coarse: false, small: false, forced: null };
 
   assert.equal(classifyTier({ ...desktop, probeReason: 'measured', score: 1 }), 'high');
-  /* The phone bar is 4.5ms. A desktop an order of magnitude past it is still
-     'high' — "slower than a good phone" is not "cannot render". */
+  /* The phone bar is 4.5ms. Everything between it and the desktop ceiling is
+     still 'high' — "slower than a good phone" is not "cannot render". */
   assert.equal(classifyTier({ ...desktop, probeReason: 'measured', score: 45 }), 'high');
+  assert.equal(classifyTier({ ...desktop, probeReason: 'measured', score: DESKTOP_LITE_THRESHOLD_MS }), 'high');
+  assert.ok(DESKTOP_LITE_THRESHOLD_MS >= 10 * RICH_THRESHOLD_MS, 'the ceiling must not collapse onto the phone bar');
+  /* Past the ceiling the machine is rasterising in software: not slow, stopped. */
+  assert.equal(classifyTier({ ...desktop, probeReason: 'measured', score: DESKTOP_LITE_THRESHOLD_MS + 0.01 }), 'lite');
+  /* Coarse pointers keep their own, much stricter bar — the desktop ceiling
+     must never leak into the phone decision. */
+  assert.equal(classifyTier({ reduced: false, coarse: true, small: true, forced: null, probeReason: 'measured', score: 50 }), 'lite');
   /* probeTier is 'lite' for every non-rich outcome, so it must NOT be the
      signal here — reading it would demote most capable desktops. */
   assert.equal(classifyTier({ ...desktop, probeTier: 'lite', probeReason: 'measured', score: 9 }), 'high');
