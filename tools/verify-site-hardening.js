@@ -293,7 +293,10 @@ check(
     /disposePostFX\(\)/.test(task7DemoterBlock) &&
     /sessionStorage\.setItem\('v34\.tierProbe', JSON\.stringify\(\{ tier: 'lite', score: null, demoted: true \}\)\)/.test(task7DemoterBlock) &&
     !/new THREE\.|makeGeometry|setAttribute/.test(task7DemoterBlock) &&
-    /if \(quality\.name === 'mobile-rich' && \(query\.get\('tier'\) !== 'rich' \|\| injectedFps !== null\)\) \{\s*demoter\.sample\(injectedFps \?\? fpsEMA, elapsed\)/.test(background) &&
+    /* v3.4g: the hold delta must stay CLAMPED. Passing raw `elapsed` let a single
+       frame after a lost-context gap satisfy the four-second sustained rule
+       outright, permanently demoting any device. The clamp is the invariant. */
+    /if \(quality\.name === 'mobile-rich' && \(query\.get\('tier'\) !== 'rich' \|\| injectedFps !== null\)\) \{[\s\S]*demoter\.sample\(injectedFps \?\? fpsEMA, Math\.min\(elapsed, 0\.25\)\)/.test(background) &&
     /if \(sceneDebug\) \{\s*window\.__sceneTest = \{[\s\S]*setFps\(value\)/.test(background) &&
     (background.match(/window\.__sceneTest/g) || []).length === 1 &&
     /Math\.min\(window\.devicePixelRatio \|\| 1, effectiveDprCap\)/.test(background) &&
