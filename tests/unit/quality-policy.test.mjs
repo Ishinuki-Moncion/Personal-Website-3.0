@@ -35,14 +35,62 @@ test('mobile-rich attachment estimate crosses the 128 MiB boundary between adjac
   assert.ok(overBoundary > 128 * 1024 * 1024, `${overBoundary} should breach the budget`);
 });
 
-test('demoter fires once after four cumulative low-fps seconds and resets on recovery', () => {
+/* The second argument is an absolute clock in seconds, so a run is written as
+   the timestamps at which frames were actually presented. */
+function run(demoter, fps, from, to, step) {
+  for (let at = from; at <= to + 1e-9; at += step) demoter.sample(fps, at);
+}
+
+test('demoter fires once after four sustained low-fps seconds and resets on recovery', () => {
   let calls = 0;
   const d = createFpsDemoter({ threshold: 45, holdSeconds: 4, onDemote: () => calls++ });
-  d.sample(40, 2); d.sample(50, 1); d.sample(40, 3.9);
-  assert.equal(calls, 0);
-  d.sample(40, 0.1); d.sample(20, 10);
+  run(d, 40, 0, 3.9, 0.1);
+  assert.equal(calls, 0, 'must not fire before the window closes');
+  d.sample(50, 4.0);                       // one good frame abandons the streak
+  assert.equal(d.lowSeconds, 0);
+  run(d, 40, 4.1, 7.9, 0.1);
+  assert.equal(calls, 0, 'the recovered frame must have restarted the window');
+  run(d, 40, 8.0, 8.3, 0.1);
   assert.equal(calls, 1);
   assert.equal(d.demoted, true);
+  run(d, 20, 9, 30, 0.1);                  // one-way: never fires again
+  assert.equal(calls, 1);
+});
+
+/* The v3.4b defect: a lost context resumes the loop with one frame carrying the
+   whole missing interval. Counting that interval satisfied a four-second rule
+   outright, so a single context loss — what mobile Safari does under memory
+   pressure — permanently demoted any device for the session. */
+test('an interval too long to be a frame restarts the window instead of filling it', () => {
+  let calls = 0;
+  const d = createFpsDemoter({ threshold: 45, holdSeconds: 4, maxGapSeconds: 1, onDemote: () => calls++ });
+  run(d, 30, 0, 3.5, 0.1);                 // already a long low streak...
+  d.sample(30, 13.5);                      // ...then a 10s gap: the loop was not running
+  assert.equal(calls, 0, 'a suspension must contribute nothing, even mid-streak');
+  assert.equal(d.lowSeconds, 0);
+  run(d, 30, 13.6, 17.4, 0.1);             // 3.9s of real frames after the gap
+  assert.equal(calls, 0);
+  run(d, 30, 17.5, 17.6, 0.1);
+  assert.equal(calls, 1, 'the window must still close on genuinely sustained low FPS');
+});
+
+/* The regression this replaced: clamping each delta to 250ms made four seconds
+   mean sixteen frames, so a device at 3fps was rescued LATER than one at 60fps
+   — and a CI runner that managed 14 frames in 4.3s was never rescued at all.
+   Demotion must depend on elapsed time, not on how many frames fit in it. */
+test('the hold is wall-clock, so a slow device demotes no later than a fast one', () => {
+  const fire = () => { let at = null; return { at, mark: t => { if (at === null) at = t; }, get value() { return at; } }; };
+  const observed = [60, 30, 6, 3.3].map(fps => {
+    const seen = fire();
+    let last = null;
+    const d = createFpsDemoter({ threshold: 45, holdSeconds: 4, onDemote: () => seen.mark(last) });
+    for (let frame = 0; frame <= Math.ceil(6 * fps); frame++) { last = frame / fps; d.sample(20, last); }
+    return { fps, at: seen.value };
+  });
+  for (const { fps, at } of observed) {
+    assert.ok(at !== null, `${fps}fps never demoted`);
+    assert.ok(at < 4 + 2 / fps, `${fps}fps demoted at ${at}s, later than the four-second rule allows`);
+  }
 });
 
 function makeProbeHarness({ throwOnRead = null, readMs = 4, failOnCreate = null } = {}) {

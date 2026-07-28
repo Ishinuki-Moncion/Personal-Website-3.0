@@ -60,14 +60,16 @@ test('growing the viewport past the postFX budget fails closed instead of reallo
    Consequence: a WebGL context loss, which is exactly what mobile Safari does
    under memory pressure and the reason the handler exists at all, permanently
    demoted the scene to lite for the session on any device. */
-/* KNOWN TIMING-SENSITIVE. This test drives a real WEBGL_lose_context cycle and
-   then asserts on a 300ms window, so it depends on when Chromium delivers the
-   restore event and resumes rAF. Measured flake rates on this machine: 2/6, then
-   1/3, then 0/5 after clamping the demoter delta — but ALSO 0/3 with the clamp
-   removed, so the clamp is NOT demonstrated to be the cause of the improvement.
-   Treated as unresolved rather than fixed. If it fails in CI, re-run before
-   investigating: the production behaviour it guards (a context loss must not
-   demote on its own) is separately enforced by the clamp in js/background.js. */
+/* Previously recorded here as timing-sensitive and unresolved: the delta clamp
+   that was meant to fix it reduced the observed flake rate but was never shown
+   to be the cause, since the rate improved with the clamp removed too.
+   v3.4h replaces the clamp with a demoter whose hold window RESTARTS across any
+   interval too long to be a frame (see createFpsDemoter), which makes the
+   property this test asserts hold by construction rather than by timing: the
+   first sample after a multi-second loss begins a fresh window whenever it
+   arrives, so no schedule of restore events can demote. The unit test
+   'an interval too long to be a frame restarts the window instead of filling
+   it' pins the same rule deterministically. */
 test('a context-loss gap does not by itself satisfy the sustained-low-FPS demotion rule', async ({ browser }) => {
   const { context, page } = await openCoarsePage(browser, { width: 390, height: 844 });
   try {

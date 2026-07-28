@@ -15,15 +15,15 @@ test('Package A production modules use the complete approved cache tuple', async
     readSiteFile('js/gpu-probe.mjs')
   ]);
 
-  assert.match(index, /src="js\/boot\.mjs\?v=32"/);
-  assert.match(boot, /bg: '7\.2'/);
+  assert.match(index, /src="js\/boot\.mjs\?v=33"/);
+  assert.match(boot, /bg: '7\.3'/);
   assert.match(boot, /boot: '3\.3'/);
   assert.match(boot, /cursor: '3\.2'/);
-  assert.match(boot, /app: '4\.5'/);
-  assert.match(boot, /probe: '2'/);
+  assert.match(boot, /app: '4\.6'/);
+  assert.match(boot, /probe: '3'/);
   assert.match(boot, /import\('\.\/scene-bootstrap\.mjs\?v=1'\)/);
-  assert.match(probe, /from '\.\/quality-policy\.mjs\?v=1'/);
-  assert.match(background, /from '\.\/quality-policy\.mjs\?v=1'/);
+  assert.match(probe, /from '\.\/quality-policy\.mjs\?v=2'/);
+  assert.match(background, /from '\.\/quality-policy\.mjs\?v=2'/);
 });
 
 /* The audit log claimed a unit regression "locks the complete cache graph". It

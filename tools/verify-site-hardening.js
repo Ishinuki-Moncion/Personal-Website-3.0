@@ -14,6 +14,10 @@ const boot = read('js/boot.js');
 const cursor = read('js/cursor.js');
 const sceneBootstrap = read('js/scene-bootstrap.mjs');
 const qualityPolicy = read('js/quality-policy.mjs');
+/* Comment-free view, for checks that must judge behaviour rather than wording. */
+const qualityPolicyCode = qualityPolicy
+  .replace(/\/\*[\s\S]*?\*\//g, ' ')
+  .replace(/(^|[^:])\/\/.*$/gm, '$1');
 const gpuProbe = read('js/gpu-probe.mjs');
 const unrealBloomPassSource = read('js/vendor/three-0.158.0/examples/jsm/postprocessing/UnrealBloomPass.js');
 
@@ -159,8 +163,28 @@ check(
     /score <= RICH_THRESHOLD_MS \? 'mobile-rich' : 'lite'/.test(qualityPolicy) &&
     /export function estimatePostFxBytes/.test(qualityPolicy) &&
     /export function createFpsDemoter/.test(qualityPolicy) &&
-    !/window|document|navigator|matchMedia|sessionStorage/.test(qualityPolicy),
-  'quality-policy.mjs must stay deterministic and browser-independent with the measured 4.5ms threshold, memory estimator, and one-way demoter'
+    /* v3.4h: the hold must stay WALL-CLOCK. It is measured from the first low
+       sample, and any interval too long to be a frame RESTARTS the window
+       rather than filling it — so a suspended loop contributes nothing while a
+       genuinely slow device is still measured in real seconds. Accumulating
+       per-frame deltas cannot express that: counting them demoted a healthy
+       device off one lost context, and clamping them reinterpreted "four
+       seconds" as "sixteen frames", which delayed rescue on exactly the slow
+       devices the rule exists for. Neither form may come back. */
+    /sample\(fps, nowSeconds\)/.test(qualityPolicy) &&
+    /const gap = lastSample === null \? Infinity : nowSeconds - lastSample/.test(qualityPolicy) &&
+    /if \(lowSince === null \|\| gap > maxGapSeconds\) \{ lowSince = nowSeconds; lowSeconds = 0; return; \}/.test(qualityPolicy) &&
+    /lowSeconds = nowSeconds - lowSince;\s*\n\s*if \(lowSeconds >= holdSeconds\) \{ demoted = true; onDemote\(\); \}/.test(qualityPolicy) &&
+    !/lowSeconds \+ dt|lowSeconds \+=/.test(qualityPolicy) &&
+    /* Browser-global purity is a property of the CODE, not of the prose. The
+       bare substring form flagged this module's own commentary, which discusses
+       the demotion window at length, as an environment dependency. Strip
+       comments first — and require the exports to survive the strip, so a
+       stripper that ate the file could never let this pass vacuously. */
+    qualityPolicyCode.includes('createFpsDemoter') &&
+    qualityPolicyCode.includes('classifyTier') &&
+    !/\b(?:window|document|navigator|matchMedia|sessionStorage|localStorage)\b/.test(qualityPolicyCode),
+  'quality-policy.mjs must stay deterministic and browser-independent with the measured 4.5ms threshold, memory estimator, and a wall-clock gap-restarting one-way demoter'
 );
 
 const task5Profiles = [
@@ -220,7 +244,10 @@ check(
 );
 check(
   'v3.4 renderer richness follows explicit capability profiles, not mobile layout',
-    /import \{ classifyTier, createFpsDemoter, estimatePostFxBytes \} from '\.\/quality-policy\.mjs\?v=1'/.test(background) &&
+    /* The cache token deliberately is NOT pinned here — tests/unit/cache-versions.test.mjs
+       owns which version is current, and duplicating it made every legitimate
+       cache bump fail a check about module shape. This asserts the shape. */
+    /import \{ classifyTier, createFpsDemoter, estimatePostFxBytes \} from '\.\/quality-policy\.mjs\?v=\d+'/.test(background) &&
     /const LITE = coarse \|\| small/.test(background) &&
     /const tier = classifyTier\(\{[\s\S]*probeTier: tierProbe\?\.tier,[\s\S]*score: probeScore/.test(background) &&
     background.indexOf('const RIVULET_GATE = true') < background.indexOf('const profiles = {') &&
@@ -293,10 +320,14 @@ check(
     /disposePostFX\(\)/.test(task7DemoterBlock) &&
     /sessionStorage\.setItem\('v34\.tierProbe', JSON\.stringify\(\{ tier: 'lite', score: null, demoted: true \}\)\)/.test(task7DemoterBlock) &&
     !/new THREE\.|makeGeometry|setAttribute/.test(task7DemoterBlock) &&
-    /* v3.4g: the hold delta must stay CLAMPED. Passing raw `elapsed` let a single
-       frame after a lost-context gap satisfy the four-second sustained rule
-       outright, permanently demoting any device. The clamp is the invariant. */
-    /if \(quality\.name === 'mobile-rich' && \(query\.get\('tier'\) !== 'rich' \|\| injectedFps !== null\)\) \{[\s\S]*demoter\.sample\(injectedFps \?\? fpsEMA, Math\.min\(elapsed, 0\.25\)\)/.test(background) &&
+    /* v3.4h: the demoter must be handed the CLOCK, never a delta. Passing raw
+       `elapsed` let one frame after a lost-context gap satisfy the four-second
+       sustained rule outright, permanently demoting any device; clamping that
+       delta closed the hole but silently made the rule a frame COUNT, so a
+       runner rendering 14 frames in 4.3s never demoted at all. The absolute
+       timestamp is the invariant — the window logic belongs to the demoter. */
+    /if \(quality\.name === 'mobile-rich' && \(query\.get\('tier'\) !== 'rich' \|\| injectedFps !== null\)\) \{[\s\S]*demoter\.sample\(injectedFps \?\? fpsEMA, now \/ 1000\)/.test(background) &&
+    !/demoter\.sample\([^)]*elapsed/.test(background) &&
     /if \(sceneDebug\) \{\s*window\.__sceneTest = \{[\s\S]*setFps\(value\)/.test(background) &&
     (background.match(/window\.__sceneTest/g) || []).length === 1 &&
     /Math\.min\(window\.devicePixelRatio \|\| 1, effectiveDprCap\)/.test(background) &&

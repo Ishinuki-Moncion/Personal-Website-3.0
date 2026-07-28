@@ -318,6 +318,11 @@
   let lbReturnFocus = null;
   let lbOpenPending = false;
   let lbOpenRequest = 0;
+  /* Longest a shared-element morph may withhold the lightbox before the plain
+     open takes over. Comfortably above a healthy capture (tens of ms) so the
+     morph survives on real hardware, and well inside the ~1s at which a tap
+     that has produced nothing reads as broken rather than merely slow. */
+  const LB_TRANSITION_DEADLINE_MS = 500;
   /* v32h — overlays are visibility-gated while closed, and Blink applies the closed
      state's transition delay on the opening edge, so the focus target can stay
      computed-hidden (unfocusable) for up to ~.45s after open. Retry until it lands. */
@@ -410,6 +415,31 @@
           lbImg.classList.remove('swapping');  // skip the fade show() armed; the morph IS the entrance
         });
         vt.finished.finally(() => { lbImg.style.viewTransitionName = ''; });
+        /* Skipping a transition REJECTS its `ready`, and an unobserved rejection
+           is reported as a page error. The deadline below skips deliberately,
+           so claim that rejection rather than let a working fallback announce
+           itself as a fault. */
+        vt.ready?.catch(() => {});
+        /* v3.4h — the morph is the ONLY writer of `.open` on this branch, so a
+           capture that never completes leaves a visitor tapping a photograph on
+           a page that does nothing. Not hypothetical: on a GPU-less CI runner
+           the document stopped producing frames at the click and had still
+           produced none eight seconds later, while script kept executing
+           normally throughout — the browser had begun capturing the old state
+           (a full-viewport WebGL canvas among it) and never finished.
+
+           The decode above is already bounded against the same class of stall;
+           the transition itself was not. Past the deadline we abandon the morph
+           and take the ordinary no-View-Transitions path that every engine
+           without the API already runs. openNow() is the sole arbiter — it
+           returns false once an open has been served or superseded — so a late
+           callback and this timer cannot both open, in either order. */
+        setTimeout(() => {
+          if (!lbOpenPending || request !== lbOpenRequest) return;
+          media.style.viewTransitionName = '';
+          try { vt.skipTransition(); } catch { /* absent in early implementations */ }
+          openNow();
+        }, LB_TRANSITION_DEADLINE_MS);
       });
     } else {
       openNow();

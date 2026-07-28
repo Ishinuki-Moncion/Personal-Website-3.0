@@ -1,4 +1,4 @@
-import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-policy.mjs?v=1';
+import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-policy.mjs?v=2';
 
 /* Immersive scene: TOKYO DATA-GLOBE — a particle Earth whose points exist only
    where land exists, a pulsing amber Tokyo node with live coordinates, and a
@@ -2650,16 +2650,18 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
     const dt = Math.min(elapsed, 0.033);
     if (elapsed > 0) fpsEMA += (Math.min(1 / elapsed, 120) - fpsEMA) * 0.04;   // QA gate reads this
     if (quality.name === 'mobile-rich' && (query.get('tier') !== 'rich' || injectedFps !== null)) {
-      /* v3.4g: CLAMP the hold delta. Resetting `last` on webglcontextrestored
-         was only half the fix — that reset lives inside `if (!running)`, so any
-         resume path where `running` is still true (Chromium can pause rAF for a
-         lost-context canvas without the loop being marked stopped) skips it and
-         the first frame still carries the whole gap. Clamping makes the rule
-         hold regardless of which path resumed: no single frame may contribute
-         more than 250ms toward a FOUR-SECOND sustained requirement, so demotion
-         needs at least ~16 consecutive bad frames — which is what "sustained"
-         was always supposed to mean. */
-      demoter.sample(injectedFps ?? fpsEMA, Math.min(elapsed, 0.25));
+      /* v3.4h: hand the demoter the CLOCK, not a delta. Resetting `last` on
+         webglcontextrestored was only half the v3.4b fix — that reset lives
+         inside `if (!running)`, so any resume path where `running` is still
+         true (Chromium can pause rAF for a lost-context canvas without the loop
+         being marked stopped) skipped it and the first frame still carried the
+         whole gap. Clamping that delta closed the hole but turned "sustained
+         for four seconds" into "sixteen frames", which penalised exactly the
+         slow devices the rule exists to rescue. The demoter now restarts its
+         window across any gap too long to be a frame, so a suspension counts
+         for nothing while a genuinely slow device is still measured in real
+         seconds. See createFpsDemoter. */
+      demoter.sample(injectedFps ?? fpsEMA, now / 1000);
     }
     t += dt * 0.3;
     if (GLOBE_ELEV) {   // boot-up scan-reveal: ease-out cubic over ~1.8s, then inert at 1
