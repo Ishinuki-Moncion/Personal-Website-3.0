@@ -271,8 +271,12 @@ test('thrown readPixels still yields, deletes every resource, loses context once
   assert.equal(snapshot.blurDrawCalls, 12);
   assert.equal(snapshot.yieldedFrames, 2);
   assertFullyCleaned(snapshot, { shader: 4, program: 2, buffer: 1, texture: 2, framebuffer: 2 });
-  assert.equal(snapshot.cacheWrites.length, 1);
-  assert.deepEqual(snapshot.cacheWrites[0].value, result);
+  /* v3.4e: only a MEASUREMENT is cached. This is a failure path (thrown
+     readPixels / allocation failure), and its verdict describes a transient
+     condition rather than the hardware — so caching it would pin the session on
+     evidence that is not about the device. The probe simply re-measures next
+     navigation. */
+  assert.equal(snapshot.cacheWrites.length, 0);
 });
 
 test('partial target allocation failure deletes only already-created resources with their matching methods', async () => {
@@ -293,8 +297,8 @@ test('partial target allocation failure deletes only already-created resources w
   assert.equal(snapshot.blurDrawCalls, 0);
   assert.equal(snapshot.yieldedFrames, 0);
   assertFullyCleaned(snapshot, { shader: 4, program: 2, buffer: 1, texture: 1, framebuffer: 1 });
-  assert.equal(snapshot.cacheWrites.length, 1);
-  assert.deepEqual(snapshot.cacheWrites[0].value, result);
+  /* v3.4e: transient verdicts are not cached — see the note above. */
+  assert.equal(snapshot.cacheWrites.length, 0);
 });
 
 test('reduced and fine-pointer paths return null without canvas, cache, or probe work', async () => {

@@ -69,7 +69,19 @@ export async function resolveTier(env = browserEnv()) {
   let result;
   try { result = await runProbe(env); }
   catch { result = { tier: 'lite', score: null, forced: false, reason: 'error', cleaned: true }; }
-  env.cacheWrite(CACHE_KEY, result);
+  /* v3.4e: cache only a MEASUREMENT. `budget`, `error` and `no-webgl2` describe a
+     transient condition, not the hardware — and the probe yields on
+     requestAnimationFrame, which stops entirely while a tab is hidden. So
+     backgrounding the tab for a moment during the ~200ms probe produced a
+     `budget` timeout and pinned a capable iPhone to lite for the WHOLE session,
+     including every subsequent navigation.
+
+     That also made the owner calibration protocol unreliable: a packet could
+     record lite for a device that never actually measured slow. Not caching a
+     non-measurement means the next navigation simply measures again, which is
+     the correct behaviour for a condition that has probably passed. A genuinely
+     slow device still measures slow every time and still lands on lite. */
+  if (result.reason === 'measured') env.cacheWrite(CACHE_KEY, result);
   return result;
 }
 
