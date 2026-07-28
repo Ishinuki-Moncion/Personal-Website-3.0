@@ -299,3 +299,64 @@ on `port 4173 is already used`. And any wait-loop condition must match failure a
 well as success (`passed|failed|Error:`); a success-only pattern against an
 errored run polls forever. That mistake cost 8 hours of idle background polling
 in the session that produced this branch.
+
+## 8. PUSHED — and where things actually stand (2026-07-28)
+
+### 8.1 State
+
+- `origin/v34-completion` @ `947727b` — **55 commits, pushed.**
+- `origin/main` @ `562b0a3` — **untouched.**
+- **GitHub Pages serves `main` / root**, so the LIVE SITE IS STILL THE OLD ONE.
+  Nothing in this branch is public yet.
+- `main` is a direct ancestor: 55 ahead, 0 behind. A merge **fast-forwards** — no
+  merge commit, no possible conflict. No PR is required; the owner can merge.
+- History was scrubbed before pushing: the employer's private tooling repository
+  names appeared in 3 commits and 1 working-tree file, and were redacted by
+  rewriting from `562b0a3`. Verified 0 occurrences on the remote.
+
+### 8.2 CI IS RED — do not merge on a green assumption
+
+First-ever run of `.github/workflows/ci.yml`:
+
+| | local | GitHub Actions |
+|---|---|---|
+| browser suite | **151 passed, 0 failed** | **135 passed, 16 failed** |
+| runtime | 7.8 min | **21.4 min** |
+
+**Everything except the browser suite passed** — unit, all four generation-drift
+checks, hardening 70/70, HTML Validate, W3C Nu, and the deploy-artifact
+allowlist. Provisioning worked (Java, Python fontTools, Playwright).
+
+The failure signature points at TIMING on a ~3x slower 2-core software-GL runner,
+not product defects:
+
+- 9 of 16 are `expect(locator).toHaveClass` timeouts, mostly `.lightbox`
+  waiting for `/open/`;
+- 2 are test-level timeouts surfacing as "browser has been closed" /
+  "Test ended";
+- the rest are the viewport matrix and the demote test, both wall-clock bound.
+
+The suite is full of fixed windows — 1500ms reveal budget, 300ms observation
+window, 5s class waits, 9s boot cap — written against this Mac.
+
+**This is an uncalibrated harness, not a broken site.** But it is inferred from
+the signature, NOT proven; nobody has confirmed each of the 16 individually.
+
+### 8.3 The decision in front of the owner
+
+1. **Calibrate CI, get it green, then fast-forward `main`.** Make timeouts
+   CI-aware (`process.env.CI`), allow a retry on CI where flake is expected,
+   then confirm a real green run. Safest, and leaves a working gate for every
+   future change.
+2. **Fast-forward `main` now.** The site goes live immediately. The product is
+   verified green locally on both engines; only the harness is uncalibrated.
+   Defensible, but merges with a red badge and an unproven gate.
+3. **Leave it.** Branch is safe on GitHub, nothing is live.
+
+### 8.4 If you resume by fixing CI
+
+Start at `.github/workflows/ci.yml` and `playwright.config.mjs`. The likely shape
+is: `timeout` and `expect.timeout` scaled when `process.env.CI`, `retries: 1` on
+CI only, and possibly `workers: 1` already set. Re-run with
+`gh run list --branch v34-completion` and read failures with
+`gh run view <id> --log-failed`.
