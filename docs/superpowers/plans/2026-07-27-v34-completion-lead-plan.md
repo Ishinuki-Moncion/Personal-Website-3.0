@@ -148,8 +148,9 @@ spec's §B1 complaint. Verified against the live account:
 - `Personal-Website-3.0` — public. Deep engineering material in the 70-file docs corpus.
 - `tokyo-data-globe` — public, live demo, substantive README.
 - SeenThis Japan — NDA-safe aggregate, **no repository link**: the related
-  `REDACTED-INTERNAL-REPO` / `REDACTED-INTERNAL-REPO` repos are private and describe
-  production internals. They must not appear in public content.
+  the owner's related employer-tooling repositories are PRIVATE and describe
+  production internals. Neither their names nor their contents may appear in
+  public content, so this entry carries no repository link at all.
 
 ### Task 5 — Package C: bilingual, semantic media, discovery
 Per D2. Plus semantic `picture`/`img` for gallery photographs, JSON-LD, `robots.txt`,
