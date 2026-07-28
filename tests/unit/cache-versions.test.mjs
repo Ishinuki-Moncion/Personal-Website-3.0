@@ -16,7 +16,7 @@ test('Package A production modules use the complete approved cache tuple', async
   ]);
 
   assert.match(index, /src="js\/boot\.mjs\?v=32"/);
-  assert.match(boot, /bg: '7\.1'/);
+  assert.match(boot, /bg: '7\.2'/);
   assert.match(boot, /boot: '3\.3'/);
   assert.match(boot, /cursor: '3\.2'/);
   assert.match(boot, /app: '4\.5'/);

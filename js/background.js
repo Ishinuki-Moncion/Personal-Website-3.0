@@ -2650,7 +2650,16 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
     const dt = Math.min(elapsed, 0.033);
     if (elapsed > 0) fpsEMA += (Math.min(1 / elapsed, 120) - fpsEMA) * 0.04;   // QA gate reads this
     if (quality.name === 'mobile-rich' && (query.get('tier') !== 'rich' || injectedFps !== null)) {
-      demoter.sample(injectedFps ?? fpsEMA, elapsed);
+      /* v3.4g: CLAMP the hold delta. Resetting `last` on webglcontextrestored
+         was only half the fix — that reset lives inside `if (!running)`, so any
+         resume path where `running` is still true (Chromium can pause rAF for a
+         lost-context canvas without the loop being marked stopped) skips it and
+         the first frame still carries the whole gap. Clamping makes the rule
+         hold regardless of which path resumed: no single frame may contribute
+         more than 250ms toward a FOUR-SECOND sustained requirement, so demotion
+         needs at least ~16 consecutive bad frames — which is what "sustained"
+         was always supposed to mean. */
+      demoter.sample(injectedFps ?? fpsEMA, Math.min(elapsed, 0.25));
     }
     t += dt * 0.3;
     if (GLOBE_ELEV) {   // boot-up scan-reveal: ease-out cubic over ~1.8s, then inert at 1
