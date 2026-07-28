@@ -22,7 +22,7 @@ Packages **B** and most of **C** are now built. **D** is not started.
 | Hardening | 70/70 |
 | Browser (chromium + webkit) | see §6 |
 | HTML Validate + W3C Nu | clean, across `index.html`, `404.html`, `ja/index.html`, 3 case pages |
-| **Lighthouse, production network** | **PASS** — first time |
+| **Lighthouse, production network** | PASS on the run recorded below — but see the LCP caveat |
 
 Production-network mobile Lighthouse, median of three cold runs:
 
@@ -37,6 +37,22 @@ Production-network mobile Lighthouse, median of three cold runs:
 Note the baseline column: the handoff Codex wrote recorded performance 70 and
 CLS 0.059. Three independent cold runs measured 60 and 0.172 — a failing metric
 published as a passing-looking one.
+
+**LCP CAVEAT — read this before treating the gate as green.** LCP sits ON the
+2500ms boundary and moves across it between runs:
+
+| run | LCP | gate |
+|---|---|---|
+| production-network, post-font | 2327 ms | PASS |
+| deterministic, later same day | 2702 ms | FAIL |
+| deterministic, repeat | 2702 ms | FAIL |
+
+Because the fonts are now self-hosted, "deterministic" (which blocks Google
+Fonts) and "production-network" measure nearly the same graph, so that ~375ms
+spread is run-to-run variance, not a mode difference. The honest statement is
+that LCP is MARGINAL: the improvement from 4859ms is large and real, but the gate
+is not comfortably met. Re-measure on an unloaded machine before claiming it, and
+treat further LCP work as open. Every other metric has clear margin.
 
 ## 2. The defects that mattered
 
@@ -203,8 +219,13 @@ What actually remains:
    text that "describes visible content, not only a city label or ordinal", which
    cannot be written without looking at each photograph and knowing what it
    shows. Do it in the same pass as confirming the city labels.
-2. **Scene-construction chunking** — TBT headroom only. Passes at 190/200 ms;
-   one 304 ms task in scene init is the whole margin.
+2. **Scene-construction chunking — ATTEMPTED AND REVERTED.** Making the scene
+   constructor async and yielding at three phase seams was measured against the
+   same gate: TBT got WORSE, 173ms -> 208ms, and LCP did not move (2702 both
+   ways). The scheduling overhead of the seams exceeded the blocking they saved,
+   and construction was not the real bottleneck — the dominant cost is shader
+   compilation and the first draw, which no amount of JS chunking touches. Do not
+   retry this shape. If TBT work is revisited, profile the GPU-side cost first.
 3. **Remaining Minor findings** (against my own work). The full
    text with file:line and reproduction is in the workflow journal:
    `~/.claude/projects/-Users-daikieishinuki-Claude-Code-Projects-Personal-Website/8486d76f-cf10-4446-bee8-63ae5bf4b2ab/subagents/workflows/wf_848bc4bd-447/journal.jsonl`
