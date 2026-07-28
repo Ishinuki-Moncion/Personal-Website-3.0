@@ -360,3 +360,90 @@ is: `timeout` and `expect.timeout` scaled when `process.env.CI`, `retries: 1` on
 CI only, and possibly `workers: 1` already set. Re-run with
 `gh run list --branch v34-completion` and read failures with
 `gh run view <id> --log-failed`.
+
+---
+
+## 9. CI is green (2026-07-28) — and what it cost
+
+`origin/v34-completion` @ `13e2741`. Run 30364543607: **127 passed, 31 skipped,
+0 failed, 16m36s** (was 24m14s with 15 failures). `main` is still untouched at
+`562b0a3`; Pages serves `main`, so **nothing is live**.
+
+The §8 note called the failures "an uncalibrated harness". Reading the traces
+refuted that for two of them. Both were real defects, and both were only
+reproducible because the runner has no GPU.
+
+### Two product defects, fixed
+
+**The sustained-FPS watchdog could not rescue a slow device.** `Math.min(elapsed,
+0.25)` silently reinterpreted "low FPS for four seconds" as "sixteen frames":
+the trace shows `renderCounts.postfx = 14` after `waitForTimeout(4300)`, so
+14 x 0.25 = 3.5s against a 4s threshold and demotion never fired. The slower the
+device, the longer it waited — worst exactly where it mattered. `createFpsDemoter`
+now takes the clock, measures the hold from the first low sample, and RESTARTS
+the window across any interval too long to be a frame. A suspension therefore
+contributes nothing, so the v3.4b context-loss defect stays fixed by
+construction rather than by timing (that test's "unresolved flake" note is
+corrected, not carried).
+
+**The lightbox could be stranded shut.** `openLb()` wrote `.open` only from
+inside the View Transition callback, with no fallback. Reproduced red in both
+engines with a stalled-transition stub; now bounded at 500ms to the ordinary
+open path. NOTE: this was NOT the cause of the CI lightbox failures — I
+originally said it was and that was wrong. The traces show the main thread
+*blocked* (zero frames, one locator resolution in 17s), which no timer can
+rescue. The fix stands on its own merits and has its own test.
+
+### CI scope, per the owner's decision
+
+- GPU-metric specs (`mobile-rich`, `postfx-budget`) skip on CI with the reason
+  recorded. They measure SwiftShader there, not the site.
+- Lighthouse moved to `workflow_dispatch`. TBT measured 186ms locally, 10,319ms
+  there. On manual dispatch it still enforces CLS and prints the paint metrics
+  as deferred.
+- The browser suite runs as two invocations (exact complementary greps) so each
+  gets a fresh browser; the interaction matrix runs against `?tier=lite` on CI.
+- Wait timeouts scale 2x under CI. 4x was tried and made things worse.
+
+### The coverage we gave up, stated plainly
+
+**Four WebKit tests are skipped on CI**: the nine matrix viewports, the touch
+swipe, the repeated mobile navigation, and the delayed-open Escape case.
+Evidence it is the engine and not the site: same commit, same runner, same lite
+profile — Chromium passed all nine matrix viewports, WebKit failed eight. Not
+exhaustion either: in a fresh browser WebKit's first viewport passed and the
+next eight failed, eighteen tests in, with the page still answering (three
+locator resolutions across sixteen seconds). It is starved past the point of
+responding to a click.
+
+This matters: a WebKit-specific defect has shipped from this repo before (the
+premultiplied-alpha clamp, v3.3h). That class of bug is now caught only by the
+local `npm run qa:browser`, which runs both engines in full.
+
+### OPEN — an owner decision, deliberately not taken under time pressure
+
+**The GPU probe never runs on desktop.** `js/gpu-probe.mjs:56` returns null for
+any non-coarse pointer, so `classifyTier` has never had a measurement to read
+there and a desktop that measurably cannot render still gets the full scene —
+it does not degrade, it freezes (17s unresponsive at one click on the runner).
+Software rasterisation on a desktop is not exotic: VMs, remote desktops and
+stale drivers all land there.
+
+The owner approved extending the measurement to desktop. I did not wire it,
+because both routes carry a real cost that should be chosen, not slipped in:
+
+1. Run the probe on the desktop critical path — ~200ms, against a desktop LCP
+   already over its 2500ms gate at ~2700ms.
+2. Let the existing sustained-FPS watchdog demote `'high'` as it already demotes
+   `'mobile-rich'` — free at boot, but rescues only after four seconds.
+
+`INCAPABLE_PROBE_REASONS` and `DESKTOP_LITE_THRESHOLD_MS = 60` are in place and
+unit-tested, and `smoke.spec.mjs` prints what each machine measured so the
+constant cannot rot. Recommendation: option 2, plus option 1 behind a later
+LCP pass.
+
+### Still open from before
+Photo labels (12), Japanese wording approval, iPhone calibration,
+`tokyo-data-globe` licence, and the merge/deploy decision. LCP still fails at
+~2701ms against 2500 by owner decision; the local `qa:perf` gate is red on LCP
+and TBT (212.5 measured on a non-quiet machine).
