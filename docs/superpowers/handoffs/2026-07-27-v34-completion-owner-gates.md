@@ -38,21 +38,43 @@ Note the baseline column: the handoff Codex wrote recorded performance 70 and
 CLS 0.059. Three independent cold runs measured 60 and 0.172 — a failing metric
 published as a passing-looking one.
 
-**LCP CAVEAT — read this before treating the gate as green.** LCP sits ON the
-2500ms boundary and moves across it between runs:
+**LCP FAILS THE GATE — corrected, and diagnosed.** An earlier note here claimed
+production-network Lighthouse passed. Re-measured on a deliberately quieted
+machine (Spotlight settled, load 2.39, three cold runs):
 
-| run | LCP | gate |
-|---|---|---|
-| production-network, post-font | 2327 ms | PASS |
-| deterministic, later same day | 2702 ms | FAIL |
-| deterministic, repeat | 2702 ms | FAIL |
+| run | LCP | TBT | CLS |
+|---|---|---|---|
+| cold-1 | 2627.5 ms | 193.5 ms | 0.0451 |
+| cold-2 | 2701.9 ms | 186.5 ms | 0.0633 |
+| cold-3 | 2701.4 ms | 182.0 ms | 0.0441 |
+| **median** | **2701.4 ms — FAIL (gate 2500)** | 186.5 ms PASS | 0.0451 PASS |
 
-Because the fonts are now self-hosted, "deterministic" (which blocks Google
-Fonts) and "production-network" measure nearly the same graph, so that ~375ms
-spread is run-to-run variance, not a mode difference. The honest statement is
-that LCP is MARGINAL: the improvement from 4859ms is large and real, but the gate
-is not comfortably met. Re-measure on an unloaded machine before claiming it, and
-treat further LCP work as open. Every other metric has clear margin.
+All three runs are above the gate. The single 2327ms run that passed was the
+outlier. Performance 92, TBT and CLS pass with margin; **LCP is the only failing
+metric, by roughly 200ms.**
+
+WHY, and why it is your call rather than mine. The LCP element is the `<h1>` —
+text, not an image — and js/app.js deliberately EMPTIES it and rebuilds it:
+`runDecrypt()` sets `line.textContent = ''` and scrambles the characters back in.
+The headline therefore cannot reach its final paint until the boot choreography
+completes. On mobile that is `hardCap = 1500ms` (js/boot.js:11) plus a ~950ms
+decrypt beat, which lands almost exactly on the measured 2701ms.
+
+So LCP is not waiting on bytes. Self-hosting the fonts fixed the delivery half
+outright (4859 -> 2701ms). What remains is the entrance animation itself, and the
+three ways to close it are all design decisions:
+
+1. Shorten the mobile boot cap (js/boot.js:11, currently 1500ms). Cheapest, and
+   directly trades cinematic length for the metric.
+2. Keep the headline text in the DOM and animate opacity/transform instead of
+   clearing and rewriting textContent. Preserves a fade-style entrance but
+   retires the decrypt/scramble effect, which is a signature of the design.
+3. Accept LCP ~2700ms. It is 200ms over a threshold, on a portfolio whose whole
+   proposition is the cinematic, and every other metric passes.
+
+I have NOT chosen for you — option 2 in particular would retire an effect the
+design language is built around. Note the hero entrance variant is already
+user-switchable in the control deck, so the cost differs per variant.
 
 ## 2. The defects that mattered
 
