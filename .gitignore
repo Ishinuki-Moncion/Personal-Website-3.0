@@ -31,3 +31,6 @@ playwright-report/
 # with `npm run fonts:fetch`). Only the generated fonts/*.woff2 subsets and the
 # OFL license files are committed.
 .fontsrc/
+
+# Generated Pages deploy artifact (tools/build-artifact.mjs)
+dist/

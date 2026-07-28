@@ -39,15 +39,33 @@ ${urls}
 `;
 }
 
+/* robots.txt is only ever fetched from the ORIGIN ROOT. This site is published at
+   a GitHub Pages PROJECT path (…github.io/Personal-Website-3.0/), so a robots.txt
+   committed here is served at /Personal-Website-3.0/robots.txt — which no crawler
+   requests — while the file that actually governs crawling lives at
+   ishinuki-moncion.github.io/robots.txt and belongs to a different repository.
+   Two consequences the first version got wrong:
+     1. root-relative Disallow paths here would have been wrong even if fetched,
+        because the real paths are /Personal-Website-3.0/tests/ etc.;
+     2. the file cannot be relied on at all at this URL.
+   It is still emitted — correctly path-prefixed — because it becomes live and
+   correct the moment the site moves to a custom domain or a user-site root, and
+   because the sitemap reference is harmless. Crawl control that must work TODAY
+   is expressed as per-page meta robots (see tools/build-locale.mjs), which is
+   path-independent. */
 export function renderRobots() {
+  const base = new URL(ORIGIN).pathname.replace(/\/$/, '');
   return `# ${ORIGIN}
+# NOTE: served at ${base}/robots.txt on GitHub Pages project hosting, where
+# crawlers do not look for it. Authoritative only if this site moves to an
+# origin root. Per-page <meta name="robots"> is what governs crawling today.
 User-agent: *
 Allow: /
 
 # Verification artefacts and development tooling are not content.
-Disallow: /tests/
-Disallow: /shots/
-Disallow: /docs/
+Disallow: ${base}/tests/
+Disallow: ${base}/shots/
+Disallow: ${base}/docs/
 
 Sitemap: ${ORIGIN}/sitemap.xml
 `;

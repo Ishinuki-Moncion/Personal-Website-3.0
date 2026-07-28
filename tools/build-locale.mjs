@@ -80,6 +80,26 @@ export function buildJapanese(indexHtml) {
     (whole, open, body, close) => open + body.replace(/"\.\//g, '"../') + close
   );
 
+  /* Metadata must be Japanese too. A locale page that renders Japanese but
+     serves an English <title>, description and og: copy is what a crawler and a
+     share preview actually see — the page would be indexed, and shared, in the
+     wrong language. Likewise the JSON-LD inLanguage. */
+  const META_JA = {
+    title: 'Ishinuki Daikie — 開発者 / 写真家、東京',
+    description: '東京を拠点に、オープンウェブとインタラクティブ制作を手がける開発者・写真家。テクニカルプロデューサーとして100件を超えるキャンペーンを担当。',
+  };
+  html = html.replace(/<title>[^<]*<\/title>/, `<title>${META_JA.title}</title>`);
+  for (const [attr, key] of [['name="description"', 'description'], ['property="og:description"', 'description'],
+                             ['property="og:title"', 'title'], ['name="twitter:title"', 'title'],
+                             ['name="twitter:description"', 'description']]) {
+    html = html.replace(new RegExp(`(<meta ${attr} content=")[^"]*(")`), `$1${META_JA[key]}$2`);
+  }
+  html = html.replace(/"inLanguage": "en"/g, '"inLanguage": "ja"');
+  /* The @id values are shared identity anchors and must NOT be rewritten: both
+     pages describe the SAME person and site, so duplicating the graph under new
+     ids would assert two different people. Only url/inLanguage are locale-bound. */
+  html = html.replace(/("url": ")([^"]*Personal-Website-3\.0)(\/")/g, '$1$2/ja$3');
+
   html = html.replace(
     /<link rel="canonical"[^>]*\/?>/,
     `<link rel="canonical" href="${ORIGIN}/ja/" />`

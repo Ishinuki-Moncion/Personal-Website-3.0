@@ -11,7 +11,7 @@
 
 /* Single source for the shared stylesheet token: hard-coding it here put a
    second copy outside the cache-version pin, so the two could drift apart. */
-export const SITE_CSS_VERSION = '3.33';
+export const SITE_CSS_VERSION = '3.34';
 
 const escape = value => String(value)
   .replace(/&/g, '&amp;')

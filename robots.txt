@@ -1,10 +1,13 @@
 # https://ishinuki-moncion.github.io/Personal-Website-3.0
+# NOTE: served at /Personal-Website-3.0/robots.txt on GitHub Pages project hosting, where
+# crawlers do not look for it. Authoritative only if this site moves to an
+# origin root. Per-page <meta name="robots"> is what governs crawling today.
 User-agent: *
 Allow: /
 
 # Verification artefacts and development tooling are not content.
-Disallow: /tests/
-Disallow: /shots/
-Disallow: /docs/
+Disallow: /Personal-Website-3.0/tests/
+Disallow: /Personal-Website-3.0/shots/
+Disallow: /Personal-Website-3.0/docs/
 
 Sitemap: https://ishinuki-moncion.github.io/Personal-Website-3.0/sitemap.xml

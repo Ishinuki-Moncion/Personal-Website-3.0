@@ -471,8 +471,13 @@ check(
   (() => {
     const work = (index.match(/<section class="work"[\s\S]*?<\/section>/) || [''])[0];
     const projects = (index.match(/<section class="projects"[\s\S]*?<\/section>/) || [''])[0];
-    return (work.match(/<h3 class="row-title">/g) || []).length === 3 &&
-      (projects.match(/<h3 class="row-title">/g) || []).length === 3;
+    /* v3.4d: match the CLASS, not the exact opening tag. Work titles now carry
+       data-en/data-ja so they translate, which a `<h3 class="row-title">`
+       literal could not survive — the invariant is that each row title is an h3,
+       not that it has no attributes. */
+    const rowTitle = /<h3 class="row-title"[ >]/g;
+    return (work.match(rowTitle) || []).length === 3 &&
+      (projects.match(rowTitle) || []).length === 3;
   })(),
   'the three Work rows and three Project rows each need h3 titles beneath their section h2'
 );

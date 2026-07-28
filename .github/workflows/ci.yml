@@ -1,0 +1,80 @@
+# CI for daikieOS — Personal Website 3.0
+#
+# Runs the same gates a local `npm run qa:all` runs, plus the deploy-artifact
+# allowlist check. Deliberately does NOT deploy: publishing is an explicit owner
+# action (spec 2026-07-21 §D2), so this workflow proves the branch is shippable
+# and stops there.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # Java is required by the pinned W3C Nu validator (vnu-jar).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Font subsetting needs Python fontTools + brotli. Only required for the
+      # generation-drift check to be able to REBUILD; the committed subsets are
+      # what ship.
+      - run: python3 -m pip install --quiet fonttools brotli
+
+      - run: npx playwright install --with-deps chromium webkit
+
+      # Unit tests, generation-drift checks (cases / locale / discovery),
+      # structural hardening, HTML Validate and pinned W3C Nu.
+      - name: Static gates
+        run: npm run qa:static
+
+      - name: Deploy artifact allowlist
+        run: npm run check:artifact
+
+      - name: Browser suite (chromium + webkit)
+        run: npm run qa:browser
+
+      - name: Upload failure artefacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+  # Performance is a separate job: it is slower, and a red Lighthouse should be
+  # legible on its own rather than buried in a suite failure.
+  performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # The deterministic gate. `qa:perf:network` is the honest production-network
+      # measurement but depends on a live third-party origin, so it is not a CI
+      # blocker — run it locally before shipping.
+      - name: Lighthouse (deterministic)
+        run: npm run qa:perf

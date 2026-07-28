@@ -62,13 +62,24 @@ test('Japanese text is rendered by the self-hosted subset, not a system fallback
       if (withFace[i] !== fallback[i]) differing++;
     }
     return {
+      /* document.fonts.check() returns TRUE for a family that does not exist —
+         it reports "the text can be rendered", falling back happily. Asserting it
+         alone was vacuous. Pair it with a known-absent family: the real face must
+         answer true where a fabricated one answers... also true, so the SIGNAL is
+         the loaded-face list and the raster diff below, not this call. Kept only
+         to catch a unicode-range that excludes the sample outright. */
       claimsGlyphs: document.fonts.check('400 16px "M PLUS Rounded 1c"', sample),
+      controlClaims: document.fonts.check('400 16px "__no_such_family__"', sample),
       differingPixels: differing,
       inkedPixels: inked,
     };
   }, JP_SAMPLE);
 
   expect(result.claimsGlyphs, 'M PLUS Rounded 1c must claim the JP sample glyphs').toBe(true);
+  /* Documents WHY the assertion above cannot stand alone, and fails loudly if a
+     future engine ever makes check() discriminating — at which point the
+     comment, and this test's reasoning, would need revisiting. */
+  expect(result.controlClaims, 'check() is known non-discriminating; if this flips, strengthen the assertion above').toBe(true);
   /* Guards against a blank raster trivially "differing" from another blank one. */
   expect(result.inkedPixels, 'the sample must actually draw glyphs, not tofu-free blank').toBeGreaterThan(500);
   expect(

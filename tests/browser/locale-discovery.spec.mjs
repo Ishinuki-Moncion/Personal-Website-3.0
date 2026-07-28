@@ -67,7 +67,7 @@ test('robots.txt and sitemap.xml are served and agree with each other', async ({
   expect(robots.status()).toBe(200);
   const robotsBody = await robots.text();
   expect(robotsBody).toContain('Sitemap:');
-  expect(robotsBody, 'verification artefacts are not content').toContain('Disallow: /tests/');
+  expect(robotsBody, 'verification artefacts are not content').toMatch(/Disallow: \S*\/tests\//);
 
   const sitemap = await request.get('/sitemap.xml');
   expect(sitemap.status()).toBe(200);

@@ -107,6 +107,17 @@ test('the sticky menu CLOSE stays on top at short landscape heights', async ({ b
     await page.locator('.nav-burger').click();
     await expect(page.locator('.mm-close')).toBeVisible();
 
+    /* SCROLL FIRST. The defect is that .mm-links (z-index 1, later in DOM) paints
+       over the sticky .mm-head — which only matters once the links have scrolled
+       up underneath it. Testing at scroll position 0 passed even with the z-index
+       fix deleted, because nothing was overlapping yet. */
+    await page.evaluate(() => {
+      const menu = document.querySelector('.mobile-menu');
+      (menu.scrollHeight > menu.clientHeight ? menu : document.querySelector('.mm-links'))
+        .scrollTop = 200;
+    });
+    await page.waitForTimeout(200);
+
     const state = await page.evaluate(() => {
       const close = document.querySelector('.mm-close');
       const rect = close.getBoundingClientRect();
