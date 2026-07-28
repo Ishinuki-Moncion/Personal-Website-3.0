@@ -3,7 +3,13 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-test.setTimeout(60_000);
+import { ms } from '../helpers/ci-timing.mjs';
+
+/* The interaction matrix drives the whole page at nine viewports. On the
+   GPU-less runner the 1440x900 pass spent 64s without reaching the gallery —
+   a single isVisible() took 4s there — so this budget is scaled rather than
+   raised for everyone. See tests/helpers/ci-timing.mjs. */
+test.setTimeout(ms(60_000));
 
 const viewports = [
   { width: 320, height: 568, touch: true },
@@ -419,6 +425,13 @@ test('touch lightbox swipe moves forward and backward', async ({ browser }) => {
   try {
     await returningVisit(page);
     await page.locator('.gallery-grid .shot').first().click();
+    /* Wait for the dialog itself, not for the counter. `.lb-pos` ships as
+       "01/12" in the markup, so asserting that text could not distinguish
+       "opened on the first photograph" from "never opened at all" — it passed
+       the instant the page loaded. Swiping on that signal raced the open, and
+       the open then re-showed its own index over the swipe. Under load the
+       swipe lost. */
+    await expect(page.locator('.lightbox')).toHaveClass(/\bopen\b/);
     await expect(page.locator('.lb-pos')).toHaveText('01/12');
     const stage = page.locator('.lb-stage');
     await stage.dispatchEvent('touchstart', { changedTouches: [{ identifier: 1, clientX: 260, clientY: 100 }] });

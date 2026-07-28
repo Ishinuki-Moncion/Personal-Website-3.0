@@ -15,7 +15,11 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The browser suite alone took 22.5 min on the GPU-less runner, and the
+    # scaled per-test budgets let the slowest viewports finish instead of being
+    # cut off at 60s. Headroom so a slow run reports test results rather than
+    # being killed mid-suite, which reads as an infrastructure failure.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
