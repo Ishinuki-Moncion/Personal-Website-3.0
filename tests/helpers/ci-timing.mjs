@@ -39,3 +39,17 @@ export const SOFTWARE_RENDERER = Boolean(process.env.CI);
    DOM, content, routing, focus, accessibility, boot behaviour — stays on CI. */
 export const NEEDS_REAL_GPU =
   'measures GPU behaviour (probe timings, postFX attachments, sustained FPS); the CI runner has no GPU — enforced locally by `npm run qa:browser`';
+
+/* WebKit specifically cannot drive this page interactively on that runner, and
+   the comparison is what shows it is the engine rather than the site: on the
+   SAME commit, the SAME runner and the same lite profile, Chromium completed
+   all nine interaction-matrix viewports while WebKit failed eight. The page is
+   not dead there — Playwright still resolved the locator three times across a
+   sixteen-second window — it is starved past the point of answering, and the
+   opens never land.
+   These are skipped rather than loosened: an assertion that has to wait sixteen
+   seconds for a click is not evidence about the site. Both engines run the full
+   suite locally, which is the ship gate, and WebKit keeps its ~75 other CI
+   tests — the ones that do not depend on driving the live scene. */
+export const WEBKIT_CANNOT_DRIVE_THIS_PAGE =
+  'WebKit cannot rasterise this page fast enough on a GPU-less runner to answer interaction (Chromium passes the same tests there); both engines run it locally via `npm run qa:browser`';

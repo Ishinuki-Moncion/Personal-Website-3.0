@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { ms, SOFTWARE_RENDERER } from '../helpers/ci-timing.mjs';
+import { ms, SOFTWARE_RENDERER, WEBKIT_CANNOT_DRIVE_THIS_PAGE } from '../helpers/ci-timing.mjs';
 
 /* The interaction matrix drives the whole page at nine viewports. On the
    GPU-less runner the 1440x900 pass spent 64s without reaching the gallery —
@@ -144,7 +144,8 @@ test('view-transition lightbox opens and navigates decoded photographs', async (
 
 for (const viewport of viewports) {
   const pointer = viewport.touch ? 'coarse touch' : 'fine pointer';
-  test(`engine project viewport ${viewport.width}x${viewport.height} (${pointer}) completes the interaction matrix`, async ({ browser }) => {
+  test(`engine project viewport ${viewport.width}x${viewport.height} (${pointer}) completes the interaction matrix`, async ({ browser, browserName }) => {
+    test.skip(SOFTWARE_RENDERER && browserName === 'webkit', WEBKIT_CANNOT_DRIVE_THIS_PAGE);
     const context = await browser.newContext({
       viewport: { width: viewport.width, height: viewport.height },
       hasTouch: viewport.touch,
@@ -429,7 +430,8 @@ test('clipboard denial uses the fallback and preserves signal-row focus', async 
   await expect(signal).toBeFocused();
 });
 
-test('touch lightbox swipe moves forward and backward', async ({ browser }) => {
+test('touch lightbox swipe moves forward and backward', async ({ browser, browserName }) => {
+  test.skip(SOFTWARE_RENDERER && browserName === 'webkit', WEBKIT_CANNOT_DRIVE_THIS_PAGE);
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   await localOnly(context);
   const page = await context.newPage();
@@ -522,7 +524,8 @@ test('background and restore pause and resume the scene without duplicating the 
   }
 });
 
-test('repeated mobile navigation closes the modal and reaches each destination', async ({ browser }) => {
+test('repeated mobile navigation closes the modal and reaches each destination', async ({ browser, browserName }) => {
+  test.skip(SOFTWARE_RENDERER && browserName === 'webkit', WEBKIT_CANNOT_DRIVE_THIS_PAGE);
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   await localOnly(context);
   const page = await context.newPage();

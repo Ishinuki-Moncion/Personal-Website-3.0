@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+import { SOFTWARE_RENDERER, WEBKIT_CANNOT_DRIVE_THIS_PAGE } from '../helpers/ci-timing.mjs';
+
 const sizes = [
   { width: 320, height: 568 },
   { width: 375, height: 812 },
@@ -44,7 +46,8 @@ test('lightbox inerts the document and restores focus to its activating shot', a
   await expect(shot).toBeFocused();
 });
 
-test('Escape cancels a delayed lightbox open before the View Transition starts', async ({ page }) => {
+test('Escape cancels a delayed lightbox open before the View Transition starts', async ({ page, browserName }) => {
+  test.skip(SOFTWARE_RENDERER && browserName === 'webkit', WEBKIT_CANNOT_DRIVE_THIS_PAGE);
   await page.setViewportSize({ width: 320, height: 568 });
   await page.addInitScript(() => {
     Object.defineProperty(Image.prototype, 'decode', {
