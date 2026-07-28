@@ -1,6 +1,11 @@
 export const RICH_THRESHOLD_MS = 4.5;
 
-export function classifyTier({ reduced, coarse, small, forced, probeTier, score }) {
+/* Reasons the probe reports when it could not complete a trivial GPU workload
+   AT ALL, as distinct from completing it slower than the phone-rich bar. Only
+   these override the desktop profile — see classifyTier. */
+export const INCAPABLE_PROBE_REASONS = ['no-webgl2', 'error', 'budget'];
+
+export function classifyTier({ reduced, coarse, small, forced, probeTier, probeReason, score }) {
   if (reduced) return 'reduced';
   if (coarse) {
     if (forced === 'rich') return 'mobile-rich';
@@ -8,7 +13,24 @@ export function classifyTier({ reduced, coarse, small, forced, probeTier, score 
     if (probeTier === 'mobile-rich' || probeTier === 'lite') return probeTier;
     return Number.isFinite(score) && score <= RICH_THRESHOLD_MS ? 'mobile-rich' : 'lite';
   }
-  return small ? 'lite' : 'high';
+  if (small) return 'lite';
+  if (forced === 'rich') return 'high';
+  if (forced === 'lite') return 'lite';
+  /* Desktop carries the locked art direction, so it stays 'high' wherever the
+     machine can actually render it — a measured score merely slower than the
+     phone bar is still 'high', and capable machines never reach this line.
+
+     The override is deliberately the narrowest one that is unambiguous. A probe
+     that could not obtain a WebGL2 context, threw, or exhausted its budget has
+     not reported "slow"; it has reported that a trivial GPU workload did not
+     finish. Handing the full scene to that machine does not degrade the page,
+     it FREEZES it: measured on a GPU-less runner, the main thread stopped
+     responding for 17 seconds at a single click, painting nothing and running
+     no timers. Software rasterisation on a desktop is not exotic — VMs, remote
+     desktops and stale drivers all land here.
+
+     Measured, never identity: no UA, renderer string or deviceMemory (spec 3). */
+  return INCAPABLE_PROBE_REASONS.includes(probeReason) ? 'lite' : 'high';
 }
 
 export function estimatePostFxBytes({ width, height, dpr, finalSamples, bloomSamples, bloomScale }) {

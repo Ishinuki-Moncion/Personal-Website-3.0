@@ -250,7 +250,7 @@ test('reduced-motion calibration exports an explicit non-applicable FPS result',
     await page.goto('/tests/device/mobile-rich-calibration.html?fpsWindowMs=400');
     await expect(page.getByRole('heading', { name: 'Mobile-rich calibration' })).toBeVisible();
     await page.getByRole('button', { name: /RUN 5 PROBES/ }).click();
-    await expect(page.locator('#status')).toContainText('FPS not applicable', { timeout: 35_000 });
+    await expect(page.locator('#status')).toContainText('FPS not applicable', { timeout: ms(35_000) });
 
     const packet = JSON.parse(await page.locator('#packet').textContent());
     expect(packet.selectionPolicy).toMatchObject({
@@ -288,7 +288,7 @@ for (const failure of [
     await localOnly(context);
     await page.route(failure.pattern, route => route.abort());
     await page.goto('/');
-    await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: 4_000 });
+    await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: ms(4_000) });
     await expectEssentialApp(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.locator('.nav-burger').click();
@@ -583,7 +583,7 @@ test('file:// Chromium fallback keeps app semantics and content when the scene i
   try {
     const file = pathToFileURL(resolve(process.cwd(), 'index.html')).href;
     await page.goto(file);
-    await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: 10_000 });
+    await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: ms(10_000) });
     await expectEssentialApp(page);
     await page.locator('.nav-burger').click();
     await expect(page.locator('#mobileMenu')).toHaveAttribute('aria-hidden', 'false');

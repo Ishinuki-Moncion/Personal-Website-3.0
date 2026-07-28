@@ -8,6 +8,8 @@
  */
 import { expect, test } from '@playwright/test';
 
+import { ms } from '../helpers/ci-timing.mjs';
+
 const CASES = [
   { slug: 'daikieos', title: 'daikieOS — Personal Website 3.0', repo: 'Personal-Website-3.0' },
   { slug: 'tokyo-data-globe', title: 'Tokyo Data Globe', repo: 'tokyo-data-globe' },
@@ -19,7 +21,7 @@ test('the home page links to case studies, not to a bare profile URL', async ({ 
     try { sessionStorage.setItem('daikie-booted', '1'); } catch { /* privacy modes */ }
   });
   await page.goto('/');
-  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: 9_000 });
+  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: ms(9_000) });
 
   const hrefs = await page.locator('#projects a.row').evaluateAll(rows => rows.map(r => r.getAttribute('href')));
   expect(hrefs).toEqual(CASES.map(c => `case/${c.slug}/`));

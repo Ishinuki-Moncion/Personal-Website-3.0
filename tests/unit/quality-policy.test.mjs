@@ -3,14 +3,48 @@ import assert from 'node:assert/strict';
 import {
   classifyTier,
   createFpsDemoter,
-  estimatePostFxBytes
+  estimatePostFxBytes,
+  INCAPABLE_PROBE_REASONS
 } from '../../js/quality-policy.mjs';
 import { resolveTier } from '../../js/gpu-probe.mjs';
 
-test('reduced wins and fine desktop never probes', () => {
+test('reduced wins, and a narrow viewport is lite whatever the machine can do', () => {
   assert.equal(classifyTier({ reduced: true, coarse: true, small: true, forced: 'rich', probeTier: 'mobile-rich', score: 1 }), 'reduced');
-  assert.equal(classifyTier({ reduced: false, coarse: false, small: false, forced: null, probeTier: 'lite', score: null }), 'high');
   assert.equal(classifyTier({ reduced: false, coarse: false, small: true, forced: null, probeTier: null, score: 1 }), 'lite');
+});
+
+/* Desktop carries the locked art direction. It may only lose it when the probe
+   reports that a trivial GPU workload did not finish at all — never because the
+   machine merely measured slower than the phone-rich bar, and never from any
+   form of device identity. */
+test('desktop keeps the locked profile unless the probe could not complete', () => {
+  const desktop = { reduced: false, coarse: false, small: false, forced: null };
+
+  assert.equal(classifyTier({ ...desktop, probeReason: 'measured', score: 1 }), 'high');
+  /* The phone bar is 4.5ms. A desktop an order of magnitude past it is still
+     'high' — "slower than a good phone" is not "cannot render". */
+  assert.equal(classifyTier({ ...desktop, probeReason: 'measured', score: 45 }), 'high');
+  /* probeTier is 'lite' for every non-rich outcome, so it must NOT be the
+     signal here — reading it would demote most capable desktops. */
+  assert.equal(classifyTier({ ...desktop, probeTier: 'lite', probeReason: 'measured', score: 9 }), 'high');
+  assert.equal(classifyTier({ ...desktop, probeTier: 'lite', probeReason: 'cache', score: 9 }), 'high');
+  /* No probe at all (module failed to load) is not evidence of incapacity. */
+  assert.equal(classifyTier({ ...desktop, probeTier: undefined, probeReason: undefined, score: null }), 'high');
+
+  for (const probeReason of INCAPABLE_PROBE_REASONS) {
+    assert.equal(
+      classifyTier({ ...desktop, probeTier: 'lite', probeReason, score: null }),
+      'lite',
+      `a desktop whose probe reported "${probeReason}" must not be handed the full scene`
+    );
+  }
+  assert.deepEqual(INCAPABLE_PROBE_REASONS, ['no-webgl2', 'error', 'budget']);
+});
+
+test('the desktop override is reachable by explicit request for local verification', () => {
+  const desktop = { reduced: false, coarse: false, small: false, probeReason: 'measured', score: 1 };
+  assert.equal(classifyTier({ ...desktop, forced: 'lite' }), 'lite');
+  assert.equal(classifyTier({ ...desktop, forced: 'rich' }), 'high');
 });
 
 test('coarse pointer earns rich only at the measured threshold', () => {

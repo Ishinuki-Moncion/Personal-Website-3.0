@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-import { SOFTWARE_RENDERER } from '../helpers/ci-timing.mjs';
+import { ms, SOFTWARE_RENDERER } from '../helpers/ci-timing.mjs';
 
 test('scene import failure leaves menu gallery labels and contact usable', async ({ page }) => {
   await page.route('**/js/background.js*', route => route.abort());
   await page.goto('/');
-  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: 4_000 });
+  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: ms(4_000) });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('.nav-burger').click();
   await expect(page.locator('#mobileMenu')).toHaveAttribute('aria-hidden', 'false');

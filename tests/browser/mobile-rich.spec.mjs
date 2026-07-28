@@ -1,5 +1,14 @@
 import { test, expect } from '@playwright/test';
 
+import { NEEDS_REAL_GPU, SOFTWARE_RENDERER } from '../helpers/ci-timing.mjs';
+
+/* Every assertion in this file is about what the GPU did: which tier the probe
+   measured, whether postFX was allocated, whether the sustained-FPS watchdog
+   fired. Measured on the runner, the scene managed 13 frames in 4.3 seconds and
+   the probe returned reason:'budget' — it could not finish. Those are facts
+   about SwiftShader. */
+test.skip(SOFTWARE_RENDERER, NEEDS_REAL_GPU);
+
 async function openMobilePage(browser, overrides = {}) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },

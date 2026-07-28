@@ -12,6 +12,8 @@
  */
 import { expect, test } from '@playwright/test';
 
+import { ms } from '../helpers/ci-timing.mjs';
+
 /** Fail one module request and report how the page copes.
  *
  * Seeds the returning-visitor flag so js/boot.js takes its instant(), terminal
@@ -28,7 +30,7 @@ async function bootWithModuleAborted(page, pattern) {
   await page.route(pattern, route => route.abort());
   const started = Date.now();
   await page.goto('/');
-  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: 4_000 });
+  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: ms(4_000) });
   return Date.now() - started;
 }
 
@@ -70,7 +72,7 @@ test('a failed effects module leaves the page VISIBLE, not merely attached', asy
   await expect
     .poll(() => page.evaluate(() =>
       [...document.querySelectorAll('[data-reveal]')].filter(el => Number(getComputedStyle(el).opacity) === 0).length
-    ), { timeout: 6_000 })
+    ), { timeout: ms(6_000) })
     .toBe(0);
 
   const visibility = await page.evaluate(() => {
@@ -107,10 +109,10 @@ test('losing scene-bootstrap itself still reports the scene as unavailable', asy
 
   await page.route(/\/js\/scene-bootstrap\.mjs(\?|$)/, route => route.abort());
   await page.goto('/');
-  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: 9_000 });
+  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: ms(9_000) });
 
   await expect
-    .poll(() => page.evaluate(() => window.__SCENE_STATUS?.ok), { timeout: 8_000 })
+    .poll(() => page.evaluate(() => window.__SCENE_STATUS?.ok), { timeout: ms(8_000) })
     .toBe(false);
 
   const state = await page.evaluate(() => ({

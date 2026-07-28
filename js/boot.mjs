@@ -9,7 +9,7 @@ window.__SCENE_READY_FIRED = false;
    js/app.js (ownership-scoped inert + per-photo lightbox sizing). Without
    these, a returning visitor keeps the CACHED module and none of the fixes —
    including the Critical inert lockout — ever reach them. */
-const V = { bg: '7.3', boot: '3.3', cursor: '3.2', fx: '3.8', app: '4.6', probe: '3' };
+const V = { bg: '7.4', boot: '3.3', cursor: '3.2', fx: '3.8', app: '4.6', probe: '4' };
 
 /* v3.4b: this is a COORDINATOR, not a serial dependency chain (spec 2026-07-21
    §A3). It shipped as four unguarded sequential `await import()` calls, so a

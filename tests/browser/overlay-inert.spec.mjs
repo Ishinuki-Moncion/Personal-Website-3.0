@@ -15,12 +15,14 @@
  */
 import { expect, test } from '@playwright/test';
 
+import { ms } from '../helpers/ci-timing.mjs';
+
 async function bootQuietly(page) {
   await page.addInitScript(() => {
     try { sessionStorage.setItem('daikie-booted', '1'); } catch { /* privacy modes */ }
   });
   await page.goto('/');
-  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: 9_000 });
+  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: ms(9_000) });
 }
 
 /** Inert state of the page chrome the lockout used to strand. */
@@ -52,7 +54,7 @@ test('a re-entrant lightbox open does not strand the page inert after close', as
     shots[0].click();
     shots[1]?.click();
   });
-  await expect(page.locator('.lightbox')).toHaveClass(/open/, { timeout: 5_000 });
+  await expect(page.locator('.lightbox')).toHaveClass(/open/, { timeout: ms(5_000) });
 
   /* Escape is how the whole suite closes the lightbox; .lb-close sits under
      .lb-stage in the stacking order, so a centre-point click is intercepted. */

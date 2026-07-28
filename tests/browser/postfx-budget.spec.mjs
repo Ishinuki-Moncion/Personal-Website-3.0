@@ -5,6 +5,12 @@
  */
 import { test, expect } from '@playwright/test';
 
+import { NEEDS_REAL_GPU, SOFTWARE_RENDERER } from '../helpers/ci-timing.mjs';
+
+/* Both tests here drive real GPU allocation — a 128 MiB attachment budget and a
+   WEBGL_lose_context cycle — and assert on frame-rate behaviour afterwards. */
+test.skip(SOFTWARE_RENDERER, NEEDS_REAL_GPU);
+
 async function openCoarsePage(browser, viewport) {
   const context = await browser.newContext({ viewport, hasTouch: true, isMobile: true });
   return { context, page: await context.newPage() };

@@ -3,12 +3,14 @@
  */
 import { expect, test } from '@playwright/test';
 
+import { ms } from '../helpers/ci-timing.mjs';
+
 async function bootQuietly(page) {
   await page.addInitScript(() => {
     try { sessionStorage.setItem('daikie-booted', '1'); } catch { /* privacy modes */ }
   });
   await page.goto('/');
-  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: 9_000 });
+  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: ms(9_000) });
 }
 
 /* .lb-img shipped with width="640" height="426" — the intrinsic size of the
@@ -21,7 +23,7 @@ test('lightbox photographs fill the stage rather than the thumbnail box', async 
   await bootQuietly(page);
 
   await page.locator('.shot').first().click();
-  await expect(page.locator('.lightbox')).toHaveClass(/open/, { timeout: 5_000 });
+  await expect(page.locator('.lightbox')).toHaveClass(/open/, { timeout: ms(5_000) });
   await expect.poll(() => page.evaluate(() => document.querySelector('.lb-img')?.naturalWidth || 0)).toBeGreaterThan(0);
 
   const box = await page.evaluate(() => {
@@ -59,7 +61,7 @@ test('portrait photographs are not letterboxed into a landscape box', async ({ p
   expect(portraitIndex, 'the gallery should contain at least one portrait photograph').toBeGreaterThanOrEqual(0);
 
   await page.locator('.shot').nth(portraitIndex).click();
-  await expect(page.locator('.lightbox')).toHaveClass(/open/, { timeout: 5_000 });
+  await expect(page.locator('.lightbox')).toHaveClass(/open/, { timeout: ms(5_000) });
   await expect.poll(() => page.evaluate(() => document.querySelector('.lb-img')?.naturalWidth || 0)).toBeGreaterThan(0);
 
   const shape = await page.evaluate(() => {

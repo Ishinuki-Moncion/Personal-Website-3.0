@@ -39,10 +39,35 @@ export function displayMetrics(values) {
   };
 }
 
+/* CLS measures where boxes end up, not how fast they were painted, so it holds
+   on any machine. Every other gate here is a paint or main-thread measurement
+   and only means something somewhere with a GPU to paint with. Keeping that
+   distinction as data lets a runner enforce what it can actually measure and
+   report — never silently drop — the rest. */
+export const LAYOUT_METRICS = ['CLS'];
+
+const MOBILE_BOUNDS = [
+  ['performance', values => values.performance >= 80],
+  ['LCP', values => values.LCP <= 2500],
+  ['CLS', values => values.CLS <= 0.10],
+  ['TBT', values => values.TBT <= 200]
+];
+
+const DESKTOP_BOUNDS = [
+  ['performance', values => values.performance >= 85],
+  ['LCP', values => values.LCP <= 2500],
+  ['CLS', values => values.CLS <= 0.10]
+];
+
+const failuresFor = (bounds, values) => bounds.filter(([, holds]) => !holds(values)).map(([name]) => name);
+
+export const mobileFailures = values => failuresFor(MOBILE_BOUNDS, values);
+export const desktopFailures = values => failuresFor(DESKTOP_BOUNDS, values);
+
 export function mobilePasses(values) {
-  return values.performance >= 80 && values.LCP <= 2500 && values.CLS <= 0.10 && values.TBT <= 200;
+  return mobileFailures(values).length === 0;
 }
 
 export function desktopPasses(values) {
-  return values.performance >= 85 && values.LCP <= 2500 && values.CLS <= 0.10;
+  return desktopFailures(values).length === 0;
 }

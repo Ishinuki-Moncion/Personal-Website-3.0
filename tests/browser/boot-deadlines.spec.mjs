@@ -13,6 +13,8 @@
  */
 import { test, expect } from '@playwright/test';
 
+import { ms } from '../helpers/ci-timing.mjs';
+
 const BOOT_JS = /\/js\/boot\.js(\?|$)/;
 const EVALUATION_DELAY_MS = 2500;
 
@@ -35,7 +37,7 @@ test('a slow boot.js evaluation still finishes inside the catastrophic watchdog'
 
   /* Wait past both deadlines: the 9s boot cap and the 10s watchdog. */
   await expect
-    .poll(() => page.evaluate(() => window.__bootDoneCount), { timeout: 25_000 })
+    .poll(() => page.evaluate(() => window.__bootDoneCount), { timeout: ms(25_000) })
     .toBeGreaterThan(0);
   await page.waitForTimeout(3_000);
 
@@ -62,7 +64,7 @@ test('essential content is reachable even when the boot cap is the thing that re
   });
   await page.goto('/');
 
-  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: 25_000 });
+  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: ms(25_000) });
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Ishinuki Daikie');
   await expect(page.locator('#contact')).toBeAttached();
 });

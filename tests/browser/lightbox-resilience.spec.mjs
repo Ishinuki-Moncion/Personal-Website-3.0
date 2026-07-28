@@ -20,6 +20,8 @@
  */
 import { expect, test } from '@playwright/test';
 
+import { ms } from '../helpers/ci-timing.mjs';
+
 /* A transition handle that never invokes its update callback — a capture that
    has begun and will not complete — but is otherwise faithful to the spec,
    because the fallback's correctness depends on that detail: skipTransition()
@@ -60,7 +62,7 @@ async function bootQuietly(page) {
     try { sessionStorage.setItem('daikie-booted', '1'); } catch { /* privacy modes */ }
   });
   await page.goto('/');
-  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: 9_000 });
+  await expect(page.locator('body')).not.toHaveAttribute('data-booting', '', { timeout: ms(9_000) });
 }
 
 test('a View Transition that never completes still opens the lightbox', async ({ page }) => {

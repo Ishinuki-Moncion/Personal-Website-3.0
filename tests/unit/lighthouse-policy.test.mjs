@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  desktopFailures,
   desktopPasses,
   displayMetrics,
+  LAYOUT_METRICS,
   medianMetrics,
+  mobileFailures,
   mobilePasses
 } from '../performance/lighthouse-policy.mjs';
 
@@ -43,6 +46,40 @@ test('desktop gates evaluate unrounded boundary values', () => {
     { ...desktopBounds, CLS: 0.10004 }
   ]) {
     assert.equal(desktopPasses(failing), false, JSON.stringify(failing));
+  }
+});
+
+/* The CI runner has no GPU, so it enforces only the layout gate and reports the
+   paint gates as deferred. That relaxation is only defensible while it stays
+   exactly this narrow: CLS is the one metric a software rasteriser still
+   measures truthfully, and it must remain ENFORCED there — a runner that
+   deferred CLS too would be gating on nothing at all. */
+test('the layout gate is CLS alone, and it is a real gate on both form factors', () => {
+  assert.deepEqual(LAYOUT_METRICS, ['CLS']);
+  assert.deepEqual(mobileFailures({ ...mobileBounds, CLS: 0.10004 }), ['CLS']);
+  assert.deepEqual(desktopFailures({ ...desktopBounds, CLS: 0.10004 }), ['CLS']);
+  /* Everything a GPU-less machine cannot measure must be named as such, so a
+     future edit cannot quietly move a metric out of enforcement by renaming it. */
+  assert.deepEqual(
+    mobileFailures({ performance: 0, FCP: 0, LCP: 9e9, CLS: 9, TBT: 9e9 }),
+    ['performance', 'LCP', 'CLS', 'TBT']
+  );
+  assert.deepEqual(
+    desktopFailures({ performance: 0, FCP: 0, LCP: 9e9, CLS: 9, TBT: 0 }),
+    ['performance', 'LCP', 'CLS']
+  );
+});
+
+test('failure lists and boolean gates cannot disagree', () => {
+  for (const values of [
+    mobileBounds,
+    { ...mobileBounds, TBT: 200.4 },
+    { ...mobileBounds, CLS: 0.10004, LCP: 2500.4 }
+  ]) {
+    assert.equal(mobilePasses(values), mobileFailures(values).length === 0, JSON.stringify(values));
+  }
+  for (const values of [desktopBounds, { ...desktopBounds, performance: 84.999 }]) {
+    assert.equal(desktopPasses(values), desktopFailures(values).length === 0, JSON.stringify(values));
   }
 });
 
