@@ -72,9 +72,26 @@ three ways to close it are all design decisions:
 3. Accept LCP ~2700ms. It is 200ms over a threshold, on a portfolio whose whole
    proposition is the cinematic, and every other metric passes.
 
-I have NOT chosen for you — option 2 in particular would retire an effect the
-design language is built around. Note the hero entrance variant is already
-user-switchable in the control deck, so the cost differs per variant.
+**OWNER DECISION (2026-07-28): richness wins. Option 3 — accept LCP ~2700ms.**
+
+The owner's requirement is that mobile still looks as rich as the desktop site.
+Options 1 and 2 are therefore off the table: both buy the metric by shortening or
+retiring the entrance cinematic, which is part of the richness being protected.
+
+This is a real tradeoff, taken deliberately, and it is worth being precise about
+what is and is not being traded. LCP and scene richness are INDEPENDENT here. The
+LCP element is the <h1>; the scene renders to a canvas that was never the largest
+contentful element, so the globe, bloom, rain wells and postFX chain contribute
+nothing to LCP. Verified live at 390x844 DPR 3: tier mobile-rich, render path
+postfx, 5000/5000 globe particles, wells + full graticule + refracting beads on,
+51.9 MiB of a 128 MiB postFX budget, not demoted. Nothing in this branch reduced
+scene richness.
+
+So the site ships with performance 92, TBT and CLS passing with margin, and LCP
+about 200ms over its threshold because the headline animates in. If that is ever
+revisited, the cheapest lever is the mobile boot cap at js/boot.js:11 — and note
+the hero entrance variant is already user-switchable in the control deck, so the
+cost differs per variant (decrypt is the most expensive).
 
 ## 2. The defects that mattered
 
