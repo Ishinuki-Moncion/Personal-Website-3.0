@@ -28,7 +28,7 @@
      400 face paints on the English page — Zen Kaku is scoped to html[lang="ja"]
      (site.css) and stays unfetched here, so it is deliberately not preloaded. -->
 <link rel="preload" href="../fonts/mplus-rounded-1c-400.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
-<link rel="stylesheet" href="../css/site.css?v=3.34" />
+<link rel="stylesheet" href="../css/site.css?v=3.35" />
 <noscript>
   <style>
     /* No-JS truth: kill the boot screen and reveal everything the engine would */
@@ -297,6 +297,29 @@
             <div class="stat" data-reveal data-reveal-delay="0.24s"><div class="n">N3</div><div class="l" data-en="JLPT Japanese" data-ja="日本語能力">日本語能力</div></div>
             <div class="stat" data-reveal data-reveal-delay="0.30s"><div class="n" lang="ja">東京</div><div class="l" data-en="Based in Tokyo" data-ja="東京在住">東京在住</div></div>
           </div>
+
+          <!-- Grouped rather than one long run of tags: the grouping is the
+               information — which layer each tool belongs to. Reuses .tags/.tag
+               so this introduces no new visual language. -->
+          <div class="skills" data-reveal data-reveal-delay="0.34s">
+            <span class="geo-kicker" translate="no">STACK // TOOLING</span>
+            <div class="skill-group">
+              <span class="skill-label" data-en="Languages" data-ja="言語">言語</span>
+              <div class="tags"><span class="tag">JavaScript (ES6+)</span><span class="tag">TypeScript</span><span class="tag">Python</span><span class="tag">Java</span><span class="tag">C++</span><span class="tag">SQL</span></div>
+            </div>
+            <div class="skill-group">
+              <span class="skill-label" data-en="Front-end" data-ja="フロントエンド">フロントエンド</span>
+              <div class="tags"><span class="tag">React</span><span class="tag">Next.js</span><span class="tag">HTML / CSS</span><span class="tag">SCSS</span><span class="tag">three.js</span><span class="tag">WebGL / GLSL</span></div>
+            </div>
+            <div class="skill-group">
+              <span class="skill-label" data-en="Back-end" data-ja="バックエンド">バックエンド</span>
+              <div class="tags"><span class="tag">Node.js</span><span class="tag">Express</span><span class="tag">PostgreSQL</span><span class="tag">REST APIs</span></div>
+            </div>
+            <div class="skill-group">
+              <span class="skill-label" data-en="Tooling" data-ja="ツール">ツール</span>
+              <div class="tags"><span class="tag">Docker</span><span class="tag">pgAdmin</span><span class="tag">Figma</span><span class="tag">Playwright</span><span class="tag">Premiere</span><span class="tag">Photoshop</span></div>
+            </div>
+          </div>
         </div>
         <div class="about-portrait clip-reveal" data-parallax="0.06">
           <div class="media" style="background-image:url('../images/about.jpg')"></div>
@@ -477,6 +500,55 @@
             <div class="proj-end"><span class="proj-tech">Python · Server-rendered · Scheduled</span><span class="proj-year">2026 <span class="row-arrow" aria-hidden="true">→</span></span></div>
           </div>
         </a>
+      </div>
+      <div class="row-end-rule"></div>
+
+      <!-- Earlier work: university and hackathon projects, listed rather than
+           written up. They are real and dated, but a full case study each would
+           dilute the five above rather than add to them. Same row grammar as
+           Work and Education, and deliberately NOT anchors — nothing to link to,
+           and `#projects a.row` stays exactly the set of case studies. -->
+      <h2 class="heading-xl" data-reveal data-en="Earlier work" data-ja="初期の制作">初期の制作</h2>
+      <div data-stagger>
+        <article class="row" data-reveal>
+          <div class="work-grid">
+            <div>
+              <div class="row-meta"><span class="row-date" data-en="Aug — Dec 2022" data-ja="2022年8月 — 12月">2022年8月 — 12月</span></div>
+              <h3 class="row-title" data-en="Degree Planning Audit Tool" data-ja="履修計画・監査ツール">履修計画・監査ツール</h3>
+              <div class="row-sub" data-en="The University of Texas at Dallas" data-ja="テキサス大学ダラス校">テキサス大学ダラス校</div>
+            </div>
+            <div>
+              <p class="row-desc" data-en="A local server-based tool that generated degree-plan and audit reports, automating a redundant reporting process and the manual calculation that went with it." data-ja="学位計画と監査レポートを生成するローカルサーバー型のツール。重複の多い報告作業と、それに伴う手計算を自動化しました。">学位計画と監査レポートを生成するローカルサーバー型のツール。重複の多い報告作業と、それに伴う手計算を自動化しました。</p>
+              <div class="tags"><span class="tag">JavaScript</span><span class="tag">Node.js</span><span class="tag">Express</span><span class="tag">pdf-parse</span><span class="tag">jsPDF</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="row" data-reveal>
+          <div class="work-grid">
+            <div>
+              <div class="row-meta"><span class="row-date" data-en="Nov 2021" data-ja="2021年11月">2021年11月</span></div>
+              <h3 class="row-title">TimeFlies</h3>
+              <div class="row-sub" data-en="HackUTD VIII" data-ja="HackUTD VIII">HackUTD VIII</div>
+            </div>
+            <div>
+              <p class="row-desc" data-en="A hackathon build: a PostgreSQL database wired for real-time transfer to the front end." data-ja="ハッカソンでの制作。フロントエンドへリアルタイムにデータを渡す PostgreSQL データベースを構築しました。">ハッカソンでの制作。フロントエンドへリアルタイムにデータを渡す PostgreSQL データベースを構築しました。</p>
+              <div class="tags"><span class="tag">TypeScript</span><span class="tag">PostgreSQL</span><span class="tag">MikroORM</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="row" data-reveal>
+          <div class="work-grid">
+            <div>
+              <div class="row-meta"><span class="row-date" data-en="Aug — Dec 2020" data-ja="2020年8月 — 12月">2020年8月 — 12月</span></div>
+              <h3 class="row-title">Debug</h3>
+              <div class="row-sub" data-en="Association for Computing Machinery" data-ja="ACM（計算機協会）">ACM（計算機協会）</div>
+            </div>
+            <div>
+              <p class="row-desc" data-en="A full-stack application for real-time code sharing in a collaborative editor." data-ja="共同編集エディタ上でコードをリアルタイムに共有するフルスタックアプリケーション。">共同編集エディタ上でコードをリアルタイムに共有するフルスタックアプリケーション。</p>
+              <div class="tags"><span class="tag">TypeScript</span><span class="tag">Node.js</span><span class="tag">React</span><span class="tag">Firebase</span><span class="tag">Highlight.js</span></div>
+            </div>
+          </div>
+        </article>
       </div>
       <div class="row-end-rule"></div>
     </div>
