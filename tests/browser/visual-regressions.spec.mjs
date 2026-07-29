@@ -26,7 +26,7 @@ test('lightbox photographs fill the stage rather than the thumbnail box', async 
   await expect(page.locator('.lightbox')).toHaveClass(/open/, { timeout: ms(5_000) });
   await expect.poll(() => page.evaluate(() => document.querySelector('.lb-img')?.naturalWidth || 0)).toBeGreaterThan(0);
 
-  const box = await page.evaluate(() => {
+  const measure = () => page.evaluate(() => {
     const img = document.querySelector('.lb-img');
     const rect = img.getBoundingClientRect();
     return {
@@ -39,9 +39,17 @@ test('lightbox photographs fill the stage rather than the thumbnail box', async 
   });
 
   /* Constrained by max-height:80vh on a 900px viewport, a 3:2 photograph should
-     land near 1080x720. The regression rendered it at exactly 640x426. */
-  expect(box.width, `photograph rendered ${box.width}x${box.height}; the thumbnail-sized regression renders 640x426`)
+     land near 1080x720. The regression rendered it at exactly 640x426.
+
+     Wait for LAYOUT, not just decode: naturalWidth only says the bytes arrived,
+     and on a starved engine the element can still be sitting at its pre-open
+     box a frame or two later — sampled once, that reads as exactly the defect
+     this guards (measured on CI at 3x3). Polling cannot hide that defect,
+     because the thumbnail-sized box is 640 wide and never crosses 900. */
+  await expect
+    .poll(async () => (await measure()).width, { timeout: ms(5_000) })
     .toBeGreaterThan(900);
+  const box = await measure();
 
   /* The declared box must describe THIS photograph, so the aspect ratio holds. */
   const declaredRatio = box.naturalWidth / box.naturalHeight;
@@ -64,10 +72,14 @@ test('portrait photographs are not letterboxed into a landscape box', async ({ p
   await expect(page.locator('.lightbox')).toHaveClass(/open/, { timeout: ms(5_000) });
   await expect.poll(() => page.evaluate(() => document.querySelector('.lb-img')?.naturalWidth || 0)).toBeGreaterThan(0);
 
-  const shape = await page.evaluate(() => {
+  /* Same layout race as above: wait for the stage box to exist before judging
+     its shape. A pre-open element is square, which would read as letterboxing. */
+  const shapeOf = () => page.evaluate(() => {
     const rect = document.querySelector('.lb-img').getBoundingClientRect();
     return { width: Math.round(rect.width), height: Math.round(rect.height) };
   });
+  await expect.poll(async () => (await shapeOf()).height, { timeout: ms(5_000) }).toBeGreaterThan(200);
+  const shape = await shapeOf();
   expect(shape.height, 'a portrait photograph must render taller than it is wide').toBeGreaterThan(shape.width);
 });
 

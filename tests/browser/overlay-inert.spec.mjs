@@ -15,7 +15,7 @@
  */
 import { expect, test } from '@playwright/test';
 
-import { ms } from '../helpers/ci-timing.mjs';
+import { ms, SOFTWARE_RENDERER, WEBKIT_CANNOT_DRIVE_THIS_PAGE } from '../helpers/ci-timing.mjs';
 
 async function bootQuietly(page) {
   await page.addInitScript(() => {
@@ -41,7 +41,8 @@ function readChromeInert(page) {
   });
 }
 
-test('a re-entrant lightbox open does not strand the page inert after close', async ({ page }) => {
+test('a re-entrant lightbox open does not strand the page inert after close', async ({ page, browserName }) => {
+  test.skip(SOFTWARE_RENDERER && browserName === 'webkit', WEBKIT_CANNOT_DRIVE_THIS_PAGE);
   await bootQuietly(page);
 
   const before = await readChromeInert(page);
@@ -72,7 +73,8 @@ test('a re-entrant lightbox open does not strand the page inert after close', as
   await expect(page.locator('.shot').first()).toBeVisible();
 });
 
-test('the mobile menu and the lightbox never release each other inert state', async ({ browser }) => {
+test('the mobile menu and the lightbox never release each other inert state', async ({ browser, browserName }) => {
+  test.skip(SOFTWARE_RENDERER && browserName === 'webkit', WEBKIT_CANNOT_DRIVE_THIS_PAGE);
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
   try {
