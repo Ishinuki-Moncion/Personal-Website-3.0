@@ -61,6 +61,8 @@ export const SCAN_FILES = [
   'case/daikieos/index.html',
   'case/tokyo-data-globe/index.html',
   'case/open-web-production/index.html',
+  'case/night-shift-studio/index.html',
+  'case/tokyo-apartment-hunt/index.html',
 ];
 
 /* Always-on floor, independent of today's copy. Kana are ~190 glyphs and a few KB;

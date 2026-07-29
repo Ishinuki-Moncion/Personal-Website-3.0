@@ -531,11 +531,25 @@ check(
        data-en/data-ja so they translate, which a `<h3 class="row-title">`
        literal could not survive — the invariant is that each row title is an h3,
        not that it has no attributes. */
-    const rowTitle = /<h3 class="row-title"[ >]/g;
-    return (work.match(rowTitle) || []).length === 3 &&
-      (projects.match(rowTitle) || []).length === 3;
+    /* v3.5: assert the INVARIANT, not a census. The counts were pinned at 3 and
+       3, so adding a row failed this check for being new rather than for being
+       wrong — and a census cannot catch the thing that actually matters, which
+       is a row title that stopped being a heading. Every `.row-title` in these
+       sections must be an h3, whatever the row count. */
+    const anyRowTitle = /class="row-title"/g;
+    const h3RowTitle = /<h3 class="row-title"[ >]/g;
+    const wellFormed = section => {
+      const all = (section.match(anyRowTitle) || []).length;
+      const headings = (section.match(h3RowTitle) || []).length;
+      return all > 0 && all === headings;
+    };
+    /* Each section still needs its own h2 above those h3s; Work carries two —
+       the roles and Education — which is why this counts rather than matches. */
+    return wellFormed(work) && wellFormed(projects) &&
+      (work.match(/<h2[ >]/g) || []).length >= 1 &&
+      (projects.match(/<h2[ >]/g) || []).length >= 1;
   })(),
-  'the three Work rows and three Project rows each need h3 titles beneath their section h2'
+  'every Work and Project row title must be an h3 beneath a section h2 — no row title may be demoted to a non-heading'
 );
 
 check(

@@ -8,13 +8,19 @@
  */
 import { expect, test } from '@playwright/test';
 
+import { CASE_STUDIES } from '../../content/case-studies.mjs';
 import { ms } from '../helpers/ci-timing.mjs';
 
-const CASES = [
-  { slug: 'daikieos', title: 'daikieOS — Personal Website 3.0', repo: 'Personal-Website-3.0' },
-  { slug: 'tokyo-data-globe', title: 'Tokyo Data Globe', repo: 'tokyo-data-globe' },
-  { slug: 'open-web-production', title: 'Open-Web Campaign Production', repo: null },
-];
+/* v3.5: DERIVED from the content source, not a copy of it. The hand-written
+   list here covered exactly the three studies that existed when it was written,
+   so the two added on 2026-07-29 would have shipped with no test at all and
+   nothing would have failed — the same blind spot the font scan list had. A
+   study that exists is now a study that is tested, by construction. */
+const CASES = CASE_STUDIES.map(study => ({
+  slug: study.slug,
+  title: study.title,
+  repo: study.repository ? study.repository.split('/').pop() : null,
+}));
 
 test('the home page links to case studies, not to a bare profile URL', async ({ page }) => {
   await page.addInitScript(() => {

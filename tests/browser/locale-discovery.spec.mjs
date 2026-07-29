@@ -1,6 +1,8 @@
 /* Package C — crawlable Japanese page and discovery surface. */
 import { expect, test } from '@playwright/test';
 
+import { CASE_STUDIES } from '../../content/case-studies.mjs';
+
 test('the Japanese page is a real page, not a client-side text swap', async ({ browser }) => {
   /* JavaScript disabled: the whole point of a static locale page is that its
      meaning does not depend on a runtime toggle. */
@@ -100,9 +102,25 @@ test('structured data describes the person and the site with stable identity', a
   expect(person.sameAs?.length, 'sameAs should link verifiable profiles').toBeGreaterThan(1);
   expect(website?.publisher?.['@id'], 'WebSite must reference the Person by @id').toBe(person['@id']);
 
-  /* Every code node must point at a repository that the case studies also cite. */
-  for (const code of nodes.filter(n => n['@type'] === 'SoftwareSourceCode')) {
-    expect(code.codeRepository).toMatch(/^https:\/\/github\.com\/Ishinuki-Moncion\//);
+  /* The rule is "never cite a repository we do not have", not "every node cites
+     one". Two case studies describe private work and correctly carry no link;
+     requiring codeRepository everywhere would have forced either a broken URL
+     or a link to a repository that must stay private. So: a cited repository
+     must be the owner's, and the JSON-LD must agree with the case-study content
+     about which studies have one at all — the failure that actually matters is
+     the two disagreeing. */
+  const codeNodes = nodes.filter(n => n['@type'] === 'SoftwareSourceCode');
+  expect(codeNodes.length, 'the site should describe its own work').toBeGreaterThan(0);
+  for (const code of codeNodes) {
     expect(code.author['@id']).toBe(person['@id']);
+    if (code.codeRepository !== undefined) {
+      expect(code.codeRepository).toMatch(/^https:\/\/github\.com\/Ishinuki-Moncion\//);
+    }
+    const study = CASE_STUDIES.find(s => code.url?.includes(`/case/${s.slug}/`));
+    expect(study, `JSON-LD node ${code.name} matches no case study`).toBeTruthy();
+    expect(
+      code.codeRepository ?? null,
+      `${study.slug}: structured data and case-study content disagree about the repository`
+    ).toBe(study.repository ?? null);
   }
 });

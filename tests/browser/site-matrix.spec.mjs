@@ -373,7 +373,12 @@ test('JavaScript-disabled page exposes static navigation content and gallery nam
   try {
     await page.goto('/', { waitUntil: 'networkidle' });
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Ishinuki Daikie');
-    await expect(page.locator('#work h3')).toHaveCount(3);
+    /* Property, not census: every Work row must carry its title as a heading in
+       static HTML with scripting off. Pinning the number instead meant adding a
+       role or a qualification failed this for being new rather than wrong. */
+    const workRows = await page.locator('#work .row').count();
+    expect(workRows).toBeGreaterThan(0);
+    await expect(page.locator('#work h3.row-title')).toHaveCount(workRows);
     await expect(page.locator('.gallery-grid .shot')).toHaveCount(12);
     await expect(page.locator('.gallery-grid .shot').first()).toHaveAccessibleName(/NAGANO/);
     await expect(page.locator('.gallery-grid .shot').last()).toHaveAccessibleName(/OKINAWA/);

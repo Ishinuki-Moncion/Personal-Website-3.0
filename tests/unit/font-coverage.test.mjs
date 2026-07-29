@@ -14,12 +14,12 @@
  */
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
-import { collectCodepoints, FACES } from '../../tools/build-fonts.mjs';
+import { collectCodepoints, FACES, SCAN_FILES } from '../../tools/build-fonts.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const manifest = JSON.parse(readFileSync(join(ROOT, 'fonts/jp-subset-manifest.json'), 'utf8'));
@@ -33,6 +33,26 @@ const needsJapaneseFace = cp =>
   (cp >= 0xf900 && cp <= 0xfaff) ||   // CJK compatibility ideographs
   (cp >= 0xff01 && cp <= 0xff60) ||   // fullwidth forms
   (cp >= 0xffe0 && cp <= 0xffe6);
+
+/* SCAN_FILES is deliberately explicit rather than globbed, so the subset input
+   stays deterministic. The cost of that choice is a blind spot: a case study
+   added without touching the list is simply never scanned, and the coverage
+   test below cannot notice because it reads the SAME list — both would agree,
+   and both would be wrong. This is what makes the omission detectable.
+   It bit for real: the two studies added 2026-07-29 generated their pages, and
+   the subsets were rebuilt without either of them. */
+test('the font scan list covers every case study that actually exists', () => {
+  const onDisk = readdirSync(join(ROOT, 'case'), { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => `case/${entry.name}/index.html`)
+    .sort();
+  const scanned = SCAN_FILES.filter(file => file.startsWith('case/')).sort();
+  assert.deepEqual(
+    scanned,
+    onDisk,
+    'a case study exists that tools/build-fonts.mjs never scans — its Japanese text would fall back to a system face with nothing failing'
+  );
+});
 
 test('every Japanese codepoint on the committed pages is in the shipped subsets', () => {
   const { codepoints, scanned } = collectCodepoints(ROOT);

@@ -90,6 +90,14 @@ test('gallery and work controls are semantically complete before app initializat
   await page.route('**/js/app.js*', route => route.abort());
   await page.goto('/');
   await expect(page.locator('.gallery-grid .shot').first()).toHaveAttribute('aria-label', /NAGANO/);
-  await expect(page.locator('#work h3')).toHaveCount(3);
-  await expect(page.locator('#projects h3')).toHaveCount(3);
+  /* Assert the property, not a census. These were pinned at 3 and 3, so adding
+     a role, a qualification or a case study failed them for being new rather
+     than for being wrong — and a count cannot catch what actually matters here,
+     which is a row whose title never became a heading. Every row in both
+     sections must carry an h3 title in static HTML, before app.js runs. */
+  for (const section of ['#work', '#projects']) {
+    const rows = await page.locator(`${section} .row`).count();
+    expect(rows, `${section} should have rows`).toBeGreaterThan(0);
+    await expect(page.locator(`${section} h3.row-title`)).toHaveCount(rows);
+  }
 });

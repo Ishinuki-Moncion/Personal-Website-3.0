@@ -13,6 +13,18 @@
  * figures, team sizes, and any claim about work done under NDA. The SeenThis
  * entry carries NO repository link — the related tooling repositories are
  * private and describe production internals.
+ *
+ * TWO ENTRIES DESCRIBE PRIVATE REPOSITORIES (added 2026-07-29, owner-approved).
+ * Neither carries a link, and neither may ever acquire one while the source is
+ * private. They are written from the parts their own NOTICE licenses to the
+ * author — © 2026 Daikie Ishinuki, MIT: the plugin, its scripts and parity
+ * checks, the setup, the tests and the specs. That NOTICE explicitly excludes,
+ * and forbids copying into any public or client-facing artifact: extracted
+ * client brand systems, templates, shipped or shipped-adjacent creative, the
+ * vendored production kit and gallery corpus, and real campaign or brand names.
+ * None of it appears here. Neither do colleague names, internal repository or
+ * skill names, or any per-client finding. What is described is the shape of the
+ * engineering, which is the author's own work to describe.
  */
 
 export const PROFILE = {
@@ -192,6 +204,118 @@ export const CASE_STUDIES = [
         body: [
           'At one campaign the interesting question is the creative. At a hundred it is the process: what is genuinely per-campaign, what is the same every time, and what only looks the same until it fails.',
           'That pressure is what pushed me toward building tooling for the repetitive parts, and toward the view that a production pipeline should make the correct result the easy one rather than relying on care at every step.',
+        ],
+      },
+    ],
+  },
+
+  {
+    slug: 'night-shift-studio',
+    index: '04',
+    title: 'Night-Shift Studio',
+    kicker: 'Engineering case study — internal tooling',
+    year: '2026',
+    summary:
+      'An unattended overnight production pipeline: hand over the order at night, and by morning there is a board of checked creative directions and an honest account of what could not be verified.',
+    description:
+      'Designing an agent pipeline to run unattended overnight — a generated second edition kept honest by a parity check, a permission model built so an unsupervised run cannot stall, and a system-wide rule that nothing it operates on is ever published, sent or deleted.',
+    stack: ['Python', 'Claude Code plugin', 'pytest', 'Bash'],
+    role: 'Sole author of the original work.',
+    /* No repository link, and none may be added: the source is private, and its
+       NOTICE forbids copying the excluded client material into any public
+       artifact. Everything below is drawn from the MIT-licensed original work. */
+    evidence:
+      'The source is private and stays private, because it carries extracted client brand systems and shipped creative that are not mine to license. What I can describe is my own work inside it — the plugin, its scripts and parity checks, the tests and the design records — so this entry is about engineering decisions rather than about anything produced with them. No client, brand, campaign or colleague appears here, and no figure is claimed.',
+    sections: [
+      {
+        heading: 'Context',
+        body: [
+          'Campaign production at volume splits into three kinds of work: the part that is genuinely creative, the part that is identical every time, and the part that only looks identical until it quietly fails. The third kind is what costs evenings.',
+          'This system takes the order that arrives in the morning and runs the mechanical part of it overnight, unattended. The result waiting the next day is a board of checked directions together with a report of what it could not confirm — because a pipeline that hides its uncertainty is worse than one that does nothing.',
+        ],
+      },
+      {
+        heading: 'The interesting problem was two editions, not one',
+        body: [
+          'The system needs to run in two situations: on a machine with full access to its upstream dependencies, and on a machine with none. The obvious answer is to keep a second copy with those dependencies vendored in.',
+          'That answer had already failed three times. Two hand-maintained trees with overlapping content drifted every time: a stale registry of skills, a dependency frozen at an old pin, and a template fix that landed in one tree and never reached the other. Each was silent, and each was found late.',
+          'So the second edition is not maintained — it is generated from the first by a build script, never hand-edited, and a parity check asserts the two still agree. The failure mode changed from "someone forgets" to "the check fails", which is the only version of this problem I know how to keep solved. One of the tests exists purely to stop stray files drifting into the generated tree.',
+        ],
+      },
+      {
+        heading: 'Designing for nobody being there',
+        body: [
+          'Unattended is a specific engineering constraint, not just a schedule. An agent that pauses for a confirmation at two in the morning has not run; it has waited. So installation registers a permission allowlist ahead of time, precisely so the overnight run reaches the end without a prompt it cannot answer.',
+          'The same reasoning applies to missing dependencies. One upstream is required and the run aborts naming it; another is optional, and its absence degrades the run rather than stopping it — but the report says so explicitly. Setup verifies the machine and reports ready, partially ready, or needs attention, rather than claiming success and failing later.',
+        ],
+      },
+      {
+        heading: 'Nothing publishes',
+        body: [
+          'The strongest constraint in the system is a negative one: no component publishes to the CMS, sends a message, or deletes anything it did not create. It reads, it produces, it reports.',
+          'That rule is written down as outranking everything else — if something is found that violates it, fixing that comes before whatever else was in progress. Automation that runs while nobody is watching earns trust by the size of the blast radius it cannot reach, and the cheapest way to bound it is to never grant the capability in the first place.',
+        ],
+      },
+      {
+        heading: 'What is enforced by tests',
+        body: [
+          'The checks that matter are the ones about output being wrong in ways a person would not notice: a build over its weight budget, an asset that was modified when it should have been passed through untouched, and files appearing in the generated edition that were never in the source.',
+          'The documentation is tested too. Version references in the docs are asserted against the thing they describe, because the failure this project kept hitting was never a broken program — it was a true instruction that had quietly stopped being true.',
+        ],
+      },
+      {
+        heading: 'How it was built',
+        body: [
+          'Each stage began as a dated design record before any of it was written, and the records were kept as written rather than edited to match what shipped — including an audit that went back over completed work and a remediation plan produced after the first end-to-end run met reality.',
+          'Keeping superseded records intact matters more than it sounds. A document rewritten to agree with the present is no longer evidence of anything; the value of a dated record is precisely that it says what was believed at the time.',
+        ],
+      },
+    ],
+  },
+
+  {
+    slug: 'tokyo-apartment-hunt',
+    index: '05',
+    title: 'Tokyo Apartment Hunt',
+    kicker: 'Engineering case study — personal tool',
+    year: '2026',
+    summary:
+      'A self-running apartment search that does the looking on a schedule and reduces the human job to two things: adjust the criteria, and read the results.',
+    description:
+      'A scheduled personal search pipeline with a bilingual, server-rendered interface that runs only on the machine that owns it — no hosted service, no account, and a local server that shuts itself down when the last tab closes.',
+    stack: ['Python', 'Server-rendered HTML', 'Scheduled automation'],
+    role: 'Sole designer and engineer.',
+    /* Private repository — a personal search over third-party listing sites.
+       No link, and no listing, price, address or site name appears here. */
+    evidence:
+      'Built for my own apartment search in Tokyo. The repository is private and no listing data, price, address or source site is described here — what is worth writing down is the design, not the search.',
+    sections: [
+      {
+        heading: 'The problem is repetition, not searching',
+        body: [
+          'Looking for an apartment in Tokyo under a fixed budget, in specific wards, near specific stations, is not a hard search. It is the same search, run again every day, for weeks — and the cost is entirely in remembering to run it and in noticing what changed since yesterday.',
+          'So the design goal was to remove the human from the repetition without removing them from the decision: a scheduled run does the whole pipeline and produces a digest. Adjusting the criteria and looking at the results is the entire remaining job.',
+        ],
+      },
+      {
+        heading: 'A local tool, deliberately',
+        body: [
+          'This runs on one machine and serves one person. It is not a hosted service, there is no account, and no data leaves the laptop — which for a search tied to where somebody is about to live is the correct default rather than a limitation.',
+          'The front door is a double-clickable launcher that opens a browser page. The local server picks a free port if its default is already taken, and shuts itself down a few minutes after the last tab closes — never mid-run. Software that runs on your own machine should not need to be remembered about, or manually stopped.',
+        ],
+      },
+      {
+        heading: 'Bilingual, and rendered as one language',
+        body: [
+          'The interface is Japanese and English, and the choice persists. It is rendered server-side in the selected language and delivered as that language — rather than shipping both and toggling in the browser, or handing the page to a machine translator.',
+          'That matters for a housing search specifically. Japanese listing vocabulary is precise, and terms of the trade — deposit and key money, the guarantor arrangement, the stove type, the move-in window — do not survive being approximated. Where a term is a term, it stays in Japanese in both renderings.',
+        ],
+      },
+      {
+        heading: 'Comparing, and watching change',
+        body: [
+          'Results are a filterable table with a seen state, so a listing already dismissed stays dismissed on later runs. Favourites open into a side-by-side ledger grouped by what actually decides these choices: cost, commute and location, and the property itself — including the parts that are easy to miss until move-in.',
+          'Because every run is retained, the tool also shows its own history: how prices and availability have moved over time. A single run tells you what is on the market; the series tells you whether waiting is working, which is the question you actually have.',
         ],
       },
     ],

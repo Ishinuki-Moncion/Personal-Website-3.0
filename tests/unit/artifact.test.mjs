@@ -13,6 +13,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
+import { CASE_STUDIES } from '../../content/case-studies.mjs';
 import { ARTIFACT_DIRS, ARTIFACT_FILES, collectArtifact, collectOmitted } from '../../tools/build-artifact.mjs';
 import { isAllowedSitePath } from '../helpers/server-policy.mjs';
 
@@ -23,9 +24,9 @@ test('the artifact contains every page the site actually serves', () => {
   for (const required of [
     'index.html', '404.html', 'robots.txt', 'sitemap.xml', 'favicon.svg',
     'ja/index.html',
-    'case/daikieos/index.html',
-    'case/tokyo-data-globe/index.html',
-    'case/open-web-production/index.html',
+    /* Derived, so a new study cannot ship un-deployed: this listed exactly the
+       three that existed when it was written. */
+    ...CASE_STUDIES.map(study => `case/${study.slug}/index.html`),
   ]) {
     assert.ok(files.includes(required), `artifact is missing ${required}`);
   }

@@ -83,6 +83,16 @@
           "name": "Soka University"
         }
       ],
+      "alumniOf": [
+        {
+          "@type": "CollegeOrUniversity",
+          "name": "The University of Texas at Dallas"
+        },
+        {
+          "@type": "CollegeOrUniversity",
+          "name": "Soka University"
+        }
+      ],
       "knowsLanguage": [
         {
           "@type": "Language",
@@ -116,6 +126,26 @@
       "url": "https://ishinuki-moncion.github.io/Personal-Website-3.0/case/tokyo-data-globe/",
       "codeRepository": "https://github.com/Ishinuki-Moncion/tokyo-data-globe",
       "programmingLanguage": "JavaScript",
+      "author": {
+        "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/#person"
+      }
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/case/night-shift-studio/#work",
+      "name": "Night-Shift Studio",
+      "url": "https://ishinuki-moncion.github.io/Personal-Website-3.0/case/night-shift-studio/",
+      "programmingLanguage": "Python",
+      "author": {
+        "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/#person"
+      }
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/case/tokyo-apartment-hunt/#work",
+      "name": "Tokyo Apartment Hunt",
+      "url": "https://ishinuki-moncion.github.io/Personal-Website-3.0/case/tokyo-apartment-hunt/",
+      "programmingLanguage": "Python",
       "author": {
         "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/#person"
       }
@@ -314,6 +344,41 @@
         </article>
       </div>
       <div class="row-end-rule"></div>
+
+      <!-- Education lives inside Work / Experience rather than as a sixth
+           top-level section: promoting it would renumber Gallery, Projects and
+           Contact and the nav with them, for a block that reads naturally as
+           part of the same career column. Same row grammar as the roles above. -->
+      <h2 class="heading-xl" data-reveal data-en="Education" data-ja="学歴">Education</h2>
+      <div data-stagger>
+        <article class="row" data-reveal>
+          <div class="work-grid">
+            <div>
+              <div class="row-meta"><span class="row-date" data-en="Japan Studies" data-ja="日本研究">Japan Studies</span></div>
+              <h3 class="row-title" data-en="Post-Graduate Program" data-ja="大学院プログラム">Post-Graduate Program</h3>
+              <div class="row-sub" data-en="Soka University" data-ja="創価大学">Soka University</div>
+            </div>
+            <div>
+              <p class="row-desc" data-en="Completed after moving to Japan — the bridge between studying computer science in Texas and working as a producer in Tokyo." data-ja="来日後に修了。テキサスでのコンピュータサイエンスと、東京でのプロデューサー業をつなぐ道のりです。">Completed after moving to Japan — the bridge between studying computer science in Texas and working as a producer in Tokyo.</p>
+              <div class="tags"><span class="tag" data-en="Japan Studies" data-ja="日本研究">Japan Studies</span><span class="tag">JLPT N3</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="row" data-reveal>
+          <div class="work-grid">
+            <div>
+              <div class="row-meta"><span class="row-date" data-en="Computer Science" data-ja="コンピュータサイエンス">Computer Science</span></div>
+              <h3 class="row-title" data-en="The University of Texas at Dallas" data-ja="テキサス大学ダラス校">The University of Texas at Dallas</h3>
+              <div class="row-sub" data-en="Richardson, Texas" data-ja="リチャードソン, テキサス">Richardson, Texas</div>
+            </div>
+            <div>
+              <p class="row-desc" data-en="Studied computer science, and worked across the stack from there — React and Next.js on the front, Node and Express over PostgreSQL and REST APIs behind it." data-ja="コンピュータサイエンスを学び、そこからフルスタックへ。フロントは React と Next.js、背後は PostgreSQL と REST API 上の Node・Express。">Studied computer science, and worked across the stack from there — React and Next.js on the front, Node and Express over PostgreSQL and REST APIs behind it.</p>
+              <div class="tags"><span class="tag">Computer Science</span><span class="tag">React</span><span class="tag">Node</span><span class="tag">PostgreSQL</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="row-end-rule"></div>
     </div>
   </section>
 
@@ -378,6 +443,26 @@
               <p class="row-sub" data-en="Technical Producer at SeenThis Japan — building and converting advertising creative into open-web display formats inside strict weight budgets, across 100+ campaign lifecycles." data-ja="SeenThis Japan のテクニカルプロデューサーとして、厳しい容量制限のもとで広告クリエイティブをオープンウェブの表示フォーマットへ制作・変換。100件を超えるキャンペーンを担当。">Technical Producer at SeenThis Japan — building and converting advertising creative into open-web display formats inside strict weight budgets, across 100+ campaign lifecycles.</p>
             </div>
             <div class="proj-end"><span class="proj-tech">HTML · CSS · JavaScript</span><span class="proj-year">2025 — <span class="row-arrow" aria-hidden="true">→</span></span></div>
+          </div>
+        </a>
+        <a class="row" href="case/night-shift-studio/" data-reveal data-cursor="read →">
+          <div class="proj-grid">
+            <span class="proj-idx">04</span>
+            <div>
+              <h3 class="row-title">Night-Shift Studio</h3>
+              <p class="row-sub" data-en="An unattended overnight production pipeline: hand over the order at night, and by morning there is a board of checked directions and an honest account of what could not be verified." data-ja="夜間に無人で走る制作パイプライン。夜に依頼を渡せば、朝には検証済みの方向性が並び、確認できなかった点も正直に報告されます。">An unattended overnight production pipeline: hand over the order at night, and by morning there is a board of checked directions and an honest account of what could not be verified.</p>
+            </div>
+            <div class="proj-end"><span class="proj-tech">Python · Agent pipeline · pytest</span><span class="proj-year">2026 <span class="row-arrow" aria-hidden="true">→</span></span></div>
+          </div>
+        </a>
+        <a class="row" href="case/tokyo-apartment-hunt/" data-reveal data-cursor="read →">
+          <div class="proj-grid">
+            <span class="proj-idx">05</span>
+            <div>
+              <h3 class="row-title">Tokyo Apartment Hunt</h3>
+              <p class="row-sub" data-en="A self-running apartment search with a bilingual, server-rendered interface that runs only on the machine that owns it — no hosted service, and a local server that shuts itself down when the last tab closes." data-ja="自動で走る住まい探し。日英どちらでもサーバー側で描画される画面を持ち、動くのは自分の端末の中だけ。ホスティングは無く、最後のタブを閉じるとローカルサーバーは自ら停止します。">A self-running apartment search with a bilingual, server-rendered interface that runs only on the machine that owns it — no hosted service, and a local server that shuts itself down when the last tab closes.</p>
+            </div>
+            <div class="proj-end"><span class="proj-tech">Python · Server-rendered · Scheduled</span><span class="proj-year">2026 <span class="row-arrow" aria-hidden="true">→</span></span></div>
           </div>
         </a>
       </div>

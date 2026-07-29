@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Tokyo Apartment Hunt — Ishinuki Daikie</title>
+<meta name="description" content="A scheduled personal search pipeline with a bilingual, server-rendered interface that runs only on the machine that owns it — no hosted service, no account, and a local server that shuts itself down when the last tab closes." />
+<link rel="canonical" href="https://ishinuki-moncion.github.io/Personal-Website-3.0/case/tokyo-apartment-hunt/" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Tokyo Apartment Hunt" />
+<meta property="og:description" content="A scheduled personal search pipeline with a bilingual, server-rendered interface that runs only on the machine that owns it — no hosted service, no account, and a local server that shuts itself down when the last tab closes." />
+<meta property="og:url" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/case/tokyo-apartment-hunt/" />
+<meta property="og:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
+<meta property="og:image:alt" content="daikieOS — Ishinuki Daikie, developer and photographer, Tokyo" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Tokyo Apartment Hunt" />
+<meta name="twitter:description" content="A scheduled personal search pipeline with a bilingual, server-rendered interface that runs only on the machine that owns it — no hosted service, no account, and a local server that shuts itself down when the last tab closes." />
+<meta name="twitter:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
+<meta name="twitter:image:alt" content="daikieOS — Ishinuki Daikie, developer and photographer, Tokyo" />
+<link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="../../images/apple-touch-icon.png" />
+<link rel="stylesheet" href="../../css/site.css?v=3.34" />
+<link rel="stylesheet" href="../../css/case.css?v=1" />
+</head>
+<body class="packet-body">
+<a class="skip-link" href="#packet-main">Skip to content</a>
+
+<header class="packet-head">
+  <a class="packet-home" href="../../">← <span>Ishinuki Daikie</span></a>
+  <span class="packet-idx" translate="no">CASE_05</span>
+</header>
+
+<main class="packet" id="packet-main">
+  <article>
+    <p class="packet-kicker">Engineering case study — personal tool</p>
+    <h1>Tokyo Apartment Hunt</h1>
+    <p class="packet-summary">A self-running apartment search that does the looking on a schedule and reduces the human job to two things: adjust the criteria, and read the results.</p>
+
+    <dl class="packet-meta">
+      <div><dt>Period</dt><dd>2026</dd></div>
+      <div><dt>Role</dt><dd>Sole designer and engineer.</dd></div>
+      <div><dt>Stack</dt><dd>Python · Server-rendered HTML · Scheduled automation</dd></div>
+    </dl>
+
+
+
+    <aside class="packet-evidence">
+      <h2>Evidence boundary</h2>
+      <p>Built for my own apartment search in Tokyo. The repository is private and no listing data, price, address or source site is described here — what is worth writing down is the design, not the search.</p>
+    </aside>
+
+    <nav class="packet-contents" aria-label="Sections">
+      <h2>Contents</h2>
+      <ol>
+            <li><a href="#the-problem-is-repetition-not-searching">The problem is repetition, not searching</a></li>
+            <li><a href="#a-local-tool-deliberately">A local tool, deliberately</a></li>
+            <li><a href="#bilingual-and-rendered-as-one-language">Bilingual, and rendered as one language</a></li>
+            <li><a href="#comparing-and-watching-change">Comparing, and watching change</a></li>
+      </ol>
+    </nav>
+
+      <section class="packet-section" id="the-problem-is-repetition-not-searching">
+        <h2><a class="anchor" href="#the-problem-is-repetition-not-searching">The problem is repetition, not searching</a></h2>
+        <p>Looking for an apartment in Tokyo under a fixed budget, in specific wards, near specific stations, is not a hard search. It is the same search, run again every day, for weeks — and the cost is entirely in remembering to run it and in noticing what changed since yesterday.</p>
+        <p>So the design goal was to remove the human from the repetition without removing them from the decision: a scheduled run does the whole pipeline and produces a digest. Adjusting the criteria and looking at the results is the entire remaining job.</p>
+      </section>
+
+      <section class="packet-section" id="a-local-tool-deliberately">
+        <h2><a class="anchor" href="#a-local-tool-deliberately">A local tool, deliberately</a></h2>
+        <p>This runs on one machine and serves one person. It is not a hosted service, there is no account, and no data leaves the laptop — which for a search tied to where somebody is about to live is the correct default rather than a limitation.</p>
+        <p>The front door is a double-clickable launcher that opens a browser page. The local server picks a free port if its default is already taken, and shuts itself down a few minutes after the last tab closes — never mid-run. Software that runs on your own machine should not need to be remembered about, or manually stopped.</p>
+      </section>
+
+      <section class="packet-section" id="bilingual-and-rendered-as-one-language">
+        <h2><a class="anchor" href="#bilingual-and-rendered-as-one-language">Bilingual, and rendered as one language</a></h2>
+        <p>The interface is Japanese and English, and the choice persists. It is rendered server-side in the selected language and delivered as that language — rather than shipping both and toggling in the browser, or handing the page to a machine translator.</p>
+        <p>That matters for a housing search specifically. Japanese listing vocabulary is precise, and terms of the trade — deposit and key money, the guarantor arrangement, the stove type, the move-in window — do not survive being approximated. Where a term is a term, it stays in Japanese in both renderings.</p>
+      </section>
+
+      <section class="packet-section" id="comparing-and-watching-change">
+        <h2><a class="anchor" href="#comparing-and-watching-change">Comparing, and watching change</a></h2>
+        <p>Results are a filterable table with a seen state, so a listing already dismissed stays dismissed on later runs. Favourites open into a side-by-side ledger grouped by what actually decides these choices: cost, commute and location, and the property itself — including the parts that are easy to miss until move-in.</p>
+        <p>Because every run is retained, the tool also shows its own history: how prices and availability have moved over time. A single run tells you what is on the market; the series tells you whether waiting is working, which is the question you actually have.</p>
+      </section>
+  </article>
+
+  <p class="packet-foot">
+    <a href="../../#projects">← All case studies</a>
+    <a href="../../#contact">Start a conversation →</a>
+  </p>
+</main>
+</body>
+</html>
