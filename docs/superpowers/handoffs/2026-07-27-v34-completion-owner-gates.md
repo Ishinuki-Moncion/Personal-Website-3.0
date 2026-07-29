@@ -365,8 +365,8 @@ CI only, and possibly `workers: 1` already set. Re-run with
 
 ## 9. CI is green (2026-07-28) — and what it cost
 
-`origin/v34-completion` @ `13e2741`. Run 30364543607: **127 passed, 31 skipped,
-0 failed, 16m36s** (was 24m14s with 15 failures). `main` is still untouched at
+`origin/v34-completion` @ `2a6c84b`. Run 30418164023: **124 passed, 38 skipped,
+0 failed, 15m39s** (was 24m14s with 15 failures). `main` is still untouched at
 `562b0a3`; Pages serves `main`, so **nothing is live**.
 
 The §8 note called the failures "an uncalibrated harness". Reading the traces
@@ -420,27 +420,53 @@ This matters: a WebKit-specific defect has shipped from this repo before (the
 premultiplied-alpha clamp, v3.3h). That class of bug is now caught only by the
 local `npm run qa:browser`, which runs both engines in full.
 
-### OPEN — an owner decision, deliberately not taken under time pressure
+### CLOSED (2026-07-29): the desktop rescue is the watchdog
 
-**The GPU probe never runs on desktop.** `js/gpu-probe.mjs:56` returns null for
-any non-coarse pointer, so `classifyTier` has never had a measurement to read
-there and a desktop that measurably cannot render still gets the full scene —
-it does not degrade, it freezes (17s unresponsive at one click on the runner).
-Software rasterisation on a desktop is not exotic: VMs, remote desktops and
-stale drivers all land there.
+Owner chose the watchdog over a boot-time probe. Probing desktop would have put
+~200ms of GPU work on a critical path whose LCP is already over its 2500ms gate
+at ~2700ms, to answer a question the render loop answers for free seconds later.
 
-The owner approved extending the measurement to desktop. I did not wire it,
-because both routes carry a real cost that should be chosen, not slipped in:
+- `DEMOTE_BELOW_FPS = { 'mobile-rich': 45, high: 20 }`. Two questions, two bars:
+  mobile-rich is a promotion the device earned, so 45 means it did not deserve
+  it; 'high' carries the locked art direction, so 20 sustained for four seconds
+  means the page is not working, not that it dipped during a scroll. A tier
+  absent from the map is not watched at all, which is how 'lite' and 'reduced'
+  stay out of it without the render loop testing a tier name.
+- The verdict persists. `gpu-probe` reads the session cache on every pointer
+  type — one sessionStorage hit, no GPU work — while the MEASUREMENT stays
+  coarse-only, so a demoted desktop starts its next load lite. Only a `demoted`
+  verdict counts, and only a real boolean: a phone-tier cached 'lite' says
+  nothing about a desktop.
+- Cost of the choice, stated: the rescue lands after four seconds rather than
+  before the first frame. A desktop that cannot render still gets one bad
+  window before it is helped.
 
-1. Run the probe on the desktop critical path — ~200ms, against a desktop LCP
-   already over its 2500ms gate at ~2700ms.
-2. Let the existing sustained-FPS watchdog demote `'high'` as it already demotes
-   `'mobile-rich'` — free at boot, but rescues only after four seconds.
+**It uncovered the same bug a second time.** `maxGapSeconds` was 1s, and the new
+test failed on Chromium while passing on WebKit. Measured cause: Chromium
+presents this scene at 1.3fps locally — 770ms frames — so samples straddled the
+1s gap and restarted the window almost every time. It could never be rescued,
+while a 48fps machine was rescued in four seconds. That is exactly the defect
+the delta clamp had, re-created at a milder threshold: a rule meant to reject
+suspensions instead penalised the devices that most need rescuing. The gap is
+now 3s, above the slowest real frame. The floor this leaves — below ~0.33fps the
+window never accumulates — is asserted as a known boundary rather than left to
+be found later.
 
-`INCAPABLE_PROBE_REASONS` and `DESKTOP_LITE_THRESHOLD_MS = 60` are in place and
-unit-tested, and `smoke.spec.mjs` prints what each machine measured so the
-constant cannot rot. Recommendation: option 2, plus option 1 behind a later
-LCP pass.
+My first regression test for it used uniform intervals, so it passed at 1.3fps
+under BOTH thresholds and guarded nothing. The discrimination probe caught that;
+the test now fails outright if the gap narrows again.
+
+### The WebKit-lightbox class, now closed
+
+The class is WebKit + CI + opening the lightbox over a LIVE scene. Members are
+skipped there with the reason recorded: mobile-baseline (2), site-matrix (9
+matrix viewports + swipe + repeated nav), overlay-inert (2). Two tests that
+looked like members were NOT — visual-regressions polled for decode then sampled
+layout once, a latent race in the tests that would have bitten a slow local run
+too; they now poll the measurement and keep running everywhere. The lightbox
+tests that never fail there are the ones missing the combination:
+progressive-enhancement aborts background.js, lightbox-resilience stubs the
+transition to be synchronous.
 
 ### Still open from before
 Photo labels (12), Japanese wording approval, iPhone calibration,
