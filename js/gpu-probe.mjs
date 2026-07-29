@@ -1,4 +1,4 @@
-import { RICH_THRESHOLD_MS } from './quality-policy.mjs?v=4';
+import { RICH_THRESHOLD_MS } from './quality-policy.mjs?v=5';
 
 const CACHE_KEY = 'v34.tierProbe';
 const FRAMES = 10;
@@ -53,9 +53,16 @@ const FRAGMENT_BLUR = `#version 300 es
 
 export async function resolveTier(env = browserEnv()) {
   if (env.reduced()) return null;
-  if (!env.coarse()) return null;
   const forced = env.forced();
   if (forced) return { tier: forced === 'rich' ? 'mobile-rich' : 'lite', score: null, forced: true, reason: 'forced', cleaned: true };
+  /* v3.4h: the CACHE is read on every pointer type; only the MEASUREMENT below
+     is coarse-only. Reading costs one sessionStorage hit and no GPU work,
+     whereas probing a desktop would put ~200ms on a critical path whose LCP is
+     already over budget — so this is how a desktop demoted by the sustained-FPS
+     watchdog starts its next load already lite, instead of spending four more
+     seconds rediscovering that it cannot render. `demoted` is carried through
+     because it is the only verdict a desktop is allowed to act on: a plain
+     cached 'lite' from a phone-tier measurement says nothing about a desktop. */
   const cached = env.cacheRead(CACHE_KEY);
   if (cached?.tier === 'mobile-rich' || cached?.tier === 'lite') {
     return {
@@ -63,9 +70,11 @@ export async function resolveTier(env = browserEnv()) {
       score: Number.isFinite(cached.score) ? cached.score : null,
       forced: false,
       reason: 'cache',
+      demoted: cached.demoted === true,
       cleaned: true
     };
   }
+  if (!env.coarse()) return null;
   let result;
   try { result = await runProbe(env); }
   catch { result = { tier: 'lite', score: null, forced: false, reason: 'error', cleaned: true }; }

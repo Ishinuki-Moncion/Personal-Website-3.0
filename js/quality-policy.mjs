@@ -14,7 +14,22 @@ export const INCAPABLE_PROBE_REASONS = ['no-webgl2', 'error', 'budget'];
    the full scene will not merely be slow there, it will stop the page. */
 export const DESKTOP_LITE_THRESHOLD_MS = 60;
 
-export function classifyTier({ reduced, coarse, small, forced, probeTier, probeReason, score }) {
+/* The sustained-FPS watchdog answers two different questions, so it uses two
+   different bars.
+
+   'mobile-rich' is a PROMOTION a device earned by measurement. Falling below
+   45fps means it did not deserve it, and handing back the extra is cheap.
+
+   'high' is the desktop default and carries the locked art direction, so it is
+   demoted only when the page is not working at all — a far lower bar. 20fps
+   sustained for four seconds is not a dip during a heavy scroll; it is a
+   machine that cannot present this scene. Software rasterisation measured 3-7.
+
+   A tier absent from this map is never watched: 'lite' and 'reduced' are
+   already the floor, and there is nothing below them to demote to. */
+export const DEMOTE_BELOW_FPS = { 'mobile-rich': 45, high: 20 };
+
+export function classifyTier({ reduced, coarse, small, forced, probeTier, probeReason, probeDemoted, score }) {
   if (reduced) return 'reduced';
   if (coarse) {
     if (forced === 'rich') return 'mobile-rich';
@@ -39,22 +54,22 @@ export function classifyTier({ reduced, coarse, small, forced, probeTier, probeR
      desktops and stale drivers all land here.
 
      Measured, never identity: no UA, renderer string or deviceMemory (spec 3). */
-  /* KNOWN GAP, deliberately not closed here (2026-07-28). The owner approved
-     letting the measurement gate desktop, and these two constants encode what
-     that decision should read — but js/gpu-probe.mjs:56 returns null for any
-     non-coarse pointer, so no desktop ever HAS a probe result to read. Wiring
-     one up means running the probe on the desktop critical path, and it yields
-     across animation frames for ~200ms; desktop LCP is already over its 2500ms
-     gate at ~2700ms. Buying desktop tiering with more LCP is a trade the owner
-     should make deliberately, not one I should slip in while fixing CI.
+  /* Owner decision 2026-07-29: the desktop rescue is the sustained-FPS watchdog,
+     not a boot-time probe. Probing here would put ~200ms of GPU work on a
+     critical path whose LCP is already over its 2500ms gate at ~2700ms, to
+     answer a question the render loop answers for free a few seconds later.
 
-     The cheaper alternative — letting the existing sustained-FPS watchdog
-     demote 'high' as it already demotes 'mobile-rich' — costs nothing at boot
-     and needs no probe, but it rescues a struggling desktop only after four
-     seconds rather than before the first frame.
+     So `probeDemoted` is how a desktop reaches 'lite': the watchdog demotes the
+     live session (see DEMOTE_BELOW_FPS) and persists that verdict, and the next
+     load in the session starts lite instead of spending four more seconds
+     discovering the same thing. It is a MEASUREMENT of this machine running
+     this page — the same class of evidence as the probe, taken later and for
+     nothing.
 
-     Until then desktop keeps the locked profile unless explicitly overridden,
-     which is exactly the behaviour that shipped before this branch. */
+     The reason/score arms below stay because a desktop CAN carry a probe
+     verdict: `?tier=` forcing, and a cached result from a hybrid device that
+     reported a coarse pointer earlier in the session. Both are cheap reads. */
+  if (probeDemoted) return 'lite';
   return INCAPABLE_PROBE_REASONS.includes(probeReason) ||
     (Number.isFinite(score) && score > DESKTOP_LITE_THRESHOLD_MS)
     ? 'lite'
@@ -91,7 +106,17 @@ export function estimatePostFxBytes({ width, height, dpr, finalSamples, bloomSam
    seconds whatever the frame rate. It follows that reaching holdSeconds takes
    at least ceil(holdSeconds / maxGapSeconds) consecutive low samples, so no
    single frame can ever satisfy the rule on its own. */
-export function createFpsDemoter({ threshold = 45, holdSeconds = 4, maxGapSeconds = 1, onDemote }) {
+/* The gap that separates "the loop was not running" from "the loop is running
+   badly". Both look identical from a (fps, timestamp) pair, so this constant is
+   where the ambiguity is resolved, and it must sit ABOVE the slowest real frame:
+   set to 1s it re-created the very defect the clamp had — a desktop measured at
+   1.3fps (770ms frames) restarted its window on almost every sample and could
+   never be rescued, while a machine at 48fps was rescued in four seconds.
+   Three seconds is longer than any frame a browser still presenting will take,
+   and shorter than a suspension worth discounting. The honest limit: a device
+   below ~0.33fps never accumulates a window at all — it is beyond what changing
+   tier would rescue, and pretending otherwise would just re-open the A2 hole. */
+export function createFpsDemoter({ threshold = 45, holdSeconds = 4, maxGapSeconds = 3, onDemote }) {
   let lowSince = null;
   let lastSample = null;
   let lowSeconds = 0;

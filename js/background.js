@@ -1,4 +1,4 @@
-import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-policy.mjs?v=4';
+import { classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes } from './quality-policy.mjs?v=5';
 
 /* Immersive scene: TOKYO DATA-GLOBE — a particle Earth whose points exist only
    where land exists, a pulsing amber Tokyo node with live coordinates, and a
@@ -32,6 +32,7 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
     forced: query.get('tier'),
     probeTier: tierProbe?.tier,
     probeReason: tierProbe?.reason,
+    probeDemoted: tierProbe?.demoted === true,
     score: probeScore,
   });
   const profiles = {
@@ -2584,7 +2585,11 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
     renderer.render(scene, camera);              // reduced/lite/budget-breach/demoted: direct path
   }
 
+  /* undefined for 'lite' and 'reduced' — already the floor, nothing to demote
+     to, so they are not watched at all. See DEMOTE_BELOW_FPS. */
+  const demoteBelowFps = DEMOTE_BELOW_FPS[quality.name];
   const demoter = createFpsDemoter({
+    threshold: demoteBelowFps,
     onDemote: () => {
       demotionCount++;
       demoted = true;
@@ -2650,7 +2655,7 @@ import { classifyTier, createFpsDemoter, estimatePostFxBytes } from './quality-p
     const elapsed = Math.max(0, (now - last) / 1000); last = now;
     const dt = Math.min(elapsed, 0.033);
     if (elapsed > 0) fpsEMA += (Math.min(1 / elapsed, 120) - fpsEMA) * 0.04;   // QA gate reads this
-    if (quality.name === 'mobile-rich' && (query.get('tier') !== 'rich' || injectedFps !== null)) {
+    if (demoteBelowFps !== undefined && (query.get('tier') !== 'rich' || injectedFps !== null)) {
       /* v3.4h: hand the demoter the CLOCK, not a delta. Resetting `last` on
          webglcontextrestored was only half the v3.4b fix — that reset lives
          inside `if (!running)`, so any resume path where `running` is still

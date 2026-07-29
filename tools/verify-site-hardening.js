@@ -245,7 +245,11 @@ const allowedQualityNameSites = [
   "quality.name !== 'mobile-rich' || postFxBytesFor(width, height, pixelRatio) <= POSTFX_BUDGET_BYTES;",
   "if (globeFilled < GLOBE_N) console.warn('[scene] land particle sample underfilled', { quality: quality.name, globeFilled, expected: GLOBE_N });",
   'quality: quality.name,',
-  "if (quality.name === 'mobile-rich' && (query.get('tier') !== 'rich' || injectedFps !== null)) {",
+  /* v3.4h: the watchdog is no longer keyed to a tier NAME at its call site. It
+     reads its bar from DEMOTE_BELOW_FPS, so adding or removing a watched tier
+     is a change to that map rather than to the render loop, and a tier absent
+     from it is not watched at all. */
+  'const demoteBelowFps = DEMOTE_BELOW_FPS[quality.name];',
 ];
 check(
   'v3.4 Task 5 deferred audit: LITE and quality.name executable sites are allowlisted',
@@ -260,7 +264,7 @@ check(
     /* The cache token deliberately is NOT pinned here — tests/unit/cache-versions.test.mjs
        owns which version is current, and duplicating it made every legitimate
        cache bump fail a check about module shape. This asserts the shape. */
-    /import \{ classifyTier, createFpsDemoter, estimatePostFxBytes \} from '\.\/quality-policy\.mjs\?v=\d+'/.test(background) &&
+    /import \{ classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes \} from '\.\/quality-policy\.mjs\?v=\d+'/.test(background) &&
     /const LITE = coarse \|\| small/.test(background) &&
     /const tier = classifyTier\(\{[\s\S]*probeTier: tierProbe\?\.tier,[\s\S]*score: probeScore/.test(background) &&
     background.indexOf('const RIVULET_GATE = true') < background.indexOf('const profiles = {') &&
@@ -339,8 +343,13 @@ check(
        delta closed the hole but silently made the rule a frame COUNT, so a
        runner rendering 14 frames in 4.3s never demoted at all. The absolute
        timestamp is the invariant — the window logic belongs to the demoter. */
-    /if \(quality\.name === 'mobile-rich' && \(query\.get\('tier'\) !== 'rich' \|\| injectedFps !== null\)\) \{[\s\S]*demoter\.sample\(injectedFps \?\? fpsEMA, now \/ 1000\)/.test(background) &&
+    /if \(demoteBelowFps !== undefined && \(query\.get\('tier'\) !== 'rich' \|\| injectedFps !== null\)\) \{[\s\S]*demoter\.sample\(injectedFps \?\? fpsEMA, now \/ 1000\)/.test(background) &&
     !/demoter\.sample\([^)]*elapsed/.test(background) &&
+    /* v3.4h: the bar is owned by the policy map, so the render loop cannot
+       quietly acquire a hardcoded one — and 'lite'/'reduced' stay unwatched
+       because they are absent from it, not because of a name test here. */
+    /threshold: demoteBelowFps,/.test(background) &&
+    !/createFpsDemoter\(\{\s*threshold: \d/.test(background) &&
     /if \(sceneDebug\) \{\s*window\.__sceneTest = \{[\s\S]*setFps\(value\)/.test(background) &&
     (background.match(/window\.__sceneTest/g) || []).length === 1 &&
     /Math\.min\(window\.devicePixelRatio \|\| 1, effectiveDprCap\)/.test(background) &&

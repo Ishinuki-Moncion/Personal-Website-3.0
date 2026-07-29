@@ -4,6 +4,7 @@ import {
   classifyTier,
   createFpsDemoter,
   estimatePostFxBytes,
+  DEMOTE_BELOW_FPS,
   DESKTOP_LITE_THRESHOLD_MS,
   INCAPABLE_PROBE_REASONS,
   RICH_THRESHOLD_MS
@@ -48,6 +49,32 @@ test('desktop keeps the locked profile unless the probe could not complete', () 
     );
   }
   assert.deepEqual(INCAPABLE_PROBE_REASONS, ['no-webgl2', 'error', 'budget']);
+});
+
+/* The desktop rescue is the watchdog, not a boot-time probe: the live session is
+   demoted after four sustained seconds, and the verdict persists so the next
+   load starts lite instead of spending four more seconds rediscovering it. */
+test('a desktop demoted by the watchdog starts its next load lite', () => {
+  const desktop = { reduced: false, coarse: false, small: false, forced: null };
+  assert.equal(classifyTier({ ...desktop, probeTier: 'lite', probeReason: 'cache', probeDemoted: true }), 'lite');
+  /* Only a demotion counts. A plain cached 'lite' — a phone-tier measurement
+     from a hybrid device that reported a coarse pointer earlier in the session
+     — says nothing about this machine as a desktop. */
+  assert.equal(classifyTier({ ...desktop, probeTier: 'lite', probeReason: 'cache', probeDemoted: false, score: 7.5 }), 'high');
+  /* And a demoted desktop cannot be talked back up by a fast score. */
+  assert.equal(classifyTier({ ...desktop, probeReason: 'measured', probeDemoted: true, score: 1 }), 'lite');
+});
+
+test('the watchdog bar is far lower for the locked desktop profile than for an earned promotion', () => {
+  assert.deepEqual(DEMOTE_BELOW_FPS, { 'mobile-rich': 45, high: 20 });
+  /* 'lite' and 'reduced' are the floor: nothing below to demote to, so they are
+     not watched at all, and background.js keys the whole watchdog off this. */
+  assert.equal(DEMOTE_BELOW_FPS.lite, undefined);
+  assert.equal(DEMOTE_BELOW_FPS.reduced, undefined);
+  assert.ok(
+    DEMOTE_BELOW_FPS.high < DEMOTE_BELOW_FPS['mobile-rich'],
+    'demoting the locked art direction must need worse evidence than surrendering a promotion'
+  );
 });
 
 test('the desktop override is reachable by explicit request for local verification', () => {
@@ -106,7 +133,7 @@ test('demoter fires once after four sustained low-fps seconds and resets on reco
    pressure — permanently demoted any device for the session. */
 test('an interval too long to be a frame restarts the window instead of filling it', () => {
   let calls = 0;
-  const d = createFpsDemoter({ threshold: 45, holdSeconds: 4, maxGapSeconds: 1, onDemote: () => calls++ });
+  const d = createFpsDemoter({ threshold: 45, holdSeconds: 4, onDemote: () => calls++ });
   run(d, 30, 0, 3.5, 0.1);                 // already a long low streak...
   d.sample(30, 13.5);                      // ...then a 10s gap: the loop was not running
   assert.equal(calls, 0, 'a suspension must contribute nothing, even mid-streak');
@@ -115,6 +142,43 @@ test('an interval too long to be a frame restarts the window instead of filling 
   assert.equal(calls, 0);
   run(d, 30, 17.5, 17.6, 0.1);
   assert.equal(calls, 1, 'the window must still close on genuinely sustained low FPS');
+});
+
+/* The gap threshold must clear the slowest REAL frame, or it re-creates the
+   defect it replaced. Measured: a desktop presenting this scene at 1.3fps —
+   770ms between frames — restarted its window on almost every sample under a
+   1s gap and could never be rescued, while a 48fps machine was rescued in four
+   seconds. Slower device, later rescue: exactly backwards, again. */
+function rescuedAt(fps, options = {}) {
+  let at = null;
+  let last = null;
+  const d = createFpsDemoter({ threshold: 45, holdSeconds: 4, ...options, onDemote: () => { at = last; } });
+  for (let frame = 0; frame <= Math.ceil(20 * fps); frame++) { last = frame / fps; d.sample(10, last); }
+  return at;
+}
+
+test('a device rendering seconds per frame is still rescued', () => {
+  /* 0.5fps means two-second frames. These rates are the whole point: they are
+     the ones a 1s gap threshold silently abandoned, and they must be inside the
+     rule, not outside it. */
+  for (const fps of [0.5, 0.8, 1.3, 2, 5, 30]) {
+    const at = rescuedAt(fps);
+    assert.ok(at !== null, `${fps}fps was never rescued`);
+    assert.ok(at <= 4 + 2 / fps, `${fps}fps was rescued at ${at}s, later than the four-second rule allows`);
+  }
+  /* And the discrimination that matters: the previous 1s threshold fails these
+     outright, so this test cannot pass by accident if the constant regresses. */
+  assert.equal(rescuedAt(0.5, { maxGapSeconds: 1 }), null);
+  assert.equal(rescuedAt(0.8, { maxGapSeconds: 1 }), null);
+});
+
+/* Stated as a boundary rather than hidden: below one frame per maxGapSeconds
+   every sample restarts the window, so the watchdog stops firing. That is the
+   unavoidable cost of using the same signal to reject suspensions, and such a
+   device is past what a tier change would rescue. */
+test('the rescue has a documented floor at one frame per gap threshold', () => {
+  assert.ok(rescuedAt(1 / 3 + 0.05) !== null, 'just inside the floor must still be rescued');
+  assert.equal(rescuedAt(1 / 3 - 0.05), null, 'past the floor the watchdog knowingly stops');
 });
 
 /* The regression this replaced: clamping each delta to 250ms made four seconds
@@ -392,20 +456,46 @@ test('partial target allocation failure deletes only already-created resources w
   assert.equal(snapshot.cacheWrites.length, 0);
 });
 
-test('reduced and fine-pointer paths return null without canvas, cache, or probe work', async () => {
-  let canvasCreates = 0;
+test('reduced motion resolves to null having read nothing at all', async () => {
+  assert.equal(await resolveTier({
+    reduced: () => true,
+    coarse: () => { throw new Error('coarse query must not run'); },
+    forced: () => { throw new Error('forced override must not be read'); },
+    cacheRead: () => { throw new Error('cache must not be read'); },
+    cacheWrite: () => { throw new Error('cache must not be written'); },
+    createCanvas: () => { throw new Error('canvas must not be created'); }
+  }), null);
+});
+
+/* v3.4h changed this contract deliberately. A fine pointer now reads the two
+   cheap sources — the URL override and the session cache — because that is how
+   a desktop demoted by the sustained-FPS watchdog starts its next load already
+   lite. What it must still never do is MEASURE: probing a desktop would put
+   ~200ms of GPU work on a critical path whose LCP is already over budget. */
+test('a fine pointer reads only the cheap sources and never measures', async () => {
   let cacheReads = 0;
   const common = {
-    forced: () => { throw new Error('forced override must not be read'); },
-    cacheRead: () => { cacheReads++; return null; },
-    cacheWrite: () => { throw new Error('cache must not be written'); },
-    createCanvas: () => { canvasCreates++; throw new Error('canvas must not be created'); }
+    reduced: () => false,
+    coarse: () => false,
+    forced: () => null,
+    cacheWrite: () => { throw new Error('a fine pointer must not write the cache'); },
+    createCanvas: () => { throw new Error('a fine pointer must never probe'); }
   };
 
-  assert.equal(await resolveTier({ ...common, reduced: () => true, coarse: () => { throw new Error('coarse query must not run'); } }), null);
-  assert.equal(await resolveTier({ ...common, reduced: () => false, coarse: () => false }), null);
-  assert.equal(canvasCreates, 0);
-  assert.equal(cacheReads, 0);
+  assert.equal(await resolveTier({ ...common, cacheRead: () => { cacheReads++; return null; } }), null);
+  assert.equal(cacheReads, 1, 'the cache must be consulted, since that is the whole point');
+
+  /* The verdict a desktop is allowed to act on. */
+  assert.deepEqual(
+    await resolveTier({ ...common, cacheRead: () => ({ tier: 'lite', score: null, demoted: true }) }),
+    { tier: 'lite', score: null, forced: false, reason: 'cache', demoted: true, cleaned: true }
+  );
+  /* And the one it is not: a phone-tier measurement says nothing about a
+     desktop, so it must not arrive carrying a demotion. */
+  assert.deepEqual(
+    await resolveTier({ ...common, cacheRead: () => ({ tier: 'lite', score: 7.5 }) }),
+    { tier: 'lite', score: 7.5, forced: false, reason: 'cache', demoted: false, cleaned: true }
+  );
 });
 
 test('forced and cached paths resolve without allocating WebGL resources', async () => {
@@ -429,7 +519,7 @@ test('forced and cached paths resolve without allocating WebGL resources', async
     cacheRead: () => ({ tier: 'lite', score: 7.5 }),
     createCanvas
   }), {
-    tier: 'lite', score: 7.5, forced: false, reason: 'cache', cleaned: true
+    tier: 'lite', score: 7.5, forced: false, reason: 'cache', demoted: false, cleaned: true
   });
   assert.equal(canvasCreates, 0);
 });
@@ -438,19 +528,30 @@ test('valid cache hits normalize stale scores and discard untrusted fields', asy
   const cases = [
     {
       cached: { tier: 'mobile-rich' },
-      expected: { tier: 'mobile-rich', score: null, forced: false, reason: 'cache', cleaned: true }
+      expected: { tier: 'mobile-rich', score: null, forced: false, reason: 'cache', demoted: false, cleaned: true }
     },
     {
       cached: { tier: 'lite', score: Number.POSITIVE_INFINITY },
-      expected: { tier: 'lite', score: null, forced: false, reason: 'cache', cleaned: true }
+      expected: { tier: 'lite', score: null, forced: false, reason: 'cache', demoted: false, cleaned: true }
     },
     {
       cached: { tier: 'lite', score: '4.2' },
-      expected: { tier: 'lite', score: null, forced: false, reason: 'cache', cleaned: true }
+      expected: { tier: 'lite', score: null, forced: false, reason: 'cache', demoted: false, cleaned: true }
     },
     {
       cached: { tier: 'mobile-rich', score: 3.75, admin: true, reason: 'forged', cleaned: false },
-      expected: { tier: 'mobile-rich', score: 3.75, forced: false, reason: 'cache', cleaned: true }
+      expected: { tier: 'mobile-rich', score: 3.75, forced: false, reason: 'cache', demoted: false, cleaned: true }
+    },
+    /* `demoted` is now read rather than discarded, so it has to be normalised
+       like the rest: only a real boolean true counts. A desktop drops the
+       locked art direction on this field, so a truthy string must not do it. */
+    {
+      cached: { tier: 'lite', score: null, demoted: 'yes' },
+      expected: { tier: 'lite', score: null, forced: false, reason: 'cache', demoted: false, cleaned: true }
+    },
+    {
+      cached: { tier: 'lite', score: null, demoted: true },
+      expected: { tier: 'lite', score: null, forced: false, reason: 'cache', demoted: true, cleaned: true }
     }
   ];
 
