@@ -51,5 +51,13 @@ export const NEEDS_REAL_GPU =
    seconds for a click is not evidence about the site. Both engines run the full
    suite locally, which is the ship gate, and WebKit keeps its ~75 other CI
    tests — the ones that do not depend on driving the live scene. */
+/* The boundary of this class, so it stops being discovered one flake at a time:
+   it is WebKit + CI + opening the lightbox over a LIVE scene. The lightbox tests
+   that stay green there are exactly the ones without that combination —
+   progressive-enhancement aborts background.js so there is no scene, and
+   lightbox-resilience stubs startViewTransition so the open is synchronous. The
+   expensive part is the real transition capturing a full-viewport WebGL canvas.
+   visual-regressions opens the lightbox over a live scene and has held so far;
+   it is the remaining member of this class and the next one likely to go. */
 export const WEBKIT_CANNOT_DRIVE_THIS_PAGE =
   'WebKit cannot rasterise this page fast enough on a GPU-less runner to answer interaction (Chromium passes the same tests there); both engines run it locally via `npm run qa:browser`';

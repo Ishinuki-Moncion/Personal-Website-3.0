@@ -32,7 +32,8 @@ for (const viewport of sizes) {
   });
 }
 
-test('lightbox inerts the document and restores focus to its activating shot', async ({ page }) => {
+test('lightbox inerts the document and restores focus to its activating shot', async ({ page, browserName }) => {
+  test.skip(SOFTWARE_RENDERER && browserName === 'webkit', WEBKIT_CANNOT_DRIVE_THIS_PAGE);
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto('/');
   await page.evaluate(() => sessionStorage.setItem('daikie-booted', '1'));
