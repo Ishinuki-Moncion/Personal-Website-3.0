@@ -76,21 +76,28 @@
       "alumniOf": [
         {
           "@type": "CollegeOrUniversity",
-          "name": "The University of Texas at Dallas"
+          "name": "The University of Texas at Dallas",
+          "address": { "@type": "PostalAddress", "addressLocality": "Richardson", "addressRegion": "TX", "addressCountry": "US" }
         },
         {
           "@type": "CollegeOrUniversity",
-          "name": "Soka University"
+          "name": "Soka University",
+          "address": { "@type": "PostalAddress", "addressLocality": "Tokyo", "addressCountry": "JP" }
         }
       ],
-      "alumniOf": [
+      "hasCredential": [
         {
-          "@type": "CollegeOrUniversity",
-          "name": "The University of Texas at Dallas"
+          "@type": "EducationalOccupationalCredential",
+          "credentialCategory": "degree",
+          "educationalLevel": "Bachelor of Science",
+          "name": "Bachelor of Science, Computer Science",
+          "recognizedBy": { "@type": "CollegeOrUniversity", "name": "The University of Texas at Dallas" }
         },
         {
-          "@type": "CollegeOrUniversity",
-          "name": "Soka University"
+          "@type": "EducationalOccupationalCredential",
+          "credentialCategory": "Post-Graduate Program",
+          "name": "Post-Graduate Program, Japan Studies",
+          "recognizedBy": { "@type": "CollegeOrUniversity", "name": "Soka University" }
         }
       ],
       "knowsLanguage": [
@@ -354,9 +361,9 @@
         <article class="row" data-reveal>
           <div class="work-grid">
             <div>
-              <div class="row-meta"><span class="row-date" data-en="Japan Studies" data-ja="日本研究">Japan Studies</span></div>
-              <h3 class="row-title" data-en="Post-Graduate Program" data-ja="大学院プログラム">Post-Graduate Program</h3>
-              <div class="row-sub" data-en="Soka University" data-ja="創価大学">Soka University</div>
+              <div class="row-meta"><span class="row-date" data-en="Graduated Jul 2024" data-ja="2024年7月 修了">Graduated Jul 2024</span></div>
+              <h3 class="row-title" data-en="Post-Graduate Program, Japan Studies" data-ja="大学院プログラム 日本研究">Post-Graduate Program, Japan Studies</h3>
+              <div class="row-sub" data-en="Soka University — Tokyo, Japan" data-ja="創価大学 — 東京, 日本">Soka University — Tokyo, Japan</div>
             </div>
             <div>
               <p class="row-desc" data-en="Completed after moving to Japan — the bridge between studying computer science in Texas and working as a producer in Tokyo." data-ja="来日後に修了。テキサスでのコンピュータサイエンスと、東京でのプロデューサー業をつなぐ道のりです。">Completed after moving to Japan — the bridge between studying computer science in Texas and working as a producer in Tokyo.</p>
@@ -367,9 +374,9 @@
         <article class="row" data-reveal>
           <div class="work-grid">
             <div>
-              <div class="row-meta"><span class="row-date" data-en="Computer Science" data-ja="コンピュータサイエンス">Computer Science</span></div>
-              <h3 class="row-title" data-en="The University of Texas at Dallas" data-ja="テキサス大学ダラス校">The University of Texas at Dallas</h3>
-              <div class="row-sub" data-en="Richardson, Texas" data-ja="リチャードソン, テキサス">Richardson, Texas</div>
+              <div class="row-meta"><span class="row-date" data-en="Graduated Dec 2022" data-ja="2022年12月 卒業">Graduated Dec 2022</span></div>
+              <h3 class="row-title" data-en="Bachelor of Science, Computer Science" data-ja="理学士 コンピュータサイエンス">Bachelor of Science, Computer Science</h3>
+              <div class="row-sub" data-en="The University of Texas at Dallas — Richardson, TX" data-ja="テキサス大学ダラス校 — リチャードソン, テキサス">The University of Texas at Dallas — Richardson, TX</div>
             </div>
             <div>
               <p class="row-desc" data-en="Studied computer science, and worked across the stack from there — React and Next.js on the front, Node and Express over PostgreSQL and REST APIs behind it." data-ja="コンピュータサイエンスを学び、そこからフルスタックへ。フロントは React と Next.js、背後は PostgreSQL と REST API 上の Node・Express。">Studied computer science, and worked across the stack from there — React and Next.js on the front, Node and Express over PostgreSQL and REST APIs behind it.</p>

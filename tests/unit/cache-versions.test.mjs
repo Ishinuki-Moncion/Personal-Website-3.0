@@ -7,6 +7,40 @@ const readSiteFile = relativePath => readFile(
   'utf8'
 );
 
+/* A duplicated key is valid to JSON.parse — the last one silently wins — so an
+   `alumniOf` block pasted twice parsed fine, validated fine, passed the browser
+   assertions that read the parsed object, and shipped. Nothing in the suite
+   could see it, because everything downstream reads the PARSED value. This
+   reads the raw text instead, which is the only place the duplicate exists. */
+test('structured data declares no key twice', async () => {
+  for (const page of ['index.html', 'ja/index.html']) {
+    const html = await readSiteFile(page);
+    const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(m => m[1]);
+    assert.ok(blocks.length > 0, `${page} should carry structured data`);
+    for (const [index, block] of blocks.entries()) {
+      JSON.parse(block);   // still has to be valid JSON
+      /* Walk the raw text, tracking one key-set per open object so that a key
+         repeated inside the SAME object is caught while the same key appearing
+         in sibling objects (every "@type", every "name") is not. */
+      const duplicates = [];
+      const openObjects = [];
+      for (const token of block.matchAll(/[{}]|"((?:\\.|[^"\\])*)"\s*:/g)) {
+        if (token[0] === '{') { openObjects.push(new Set()); continue; }
+        if (token[0] === '}') { openObjects.pop(); continue; }
+        const current = openObjects[openObjects.length - 1];
+        if (!current) continue;
+        if (current.has(token[1])) duplicates.push(token[1]);
+        current.add(token[1]);
+      }
+      assert.deepEqual(
+        duplicates,
+        [],
+        `${page} block ${index + 1} declares a key more than once — JSON.parse keeps only the last, so this is invisible to every other check`
+      );
+    }
+  }
+});
+
 test('Package A production modules use the complete approved cache tuple', async () => {
   const [index, boot, background, probe] = await Promise.all([
     readSiteFile('index.html'),
