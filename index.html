@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Ishinuki Daikie — Developer &amp; Photographer</title>
+<meta name="description" content="Ishinuki Daikie — software developer and photographer based in Tokyo, Japan." />
+<meta name="theme-color" content="#05060a" />
+<link rel="canonical" href="https://ishinuki-moncion.github.io/Personal-Website-3.0/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="daikieOS" />
+<meta property="og:title" content="Ishinuki Daikie — Developer &amp; Photographer" />
+<meta property="og:description" content="Ishinuki Daikie — software developer and photographer based in Tokyo, Japan." />
+<meta property="og:url" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/" />
+<meta property="og:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="daikieOS — Ishinuki Daikie, developer and photographer, Tokyo" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Ishinuki Daikie — Developer &amp; Photographer" />
+<meta name="twitter:description" content="Software developer and photographer based in Tokyo, Japan." />
+<meta name="twitter:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png" />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<!-- v3.4a: no third-party font origin. Both JP faces are self-hosted WOFF2 subsets
+     (tools/build-fonts.mjs); the retired Google Fonts stylesheet was render-blocking
+     and its late arrival reflowed JP text into a failing 0.172 CLS. Only the M PLUS
+     400 face paints on the English page — Zen Kaku is scoped to html[lang="ja"]
+     (site.css) and stays unfetched here, so it is deliberately not preloaded. -->
+<link rel="preload" href="fonts/mplus-rounded-1c-400.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+<link rel="stylesheet" href="css/site.css?v=3.35" />
+<noscript>
+  <style>
+    /* No-JS truth: kill the boot screen and reveal everything the engine would */
+    .boot, .cursor, .cursor-dot, .cursor-label, .typ-caret, .scene-atmosphere { display: none !important; }
+    body[data-booting] { overflow: auto; }
+    body { cursor: auto; }
+    [data-reveal], .sec-label { opacity: 1 !important; transform: none !important; }
+    .clip-reveal::after { display: none; }
+    .clip-reveal .media { transform: none; }
+    .hero-sub-text::before { content: attr(data-text); }
+  </style>
+</noscript>
+<link rel="alternate" hreflang="en" href="https://ishinuki-moncion.github.io/Personal-Website-3.0/" />
+<link rel="alternate" hreflang="ja" href="https://ishinuki-moncion.github.io/Personal-Website-3.0/ja/" />
+<link rel="alternate" hreflang="x-default" href="https://ishinuki-moncion.github.io/Personal-Website-3.0/" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/#website",
+      "url": "https://ishinuki-moncion.github.io/Personal-Website-3.0/",
+      "name": "daikieOS — Ishinuki Daikie",
+      "inLanguage": "en",
+      "publisher": {
+        "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/#person"
+      }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/#person",
+      "name": "Ishinuki Daikie",
+      "url": "https://ishinuki-moncion.github.io/Personal-Website-3.0/",
+      "jobTitle": "Technical Producer",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "SeenThis Japan"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Tokyo",
+        "addressCountry": "JP"
+      },
+      "alumniOf": [
+        {
+          "@type": "CollegeOrUniversity",
+          "name": "The University of Texas at Dallas",
+          "address": { "@type": "PostalAddress", "addressLocality": "Richardson", "addressRegion": "TX", "addressCountry": "US" }
+        },
+        {
+          "@type": "CollegeOrUniversity",
+          "name": "Soka University",
+          "address": { "@type": "PostalAddress", "addressLocality": "Tokyo", "addressCountry": "JP" }
+        }
+      ],
+      "hasCredential": [
+        {
+          "@type": "EducationalOccupationalCredential",
+          "credentialCategory": "degree",
+          "educationalLevel": "Bachelor of Science",
+          "name": "Bachelor of Science, Computer Science",
+          "recognizedBy": { "@type": "CollegeOrUniversity", "name": "The University of Texas at Dallas" }
+        },
+        {
+          "@type": "EducationalOccupationalCredential",
+          "credentialCategory": "Post-Graduate Program",
+          "name": "Post-Graduate Program, Japan Studies",
+          "recognizedBy": { "@type": "CollegeOrUniversity", "name": "Soka University" }
+        }
+      ],
+      "knowsLanguage": [
+        {
+          "@type": "Language",
+          "name": "English"
+        },
+        {
+          "@type": "Language",
+          "name": "Japanese"
+        }
+      ],
+      "sameAs": [
+        "https://github.com/Ishinuki-Moncion",
+        "https://www.linkedin.com/in/daikie-moncion-6a637b71/"
+      ]
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/case/daikieos/#work",
+      "name": "daikieOS — Personal Website 3.0",
+      "url": "https://ishinuki-moncion.github.io/Personal-Website-3.0/case/daikieos/",
+      "codeRepository": "https://github.com/Ishinuki-Moncion/Personal-Website-3.0",
+      "programmingLanguage": "JavaScript",
+      "author": {
+        "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/#person"
+      }
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/case/tokyo-data-globe/#work",
+      "name": "Tokyo Data Globe",
+      "url": "https://ishinuki-moncion.github.io/Personal-Website-3.0/case/tokyo-data-globe/",
+      "codeRepository": "https://github.com/Ishinuki-Moncion/tokyo-data-globe",
+      "programmingLanguage": "JavaScript",
+      "author": {
+        "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/#person"
+      }
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/case/night-shift-studio/#work",
+      "name": "Night-Shift Studio",
+      "url": "https://ishinuki-moncion.github.io/Personal-Website-3.0/case/night-shift-studio/",
+      "programmingLanguage": "Python",
+      "author": {
+        "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/#person"
+      }
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/case/tokyo-apartment-hunt/#work",
+      "name": "Tokyo Apartment Hunt",
+      "url": "https://ishinuki-moncion.github.io/Personal-Website-3.0/case/tokyo-apartment-hunt/",
+      "programmingLanguage": "Python",
+      "author": {
+        "@id": "https://ishinuki-moncion.github.io/Personal-Website-3.0/#person"
+      }
+    }
+  ]
+}
+</script>
+</head>
+<body data-booting>
+<a class="skip-link" href="#main" data-en="Skip to content" data-ja="コンテンツへスキップ">Skip to content</a>
+
+<!-- ============ BOOT ============ -->
+<div class="boot" id="boot">
+  <div class="boot-grid"></div>
+  <div class="boot-inner">
+    <div class="boot-title" translate="no">daikieOS</div>
+    <div class="boot-lines"></div>
+    <div class="boot-bar-wrap"><div class="boot-bar"></div></div>
+    <div class="boot-pct">000%</div>
+  </div>
+  <button class="boot-skip" data-cursor="skip">Skip ↵</button>
+</div>
+
+<!-- ============ SCENE + OVERLAYS ============ -->
+<div id="scene-root" aria-hidden="true"></div>
+<div class="scene-debug" aria-hidden="true"></div>
+<div class="scene-atmosphere" aria-hidden="true">
+  <div class="scene-glass"></div>
+  <canvas class="scene-droplets"></canvas>
+</div>
+<div class="frame-hud" aria-hidden="true"><span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span></div>
+<div class="state-flash" aria-hidden="true"></div>
+
+
+<!-- custom cursor -->
+<div class="cursor" aria-hidden="true"><div class="cursor-ring"></div></div>
+<div class="cursor-dot" aria-hidden="true"></div>
+<div class="cursor-label" aria-hidden="true"></div>
+
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<!-- ============ NAV ============ -->
+<nav class="nav" aria-label="Primary navigation">
+  <a class="brand" href="#home" data-cursor="home">
+    <span class="dia" aria-hidden="true">◆</span>
+    <span class="name" translate="no">ISHINUKI_DAIKIE</span>
+  </a>
+  <div class="nav-right">
+    <div class="nav-links">
+      <a class="nav-link" href="#work" data-sec="work" data-en="Work" data-ja="作品">Work</a>
+      <a class="nav-link" href="#gallery" data-sec="gallery" data-en="Gallery" data-ja="写真">Gallery</a>
+      <a class="nav-link" href="#projects" data-sec="projects" data-en="Projects" data-ja="制作">Projects</a>
+      <a class="nav-link always" href="#contact" data-sec="contact" data-en="Contact" data-ja="連絡">Contact</a>
+    </div>
+    <div class="nav-meta">
+      <span class="clock" data-clock aria-hidden="true">JST --:--:--</span>
+      <span>TOKYO // <span lang="ja">東京</span></span>
+    </div>
+    <button class="hud-btn lang-btn" aria-label="Toggle language" data-cursor="toggle"><span class="swap">EN / 日本</span></button>
+    <button class="nav-burger" aria-label="Open menu" aria-expanded="false" data-cursor="menu"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<!-- ============ MOBILE MENU ============ -->
+<div class="mobile-menu" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Site navigation" aria-hidden="true" inert>
+  <div class="mm-grid"></div>
+  <div class="mm-head">
+    <span class="mm-tag" translate="no">daikieOS // NAV_INDEX</span>
+    <button class="mm-close" aria-label="Close menu" data-cursor="close">CLOSE ✕</button>
+  </div>
+  <nav class="mm-links" aria-label="Mobile navigation">
+    <a href="#home" data-mm><span class="mm-idx">00</span><span class="mm-label">Home</span><span class="mm-ja" lang="ja">ホーム</span></a>
+    <a href="#about" data-mm><span class="mm-idx">01</span><span class="mm-label">About</span><span class="mm-ja" lang="ja">概要</span></a>
+    <a href="#work" data-mm><span class="mm-idx">02</span><span class="mm-label">Work</span><span class="mm-ja" lang="ja">経歴</span></a>
+    <a href="#gallery" data-mm><span class="mm-idx">03</span><span class="mm-label">Gallery</span><span class="mm-ja" lang="ja">写真</span></a>
+    <a href="#projects" data-mm><span class="mm-idx">04</span><span class="mm-label">Projects</span><span class="mm-ja" lang="ja">制作</span></a>
+    <a href="#contact" data-mm><span class="mm-idx">05</span><span class="mm-label">Contact</span><span class="mm-ja" lang="ja">連絡</span></a>
+  </nav>
+  <div class="mm-foot">
+    <span class="clock" data-clock aria-hidden="true">JST --:--:--</span>
+    <span class="mm-coord" translate="no">35.6762° N, 139.6503° E — TOKYO // <span lang="ja">東京</span></span>
+  </div>
+</div>
+
+<!-- ============ SCROLL HUD ============ -->
+<div class="scroll-hud" aria-hidden="true">
+  <a href="#home" data-sec="home" tabindex="-1"><span class="lbl">Home</span><span class="tick"></span></a>
+  <a href="#about" data-sec="about" tabindex="-1"><span class="lbl">About</span><span class="tick"></span></a>
+  <a href="#work" data-sec="work" tabindex="-1"><span class="lbl">Work</span><span class="tick"></span></a>
+  <a href="#gallery" data-sec="gallery" tabindex="-1"><span class="lbl">Gallery</span><span class="tick"></span></a>
+  <a href="#projects" data-sec="projects" tabindex="-1"><span class="lbl">Projects</span><span class="tick"></span></a>
+  <a href="#contact" data-sec="contact" tabindex="-1"><span class="lbl">Contact</span><span class="tick"></span></a>
+</div>
+
+<main id="main">
+  <!-- ============ HERO ============ -->
+  <section class="hero" id="home">
+    <div class="hero-kicker">
+      <span class="bar"></span>
+      <span lang="ja" data-en="開発者 / 写真家 — Tokyo, Japan" data-ja="開発者 / 写真家 — 東京, 日本">開発者 / 写真家 — Tokyo, Japan</span>
+    </div>
+    <h1>
+      <span class="sr-only">Ishinuki Daikie — developer and photographer in Tokyo</span>
+      <span class="line" data-line="Ishinuki" aria-hidden="true">Ishinuki</span><br />
+      <span class="line amberline" data-line="Daikie" aria-hidden="true">Daikie</span>
+    </h1>
+    <p class="hero-sub">
+      <span class="hero-sub-text" data-text="Technical Producer & creative developer in Tokyo — high-performance open-web work, across the stack and through the lens."></span><span class="typ-caret"></span>
+    </p>
+    <div class="hero-cta" data-reveal data-reveal-delay="0.35s">
+      <a class="cta" href="#projects" data-cursor="read →" data-en="View case studies" data-ja="制作事例を見る">View case studies</a>
+      <a class="cta cta-ghost" href="#contact" data-cursor="expand" data-en="Start a conversation" data-ja="ご相談はこちら">Start a conversation</a>
+    </div>
+    <div class="hero-foot">
+      <div class="scroll-cue"><span class="track"></span><span data-en="Scroll to explore" data-ja="スクロール">Scroll to explore</span></div>
+      <div class="sys-online" translate="no">● SYS//ONLINE</div>
+    </div>
+  </section>
+
+  <!-- ============ ABOUT ============ -->
+  <section class="about" id="about">
+    <div class="shell">
+      <div class="sec-label"><span class="idx">[ 01 ]</span><span class="txt" data-en="About" data-ja="概要">About</span><span class="rule"></span></div>
+      <h2 class="sr-only">About</h2>
+      <p class="about-lead" data-reveal data-en="A Tokyo-based developer &amp; photographer." data-ja="東京を拠点とする開発者・写真家。">A Tokyo-based developer &amp; photographer.</p>
+      <div class="about-grid">
+        <div class="about-bio">
+          <p data-reveal data-reveal-delay="0.05s" data-en="I’m Ishinuki Daikie, a developer who likes turning ideas into things people actually use. I studied Computer Science at The University of Texas at Dallas and work across the stack — React, Next.js, and Node/Express on PostgreSQL and REST APIs. Today I’m a Technical Producer at SeenThis Japan, building and converting advertising materials into open-web digital ad banners — I’ve shepherded 100+ campaigns from creation to execution." data-ja="Ishinuki Daikie です。アイデアを、実際に人が使うものへ変えていくことが好きな開発者です。テキサス大学ダラス校でコンピュータサイエンスを学び、React・Next.js から Node/Express、PostgreSQL、REST API まで幅広く手がけています。現在は SeenThis Japan のテクニカルプロデューサーとして、広告素材をオープンウェブのディスプレイ広告へ制作・変換しています。これまでに100件を超えるキャンペーンを、制作から配信まで一貫して担当してきました。">I’m Ishinuki Daikie, a developer who likes turning ideas into things people actually use. I studied Computer Science at The University of Texas at Dallas and work across the stack — React, Next.js, and Node/Express on PostgreSQL and REST APIs. Today I’m a Technical Producer at SeenThis Japan, building and converting advertising materials into open-web digital ad banners — I’ve shepherded 100+ campaigns from creation to execution.</p>
+          <p data-reveal data-reveal-delay="0.12s" data-en="I’m based in Tokyo by way of Dallas. After UTD I followed a deeper pull toward Japan and completed a Post-Graduate Program in Japan Studies at Soka University; I speak native English and conversational Japanese (JLPT N3). Photography is a real practice for me — it’s where the engineer and the artist in me meet." data-ja="ダラスを経て、東京を拠点にしています。UTD 卒業後、日本への関心をさらに深め、創価大学で日本研究のポストグラデュエート・プログラムを修了しました。英語はネイティブ、日本語は日常会話レベル（JLPT N3）です。写真は趣味を超えた実践で、エンジニアとしての自分とアーティストとしての自分が出会う場所です。">I’m based in Tokyo by way of Dallas. After UTD I followed a deeper pull toward Japan and completed a Post-Graduate Program in Japan Studies at Soka University; I speak native English and conversational Japanese (JLPT N3). Photography is a real practice for me — it’s where the engineer and the artist in me meet.</p>
+          <div class="geo-trail" data-reveal data-reveal-delay="0.16s">
+            <span class="geo-kicker" translate="no">ROUTE // PERSONAL VECTOR</span>
+            <span class="geo-line" translate="no">Dallas → Tokyo</span>
+            <span class="geo-copy" data-en="The globe traces the same move in the background: UTD and Dallas as the origin point, Tokyo as the current base for development, production, and photography." data-ja="背景の地球儀も同じ移動を描いています。UTD とダラスを起点に、開発・制作・写真の現在地である東京へ。">The globe traces the same move in the background: UTD and Dallas as the origin point, Tokyo as the current base for development, production, and photography.</span>
+          </div>
+          <div class="stat-row">
+            <div class="stat" data-reveal data-reveal-delay="0.18s"><div class="n readout"><span data-count="100" aria-hidden="true">88</span><span class="readout-unit" aria-hidden="true">+</span><span class="sr-only">100+</span></div><div class="l" data-en="Campaigns shipped" data-ja="キャンペーン">Campaigns shipped</div></div>
+            <div class="stat" data-reveal data-reveal-delay="0.24s"><div class="n">N3</div><div class="l" data-en="JLPT Japanese" data-ja="日本語能力">JLPT Japanese</div></div>
+            <div class="stat" data-reveal data-reveal-delay="0.30s"><div class="n" lang="ja">東京</div><div class="l" data-en="Based in Tokyo" data-ja="東京在住">Based in Tokyo</div></div>
+          </div>
+
+          <!-- Grouped rather than one long run of tags: the grouping is the
+               information — which layer each tool belongs to. Reuses .tags/.tag
+               so this introduces no new visual language. -->
+          <div class="skills" data-reveal data-reveal-delay="0.34s">
+            <span class="geo-kicker" translate="no">STACK // TOOLING</span>
+            <div class="skill-group">
+              <span class="skill-label" data-en="Languages" data-ja="言語">Languages</span>
+              <div class="tags"><span class="tag">JavaScript (ES6+)</span><span class="tag">TypeScript</span><span class="tag">Python</span><span class="tag">Java</span><span class="tag">C++</span><span class="tag">SQL</span></div>
+            </div>
+            <div class="skill-group">
+              <span class="skill-label" data-en="Front-end" data-ja="フロントエンド">Front-end</span>
+              <div class="tags"><span class="tag">React</span><span class="tag">Next.js</span><span class="tag">HTML / CSS</span><span class="tag">SCSS</span><span class="tag">three.js</span><span class="tag">WebGL / GLSL</span></div>
+            </div>
+            <div class="skill-group">
+              <span class="skill-label" data-en="Back-end" data-ja="バックエンド">Back-end</span>
+              <div class="tags"><span class="tag">Node.js</span><span class="tag">Express</span><span class="tag">PostgreSQL</span><span class="tag">REST APIs</span></div>
+            </div>
+            <div class="skill-group">
+              <span class="skill-label" data-en="Tooling" data-ja="ツール">Tooling</span>
+              <div class="tags"><span class="tag">Docker</span><span class="tag">pgAdmin</span><span class="tag">Figma</span><span class="tag">Playwright</span><span class="tag">Premiere</span><span class="tag">Photoshop</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="about-portrait clip-reveal" data-parallax="0.06">
+          <div class="media" style="background-image:url('images/about.jpg')"></div>
+          <div class="duo"></div>
+          <div class="scanmask"></div>
+          <span class="pcorner pc1"></span><span class="pcorner pc2"></span>
+          <span class="ptag" translate="no">SUBJECT_01 // TOKYO</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WORK ============ -->
+  <section class="work" id="work">
+    <div class="shell">
+      <div class="sec-label"><span class="idx">[ 02 ]</span><span class="txt" data-en="Work / Experience" data-ja="作品 / 経歴">Work / Experience</span><span class="rule"></span></div>
+      <h2 class="heading-xl" data-reveal data-en="Work" data-ja="作品">Work</h2>
+      <div data-stagger>
+        <article class="row" data-reveal data-cursor="">
+          <div class="work-grid">
+            <div>
+              <div class="row-meta"><span class="row-date" data-en="Mar 2025 — Present" data-ja="2025年3月 — 現在">Mar 2025 — Present</span><span class="live-tag"><span class="dot"></span>LIVE</span></div>
+              <h3 class="row-title" data-en="Technical Producer" data-ja="テクニカルプロデューサー">Technical Producer</h3>
+              <div class="row-sub" data-en="SeenThis Japan — Tokyo, Japan" data-ja="SeenThis Japan — 東京, 日本">SeenThis Japan — Tokyo, Japan</div>
+            </div>
+            <div>
+              <p class="row-desc" data-en="Build and convert ad creative into open-web digital ad banners in HTML, CSS &amp; JavaScript. Oversaw 100+ campaign lifecycles end to end." data-ja="広告クリエイティブを HTML・CSS・JavaScript でオープンウェブのディスプレイ広告に制作・変換。100件を超えるキャンペーンを一貫して担当。">Build and convert ad creative into open-web digital ad banners in HTML, CSS &amp; JavaScript. Oversaw 100+ campaign lifecycles end to end.</p>
+              <div class="tags"><span class="tag">HTML</span><span class="tag">CSS</span><span class="tag">JavaScript</span><span class="tag">Premiere</span><span class="tag">Photoshop</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="row" data-reveal>
+          <div class="work-grid">
+            <div>
+              <div class="row-meta"><span class="row-date" data-en="Dec 2022 — Jan 2024" data-ja="2022年12月 — 2024年1月">Dec 2022 — Jan 2024</span></div>
+              <h3 class="row-title" data-en="Web Development" data-ja="ウェブ開発">Web Development</h3>
+              <div class="row-sub" data-en="Otherworldly Adventures — Remote · Contract" data-ja="Otherworldly Adventures — リモート · 業務委託">Otherworldly Adventures — Remote · Contract</div>
+            </div>
+            <div>
+              <p class="row-desc" data-en="Front-end development and ongoing management alongside a UX developer — designed, built and maintained the platform to client spec." data-ja="UX デベロッパーと協働し、フロントエンド開発と継続的な運用を担当。クライアントの要件に沿ってプラットフォームを設計・構築・保守。">Front-end development and ongoing management alongside a UX developer — designed, built and maintained the platform to client spec.</p>
+              <div class="tags"><span class="tag">React</span><span class="tag">JavaScript</span><span class="tag">Node.js</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="row" data-reveal>
+          <div class="work-grid">
+            <div>
+              <div class="row-meta"><span class="row-date" data-en="Jun 2022 — Apr 2023" data-ja="2022年6月 — 2023年4月">Jun 2022 — Apr 2023</span></div>
+              <h3 class="row-title" data-en="Instructor / TA" data-ja="講師 / ティーチングアシスタント">Instructor / TA</h3>
+              <div class="row-sub" data-en="All Star Code — New York, NY" data-ja="All Star Code — ニューヨーク, NY">All Star Code — New York, NY</div>
+            </div>
+            <div>
+              <p class="row-desc" data-en="Led workshops and live-coding sessions on JavaScript, the DOM and OOP — guiding a cohort of high-schoolers from ideation to capstone." data-ja="JavaScript・DOM・オブジェクト指向のワークショップとライブコーディングを担当。高校生のコホートを、構想から最終制作まで指導。">Led workshops and live-coding sessions on JavaScript, the DOM and OOP — guiding a cohort of high-schoolers from ideation to capstone.</p>
+              <div class="tags"><span class="tag">JavaScript</span><span class="tag">DOM</span><span class="tag">Teaching</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="row-end-rule"></div>
+
+      <!-- Education lives inside Work / Experience rather than as a sixth
+           top-level section: promoting it would renumber Gallery, Projects and
+           Contact and the nav with them, for a block that reads naturally as
+           part of the same career column. Same row grammar as the roles above. -->
+      <h2 class="heading-xl" data-reveal data-en="Education" data-ja="学歴">Education</h2>
+      <div data-stagger>
+        <article class="row" data-reveal>
+          <div class="work-grid">
+            <div>
+              <div class="row-meta"><span class="row-date" data-en="Graduated Jul 2024" data-ja="2024年7月 修了">Graduated Jul 2024</span></div>
+              <h3 class="row-title" data-en="Post-Graduate Program, Japan Studies" data-ja="大学院プログラム 日本研究">Post-Graduate Program, Japan Studies</h3>
+              <div class="row-sub" data-en="Soka University — Tokyo, Japan" data-ja="創価大学 — 東京, 日本">Soka University — Tokyo, Japan</div>
+            </div>
+            <div>
+              <p class="row-desc" data-en="Completed after moving to Japan — the bridge between studying computer science in Texas and working as a producer in Tokyo." data-ja="来日後に修了。テキサスでのコンピュータサイエンスと、東京でのプロデューサー業をつなぐ道のりです。">Completed after moving to Japan — the bridge between studying computer science in Texas and working as a producer in Tokyo.</p>
+              <div class="tags"><span class="tag" data-en="Japan Studies" data-ja="日本研究">Japan Studies</span><span class="tag">JLPT N3</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="row" data-reveal>
+          <div class="work-grid">
+            <div>
+              <div class="row-meta"><span class="row-date" data-en="Graduated Dec 2022" data-ja="2022年12月 卒業">Graduated Dec 2022</span></div>
+              <h3 class="row-title" data-en="Bachelor of Science, Computer Science" data-ja="理学士 コンピュータサイエンス">Bachelor of Science, Computer Science</h3>
+              <div class="row-sub" data-en="The University of Texas at Dallas — Richardson, TX" data-ja="テキサス大学ダラス校 — リチャードソン, テキサス">The University of Texas at Dallas — Richardson, TX</div>
+            </div>
+            <div>
+              <p class="row-desc" data-en="Studied computer science, and worked across the stack from there — React and Next.js on the front, Node and Express over PostgreSQL and REST APIs behind it." data-ja="コンピュータサイエンスを学び、そこからフルスタックへ。フロントは React と Next.js、背後は PostgreSQL と REST API 上の Node・Express。">Studied computer science, and worked across the stack from there — React and Next.js on the front, Node and Express over PostgreSQL and REST APIs behind it.</p>
+              <div class="tags"><span class="tag">Computer Science</span><span class="tag">React</span><span class="tag">Node</span><span class="tag">PostgreSQL</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="row-end-rule"></div>
+    </div>
+  </section>
+
+  <!-- ============ GALLERY ============ -->
+  <section class="gallery" id="gallery">
+    <div class="shell">
+      <div class="sec-label"><span class="idx">[ 03 ]</span><span class="txt" data-en="Gallery / Photography" data-ja="写真 / 撮影">Gallery / Photography</span><span class="rule"></span></div>
+      <div class="gallery-head">
+        <h2 class="heading-xl" data-reveal style="margin-bottom:0" data-en="Through the lens" data-ja="レンズ越しに">Through the lens</h2>
+        <span class="gallery-count" data-reveal data-en="12 FRAMES // SELECTED 2021–2025" data-ja="12 フレーム // 2021–2025 セレクション">12 FRAMES // SELECTED 2021–2025</span>
+      </div>
+    </div>
+    <div class="shell">
+      <div class="gallery-grid" data-stagger>
+        <button class="shot feature" data-reveal="scale" data-src="images/gallery-07.jpg" data-w="2000" data-h="1333" data-title="NAGANO // 長野" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 1 — NAGANO // 長野 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-07.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_01</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-03.jpg" data-w="1920" data-h="1280" data-title="KAMAKURA // 鎌倉" data-meta="ƒ/16 · 1/50s · ISO 100 · 50mm" data-cursor="expand" aria-label="View photograph 2 — KAMAKURA // 鎌倉 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-03.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_02</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-08.jpg" data-w="1417" data-h="2000" data-title="FUJI // 富士" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 3 — FUJI // 富士 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-08.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_03</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-16.jpg" data-w="1080" data-h="720" data-title="SENDAI // 仙台" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 4 — SENDAI // 仙台 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-16.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_04</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-04.jpg" data-w="2000" data-h="1249" data-title="OSAKA // 大阪" data-meta="ƒ/10 · 1/50s · ISO 1600 · 50mm" data-cursor="expand" aria-label="View photograph 5 — OSAKA // 大阪 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-04.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_05</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-13.jpg" data-w="1080" data-h="1350" data-title="FUKUOKA // 福岡" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 6 — FUKUOKA // 福岡 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-13.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_06</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-01.jpg" data-w="1920" data-h="1280" data-title="HOKKAIDO // 北海道" data-meta="ƒ/10 · 1/160s · ISO 100 · 35mm" data-cursor="expand" aria-label="View photograph 7 — HOKKAIDO // 北海道 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-01.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_07</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-02.jpg" data-w="1920" data-h="1080" data-title="SHIBUYA // 渋谷" data-meta="ƒ/1.8 · 1s · ISO 100 · 50mm" data-cursor="expand" aria-label="View photograph 8 — SHIBUYA // 渋谷 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-02.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_08</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-05.jpg" data-w="2000" data-h="1333" data-title="KYOTO // 京都" data-meta="ƒ/1.8 · 1/100s · ISO 320 · 35mm" data-cursor="expand" aria-label="View photograph 9 — KYOTO // 京都 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-05.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_09</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-09.jpg" data-w="2000" data-h="1333" data-title="DALLAS // ダラス" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 10 — DALLAS // ダラス full screen"><span class="media" style="background-image:url('images/thumbs/gallery-09.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_10</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-10.jpg" data-w="2000" data-h="1028" data-title="ASAKUSA // 浅草" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 11 — ASAKUSA // 浅草 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-10.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_11</span><span class="plus" aria-hidden="true">＋</span></button>
+        <button class="shot" data-reveal="scale" data-src="images/gallery-11.jpg" data-w="1080" data-h="697" data-title="OKINAWA // 沖縄" data-meta="EXIF//REDACTED" data-cursor="expand" aria-label="View photograph 12 — OKINAWA // 沖縄 full screen"><span class="media" style="background-image:url('images/thumbs/gallery-11.jpg')"></span><span class="sweep"></span><span class="id" aria-hidden="true">IMG_12</span><span class="plus" aria-hidden="true">＋</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PROJECTS ============ -->
+  <section class="projects" id="projects">
+    <div class="shell">
+      <div class="sec-label"><span class="idx">[ 04 ]</span><span class="txt" data-en="Projects / Case studies" data-ja="制作 / 事例">Projects / Case studies</span><span class="rule"></span></div>
+      <h2 class="heading-xl" data-reveal data-en="Case Studies" data-ja="制作事例">Case Studies</h2>
+      <div data-stagger>
+        <a class="row" href="case/daikieos/" data-reveal data-cursor="read →">
+          <div class="proj-grid">
+            <span class="proj-idx">01</span>
+            <div>
+              <h3 class="row-title">daikieOS — Personal Website 3.0</h3>
+              <p class="row-sub" data-en="This site. A zero-build portfolio running a real-time WebGL scene as progressive enhancement — measured device tiering, a bounded postprocessing budget, and a page that stays usable when every optional module fails." data-ja="このサイト。ビルド工程を持たないポートフォリオで、リアルタイム WebGL シーンをプログレッシブ・エンハンスメントとして動かしています。実測によるデバイス階層化、上限を定めたポストプロセス予算、そして任意モジュールがすべて失敗しても使えるページ。">This site. A zero-build portfolio running a real-time WebGL scene as progressive enhancement — measured device tiering, a bounded postprocessing budget, and a page that stays usable when every optional module fails.</p>
+            </div>
+            <div class="proj-end"><span class="proj-tech">three.js · GLSL · ES modules</span><span class="proj-year">2026 <span class="row-arrow" aria-hidden="true">→</span></span></div>
+          </div>
+        </a>
+        <a class="row" href="case/tokyo-data-globe/" data-reveal data-cursor="read →">
+          <div class="proj-grid">
+            <span class="proj-idx">02</span>
+            <div>
+              <h3 class="row-title">Tokyo Data Globe</h3>
+              <p class="row-sub" data-en="A particle Earth built from land-only points, with a great-circle arc that draws itself Dallas to Tokyo. The standalone scene lab behind this site’s centrepiece." data-ja="陸地だけの点で構成されたパーティクル地球儀と、ダラスから東京へ自ら描かれていく大圏コース。このサイトの中心にあるシーンの実験場です。">A particle Earth built from land-only points, with a great-circle arc that draws itself Dallas to Tokyo. The standalone scene lab behind this site’s centrepiece.</p>
+            </div>
+            <div class="proj-end"><span class="proj-tech">three.js · GLSL · Natural Earth</span><span class="proj-year">2026 <span class="row-arrow" aria-hidden="true">→</span></span></div>
+          </div>
+        </a>
+        <a class="row" href="case/open-web-production/" data-reveal data-cursor="read →">
+          <div class="proj-grid">
+            <span class="proj-idx">03</span>
+            <div>
+              <h3 class="row-title">Open-Web Campaign Production</h3>
+              <p class="row-sub" data-en="Technical Producer at SeenThis Japan — building and converting advertising creative into open-web display formats inside strict weight budgets, across 100+ campaign lifecycles." data-ja="SeenThis Japan のテクニカルプロデューサーとして、厳しい容量制限のもとで広告クリエイティブをオープンウェブの表示フォーマットへ制作・変換。100件を超えるキャンペーンを担当。">Technical Producer at SeenThis Japan — building and converting advertising creative into open-web display formats inside strict weight budgets, across 100+ campaign lifecycles.</p>
+            </div>
+            <div class="proj-end"><span class="proj-tech">HTML · CSS · JavaScript</span><span class="proj-year">2025 — <span class="row-arrow" aria-hidden="true">→</span></span></div>
+          </div>
+        </a>
+        <a class="row" href="case/night-shift-studio/" data-reveal data-cursor="read →">
+          <div class="proj-grid">
+            <span class="proj-idx">04</span>
+            <div>
+              <h3 class="row-title">Night-Shift Studio</h3>
+              <p class="row-sub" data-en="An unattended overnight production pipeline: hand over the order at night, and by morning there is a board of checked directions and an honest account of what could not be verified." data-ja="夜間に無人で走る制作パイプライン。夜に依頼を渡せば、朝には検証済みの方向性が並び、確認できなかった点も正直に報告されます。">An unattended overnight production pipeline: hand over the order at night, and by morning there is a board of checked directions and an honest account of what could not be verified.</p>
+            </div>
+            <div class="proj-end"><span class="proj-tech">Python · Agent pipeline · pytest</span><span class="proj-year">2026 <span class="row-arrow" aria-hidden="true">→</span></span></div>
+          </div>
+        </a>
+        <a class="row" href="case/tokyo-apartment-hunt/" data-reveal data-cursor="read →">
+          <div class="proj-grid">
+            <span class="proj-idx">05</span>
+            <div>
+              <h3 class="row-title">Tokyo Apartment Hunt</h3>
+              <p class="row-sub" data-en="A self-running apartment search with a bilingual, server-rendered interface that runs only on the machine that owns it — no hosted service, and a local server that shuts itself down when the last tab closes." data-ja="自動で走る住まい探し。日英どちらでもサーバー側で描画される画面を持ち、動くのは自分の端末の中だけ。ホスティングは無く、最後のタブを閉じるとローカルサーバーは自ら停止します。">A self-running apartment search with a bilingual, server-rendered interface that runs only on the machine that owns it — no hosted service, and a local server that shuts itself down when the last tab closes.</p>
+            </div>
+            <div class="proj-end"><span class="proj-tech">Python · Server-rendered · Scheduled</span><span class="proj-year">2026 <span class="row-arrow" aria-hidden="true">→</span></span></div>
+          </div>
+        </a>
+      </div>
+      <div class="row-end-rule"></div>
+
+      <!-- Earlier work: university and hackathon projects, listed rather than
+           written up. They are real and dated, but a full case study each would
+           dilute the five above rather than add to them. Same row grammar as
+           Work and Education, and deliberately NOT anchors — nothing to link to,
+           and `#projects a.row` stays exactly the set of case studies. -->
+      <h2 class="heading-xl" data-reveal data-en="Earlier work" data-ja="初期の制作">Earlier work</h2>
+      <div data-stagger>
+        <article class="row" data-reveal>
+          <div class="work-grid">
+            <div>
+              <div class="row-meta"><span class="row-date" data-en="Aug — Dec 2022" data-ja="2022年8月 — 12月">Aug — Dec 2022</span></div>
+              <h3 class="row-title" data-en="Degree Planning Audit Tool" data-ja="履修計画・監査ツール">Degree Planning Audit Tool</h3>
+              <div class="row-sub" data-en="The University of Texas at Dallas" data-ja="テキサス大学ダラス校">The University of Texas at Dallas</div>
+            </div>
+            <div>
+              <p class="row-desc" data-en="A local server-based tool that generated degree-plan and audit reports, automating a redundant reporting process and the manual calculation that went with it." data-ja="学位計画と監査レポートを生成するローカルサーバー型のツール。重複の多い報告作業と、それに伴う手計算を自動化しました。">A local server-based tool that generated degree-plan and audit reports, automating a redundant reporting process and the manual calculation that went with it.</p>
+              <div class="tags"><span class="tag">JavaScript</span><span class="tag">Node.js</span><span class="tag">Express</span><span class="tag">pdf-parse</span><span class="tag">jsPDF</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="row" data-reveal>
+          <div class="work-grid">
+            <div>
+              <div class="row-meta"><span class="row-date" data-en="Nov 2021" data-ja="2021年11月">Nov 2021</span></div>
+              <h3 class="row-title">TimeFlies</h3>
+              <div class="row-sub" data-en="HackUTD VIII" data-ja="HackUTD VIII">HackUTD VIII</div>
+            </div>
+            <div>
+              <p class="row-desc" data-en="A hackathon build: a PostgreSQL database wired for real-time transfer to the front end." data-ja="ハッカソンでの制作。フロントエンドへリアルタイムにデータを渡す PostgreSQL データベースを構築しました。">A hackathon build: a PostgreSQL database wired for real-time transfer to the front end.</p>
+              <div class="tags"><span class="tag">TypeScript</span><span class="tag">PostgreSQL</span><span class="tag">MikroORM</span></div>
+            </div>
+          </div>
+        </article>
+        <article class="row" data-reveal>
+          <div class="work-grid">
+            <div>
+              <div class="row-meta"><span class="row-date" data-en="Aug — Dec 2020" data-ja="2020年8月 — 12月">Aug — Dec 2020</span></div>
+              <h3 class="row-title">Debug</h3>
+              <div class="row-sub" data-en="Association for Computing Machinery" data-ja="ACM（計算機協会）">Association for Computing Machinery</div>
+            </div>
+            <div>
+              <p class="row-desc" data-en="A full-stack application for real-time code sharing in a collaborative editor." data-ja="共同編集エディタ上でコードをリアルタイムに共有するフルスタックアプリケーション。">A full-stack application for real-time code sharing in a collaborative editor.</p>
+              <div class="tags"><span class="tag">TypeScript</span><span class="tag">Node.js</span><span class="tag">React</span><span class="tag">Firebase</span><span class="tag">Highlight.js</span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="row-end-rule"></div>
+    </div>
+  </section>
+
+  <!-- ============ CONTACT ============ -->
+  <section class="contact" id="contact">
+    <div class="shell">
+      <div class="sec-label"><span class="idx">[ 05 ]</span><span class="txt" data-en="Contact" data-ja="連絡">Contact</span><span class="rule"></span></div>
+      <h2 data-reveal data-en="Let’s make something." data-ja="一緒に作りましょう。">Let’s make <em>something.</em></h2>
+      <p class="contact-guide" data-reveal data-reveal-delay="0.03s" data-en="For work enquiries, collaboration on open-web or interactive projects, or anything about the photography — this reaches me directly." data-ja="お仕事のご相談、オープンウェブ／インタラクティブ制作のご協力、写真についてのお問い合わせは、こちらから直接お送りください。">For work enquiries, collaboration on open-web or interactive projects, or anything about the photography — this reaches me directly.</p>
+      <!-- WCAG 2.5.3 Label in Name: the accessible name must CONTAIN the visible
+           text. An aria-label of "Copy email address to clipboard" replaced it
+           entirely, so a speech-input user saying the address they can see, or a
+           screen-reader user matching what they hear to what is on screen, got
+           no match. The name now comes from the content — which includes the
+           runtime-assembled address — with the action appended as visible-to-AT
+           text rather than overriding it. -->
+      <button class="signal-row" type="button" data-reveal data-reveal-delay="0.05s" data-cursor="copy" translate="no">
+        <span class="signal-k">SIGNAL //</span>
+        <span class="signal-addr" data-addr>KEY//STANDBY</span>
+        <span class="sr-only" data-en=" — copy email address to clipboard" data-ja=" — メールアドレスをコピー"> — copy email address to clipboard</span>
+        <span class="signal-tick" aria-hidden="true">✓ COPIED</span>
+        <span class="sr-only" role="status" data-copy-status></span>
+      </button>
+      <div class="pills" data-reveal data-reveal-delay="0.1s">
+        <a class="pill" href="https://github.com/Ishinuki-Moncion" target="_blank" rel="noopener" data-magnetic data-cursor="open ↗"><span>GitHub ↗</span></a>
+        <a class="pill" href="https://www.linkedin.com/in/daikie-moncion-6a637b71/" target="_blank" rel="noopener" data-magnetic data-cursor="open ↗"><span>LinkedIn ↗</span></a>
+        <a class="pill" href="https://www.instagram.com/d.moncion/" target="_blank" rel="noopener" data-magnetic data-cursor="open ↗"><span>Instagram ↗</span></a>
+      </div>
+      <div class="footer">
+        <span>© <span id="year"></span> Ishinuki Daikie — daikieOS</span>
+        <span class="coord" translate="no" lang="ja">35.6762° N, 139.6503° E — 東京</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============ LIGHTBOX ============ -->
+<div class="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer" aria-hidden="true" inert>
+  <div class="lb-meta" translate="no"><span class="lb-id">IMG_01</span><br /><span class="lb-exif">EXIF//REDACTED</span><br />SELECTED ARCHIVE</div>
+  <button class="lb-close" data-cursor="close">CLOSE ✕</button>
+  <div class="lb-stage">
+    <span class="lb-corner" style="top:0;left:0;border-right:0;border-bottom:0"></span>
+    <span class="lb-corner" style="top:0;right:0;border-left:0;border-bottom:0"></span>
+    <span class="lb-corner" style="bottom:0;left:0;border-right:0;border-top:0"></span>
+    <span class="lb-corner" style="bottom:0;right:0;border-left:0;border-top:0"></span>
+    <img class="lb-img" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" width="2000" height="1333" decoding="async" alt="NAGANO // 長野 — gallery photograph 1 of 12" />
+  </div>
+  <div class="lb-nav">
+    <button class="lb-prev" data-cursor="prev">← PREV</button>
+    <span class="pos lb-pos">01/12</span>
+    <button class="lb-next" data-cursor="next">NEXT →</button>
+  </div>
+  <div class="lb-strip"></div>
+</div>
+
+<!-- ============ CONTROL DECK ============ -->
+<button class="deck-toggle" aria-controls="deck" aria-label="Open control deck" aria-expanded="false" data-cursor="tweak">
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round"><g class="gear"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></g></svg>
+</button>
+<div class="deck" id="deck" role="group" aria-label="Control deck" aria-hidden="true" inert>
+  <h2>Control Deck</h2>
+  <div class="grp">
+    <div class="grp-label" id="deck-hero-label" data-en="Hero entrance" data-ja="ヒーロー演出">Hero entrance</div>
+    <div class="seg" data-seg="hero" role="group" aria-labelledby="deck-hero-label">
+      <button data-val="decrypt" data-cursor="set">Decrypt</button>
+      <button data-val="stagger" data-cursor="set">Rise</button>
+      <button data-val="chromatic" data-cursor="set">Glitch</button>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="grp-label" id="deck-lang-label">Language</div>
+    <div class="seg" data-seg="lang" role="group" aria-labelledby="deck-lang-label">
+      <button data-val="en" data-cursor="set">EN</button>
+      <button data-val="ja" data-cursor="set" lang="ja">日本語</button>
+    </div>
+  </div>
+  <div class="grp">
+    <button class="hud-btn deck-reboot" style="width:100%;text-align:center" data-cursor="reboot" data-en="↻ Reboot sequence" data-ja="↻ 再起動">↻ Reboot sequence</button>
+  </div>
+</div>
+
+<template id="bundler-thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#05060a"/><text x="50" y="60" font-family="monospace" font-size="38" fill="#39f0ff" text-anchor="middle">◆</text></svg>
+</template>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Through the lens — selected photography by Ishinuki Daikie",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "item": { "@type": "ImageObject", "name": "NAGANO // 長野 — IMG_01", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-07.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 2, "item": { "@type": "ImageObject", "name": "KAMAKURA // 鎌倉 — IMG_02", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-03.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 3, "item": { "@type": "ImageObject", "name": "FUJI // 富士 — IMG_03", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-08.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 4, "item": { "@type": "ImageObject", "name": "SENDAI // 仙台 — IMG_04", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-16.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 5, "item": { "@type": "ImageObject", "name": "OSAKA // 大阪 — IMG_05", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-04.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 6, "item": { "@type": "ImageObject", "name": "FUKUOKA // 福岡 — IMG_06", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-13.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 7, "item": { "@type": "ImageObject", "name": "HOKKAIDO // 北海道 — IMG_07", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-01.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 8, "item": { "@type": "ImageObject", "name": "SHIBUYA // 渋谷 — IMG_08", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-02.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 9, "item": { "@type": "ImageObject", "name": "KYOTO // 京都 — IMG_09", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-05.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 10, "item": { "@type": "ImageObject", "name": "DALLAS // ダラス — IMG_10", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-09.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 11, "item": { "@type": "ImageObject", "name": "ASAKUSA // 浅草 — IMG_11", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-10.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } },
+    { "@type": "ListItem", "position": 12, "item": { "@type": "ImageObject", "name": "OKINAWA // 沖縄 — IMG_12", "contentUrl": "https://ishinuki-moncion.github.io/Personal-Website-3.0/images/gallery-11.jpg", "creator": { "@type": "Person", "name": "Ishinuki Daikie" } } }
+  ]
+}
+</script>
+
+<!-- Import-map fallback for Safari <16.4 / Firefox <108. Loads async; no-ops on
+     engines with native import-map + module support. Self-hosted, CSP-clean. -->
+<script async src="js/vendor/es-module-shims-1.10.0.min.js?v=1"></script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./js/vendor/three-0.158.0/three.module.min.js",
+    "three/addons/": "./js/vendor/three-0.158.0/examples/jsm/"
+  }
+}
+</script>
+
+<script>
+document.getElementById('year').textContent = new Date().getFullYear();
+/* v3.4c catastrophic boot watchdog — deliberately OUTSIDE the module chain.
+   Essential DOM behavior and the normal reveal do not depend on scene status;
+   if the entry module itself fails, reveal after 10s so content never stays
+   trapped beneath the boot screen. No-ops when boot.js finished. */
+(function () {
+  var fired = false;
+  function reveal() {
+    if (!document.body.hasAttribute('data-booting')) return;
+    fired = true;
+    var b = document.getElementById('boot');
+    if (b && b.parentNode) b.parentNode.removeChild(b);
+    document.body.removeAttribute('data-booting');
+    document.body.classList.add('revealed');
+    document.dispatchEvent(new Event('boot:done'));
+  }
+  window.addEventListener('error', function (e) {
+    var t = e.target;
+    if (t && t.tagName === 'SCRIPT') setTimeout(reveal, 0);
+  }, true);
+  setTimeout(reveal, 10000);
+  /* boot.js's finish() also adds .revealed — on a NORMAL boot drop it, so the
+     css force-reveal (body.revealed [data-reveal]) can't blank the scroll
+     choreography. The class means "watchdog force-revealed", nothing else. */
+  document.addEventListener('boot:done', function () {
+    if (!fired) document.body.classList.remove('revealed');
+  });
+})();
+</script>
+
+<script type="module" src="js/boot.mjs?v=36"></script>
+</body>
+</html>
