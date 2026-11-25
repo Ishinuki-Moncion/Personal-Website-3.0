@@ -175,3 +175,24 @@
   .packet-section { break-inside: avoid; }
   .packet-section h2 .anchor::after { content: ""; }
 }
+
+/* ---------- system diagram (v3.6g, 2026-11-25) ----------
+   Inline SVG on the two AI case studies. Every colour is a site token, so the
+   diagram follows the palette; text uses the page's own faces. */
+.packet-figure { margin: 8px auto 44px; max-width: 520px; }
+.packet-figure figcaption { margin-top: 12px; font-size: 13px; line-height: 1.55; color: var(--muted); }
+.dg { display: block; width: 100%; height: auto; overflow: visible; }
+.dg-box { fill: var(--void-2); stroke: var(--line-strong); stroke-width: 1; }
+.dg-kit { stroke: var(--amber); }
+.dg-core { stroke: var(--cyan); stroke-width: 1.4; }
+.dg-out { stroke: var(--cyan-dim); }
+.dg-rule { stroke: var(--line); stroke-width: 1; fill: none; }
+.dg-a { stroke: var(--cyan-dim); stroke-width: 1.4; fill: none; }
+.dg-a-kit { stroke: var(--amber-dim); }
+.dg-head { fill: var(--cyan-dim); }
+.dg-head-kit { fill: var(--amber-dim); }
+.dg-t { fill: var(--fg); font-family: var(--font-display); font-size: 14px; }
+.dg-strong { font-size: 15px; font-weight: 400; }
+.dg-m { fill: var(--muted); font-family: var(--font-display); font-size: 12px; }
+.dg-n { fill: var(--cyan); font-family: var(--font-mono); font-size: 13px; }
+@media print { .dg-box { fill: none; } .dg-t { fill: #111; } }

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Production Kit — House Rules for an AI — Ishinuki Daikie</title>
+<meta name="description" content="How a team's production rules became a kit that an AI can follow and code can check. One test decided how much of it the AI needs to read." />
+<link rel="canonical" href="https://ishinuki-moncion.github.io/Personal-Website-3.0/case/production-kit/" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="Production Kit — House Rules for an AI" />
+<meta property="og:description" content="How a team's production rules became a kit that an AI can follow and code can check. One test decided how much of it the AI needs to read." />
+<meta property="og:url" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/case/production-kit/" />
+<meta property="og:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
+<meta property="og:image:alt" content="daikieOS — Ishinuki Daikie, technical producer and photographer, Tokyo" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Production Kit — House Rules for an AI" />
+<meta name="twitter:description" content="How a team's production rules became a kit that an AI can follow and code can check. One test decided how much of it the AI needs to read." />
+<meta name="twitter:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
+<meta name="twitter:image:alt" content="daikieOS — Ishinuki Daikie, technical producer and photographer, Tokyo" />
+<link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="../../images/apple-touch-icon.png" />
+<link rel="stylesheet" href="../../css/site.css?v=3.36" />
+<link rel="stylesheet" href="../../css/case.css?v=2" />
+</head>
+<body class="packet-body">
+<a class="skip-link" href="#packet-main">Skip to content</a>
+
+<header class="packet-head">
+  <a class="packet-home" href="../../">← <span>Ishinuki Daikie</span></a>
+  <span class="packet-idx" translate="no">CASE_02</span>
+</header>
+
+<main class="packet" id="packet-main">
+  <article>
+    <p class="packet-kicker">Practice case study — SeenThis Japan, Tokyo</p>
+    <h1>Production Kit — House Rules for an AI</h1>
+    <p class="packet-summary">The team's production rules, rewritten so an AI can follow them and code can check them. Night-Shift Studio runs on it.</p>
+
+    <dl class="packet-meta">
+      <div><dt>Period</dt><dd>2026</dd></div>
+      <div><dt>Role</dt><dd>I maintain the kit (2026). I designed and specified the changes described here, and built them with Claude Code.</dd></div>
+      <div><dt>Stack</dt><dd>Agent Skills · Claude Code · Python · Markdown</dd></div>
+    </dl>
+
+    <p class="packet-links">
+          <a class="packet-link" href="../night-shift-studio/">Related: Night-Shift Studio: the pipeline that runs on it →</a>
+        </p>
+
+    <aside class="packet-evidence">
+      <h2>Evidence boundary</h2>
+      <p>The kit belongs to SeenThis AB and its source is private. So this page describes how the kit works. It quotes no rules, names no client, brand, campaign or colleague, and claims no figures.</p>
+    </aside>
+
+    <nav class="packet-contents" aria-label="Sections">
+      <h2>Contents</h2>
+      <ol>
+            <li><a href="#why-an-ai-needs-the-rules-written-down">Why an AI needs the rules written down</a></li>
+            <li><a href="#what-the-kit-holds">What the kit holds</a></li>
+            <li><a href="#code-checks-what-code-can-check">Code checks what code can check</a></li>
+            <li><a href="#a-test-before-building-on-something-new">A test before building on something new</a></li>
+            <li><a href="#keeping-up-with-a-fast-changing-tool">Keeping up with a fast-changing tool</a></li>
+            <li><a href="#how-it-fits-with-night-shift-studio">How it fits with Night-Shift Studio</a></li>
+      </ol>
+    </nav>
+    <figure class="packet-figure">
+      <svg class="dg" viewBox="0 0 400 492" role="img" aria-labelledby="dg-title dg-desc">
+      <title id="dg-title">How Night-Shift Studio and the production kit work together</title>
+      <desc id="dg-desc">An ad order arrives in the evening. Night-Shift Studio searches past work in the team's records and the team's Creative Gallery, builds creative directions that follow the production kit's rules, and checks every build with the kit's automatic gate. By morning there is a board of checked directions and a list of anything it could not verify.</desc>
+      <defs><marker id="dg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="dg-head"/></marker><marker id="dg-arrow-kit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="dg-head-kit"/></marker></defs>
+      <rect class="dg-box" x="110" y="8" width="180" height="46" rx="4"/>
+      <text class="dg-t" x="200" y="29" text-anchor="middle">Ad order</text>
+      <text class="dg-m" x="200" y="45" text-anchor="middle">in the evening</text>
+      <rect class="dg-box" x="8" y="86" width="180" height="58" rx="4"/>
+      <text class="dg-t" x="98" y="111" text-anchor="middle">Past work</text>
+      <text class="dg-m" x="98" y="129" text-anchor="middle">records + Creative Gallery</text>
+      <rect class="dg-box dg-kit" x="212" y="86" width="180" height="58" rx="4"/>
+      <text class="dg-t" x="302" y="111" text-anchor="middle">Production kit</text>
+      <text class="dg-m" x="302" y="129" text-anchor="middle">rules + automatic gate</text>
+      <path class="dg-a" d="M200 54 V176" marker-end="url(#dg-arrow)"/>
+      <path class="dg-a" d="M98 144 V176" marker-end="url(#dg-arrow)"/>
+      <path class="dg-a dg-a-kit" d="M302 144 V176" marker-end="url(#dg-arrow-kit)"/>
+      <rect class="dg-box dg-core" x="8" y="180" width="384" height="206" rx="4"/>
+      <text class="dg-t dg-strong" x="24" y="206">Night-Shift Studio</text>
+      <text class="dg-m" x="376" y="206" text-anchor="end">overnight, unattended</text>
+      <path class="dg-rule" d="M24 220 H376"/>
+      <text class="dg-n" x="24" y="248">1</text><text class="dg-t" x="44" y="248">Search past work</text>
+      <text class="dg-m" x="44" y="266">brand · performance · visual · meaning</text>
+      <text class="dg-n" x="24" y="300">2</text><text class="dg-t" x="44" y="300">Build creative directions</text>
+      <text class="dg-m" x="44" y="318">following the kit's rules</text>
+      <text class="dg-n" x="24" y="352">3</text><text class="dg-t" x="44" y="352">Check every build</text>
+      <text class="dg-m" x="44" y="370">with the kit's automatic gate</text>
+      <path class="dg-a" d="M200 386 V416" marker-end="url(#dg-arrow)"/>
+      <rect class="dg-box dg-out" x="40" y="420" width="320" height="64" rx="4"/>
+      <text class="dg-t" x="200" y="447" text-anchor="middle">Morning: a board of checked directions</text>
+      <text class="dg-m" x="200" y="467" text-anchor="middle">and a list of anything it could not verify</text>
+    </svg>
+      <figcaption>How the two tools fit. The production kit holds the rules, and Night-Shift Studio follows them overnight. Each Night-Shift release is paired with a kit release.</figcaption>
+    </figure>
+
+      <section class="packet-section" id="why-an-ai-needs-the-rules-written-down">
+        <h2><a class="anchor" href="#why-an-ai-needs-the-rules-written-down">Why an AI needs the rules written down</a></h2>
+        <p>Every production team has rules that live in people's heads. What the ad platform rejects. How a click must be wired. What a format needs before it can ship. A new colleague learns them over months.</p>
+        <p>An AI starts from nothing every time you open a new conversation with it. So the rules have to be written down, for a reader that follows them literally and cannot ask what you meant.</p>
+      </section>
+
+      <section class="packet-section" id="what-the-kit-holds">
+        <h2><a class="anchor" href="#what-the-kit-holds">What the kit holds</a></h2>
+        <p>The kit is a set of documents that an AI agent loads when a task needs them. An agent is an AI that uses tools to carry out a task step by step. It holds the hard rules, one page per ad format with starter code, the design values, a quality checklist and the delivery rules.</p>
+        <p>Every rule has a stable ID. Other tools cite the ID instead of copying the words, and a test fails when a cited rule no longer exists. A rule copied into three places becomes three rules that drift apart.</p>
+      </section>
+
+      <section class="packet-section" id="code-checks-what-code-can-check">
+        <h2><a class="anchor" href="#code-checks-what-code-can-check">Code checks what code can check</a></h2>
+        <p>Some rules can be checked by code, so they are. A gate, which is an automatic check, reads a finished build and passes or blocks it. The other rules stay as written guidance.</p>
+        <p>Keeping the two apart keeps the gate honest, because it only claims what it actually tests. It also keeps the written rules short enough to read.</p>
+      </section>
+
+      <section class="packet-section" id="a-test-before-building-on-something-new">
+        <h2><a class="anchor" href="#a-test-before-building-on-something-new">A test before building on something new</a></h2>
+        <p>The company's ad editor gained an AI connector: a way for an AI to build ads directly inside the editor. The obvious move was to load the whole kit into every session that used it. I tested that idea first.</p>
+        <p>Fresh AI sessions built the same orders. They differed in one thing only: what they had beside the connector. That was nothing, one page of rules, a trimmed kit, or the full kit. I timed and scored every run.</p>
+        <p>The result changed the plan. With the connector alone, the AI repeated the same faults every time. One page of rules fixed most of them at almost no extra cost. The full kit did not make a better first draft. It added proof: a checked build and a record.</p>
+        <p>So I shipped the one-page rule card, with a test that fails if the kit changes and the card does not. I also split jobs into three kinds: pitch, draft and delivery. A pitch no longer pays for delivery checks.</p>
+      </section>
+
+      <section class="packet-section" id="keeping-up-with-a-fast-changing-tool">
+        <h2><a class="anchor" href="#keeping-up-with-a-fast-changing-tool">Keeping up with a fast-changing tool</a></h2>
+        <p>The connector changed its document format several times in one week. A written description of it would have gone stale before anyone noticed.</p>
+        <p>So the kit keeps a dated record of how the connector works. Before it builds, an AI session compares that record with the live connector. If they disagree, the session says so instead of building on old information.</p>
+      </section>
+
+      <section class="packet-section" id="how-it-fits-with-night-shift-studio">
+        <h2><a class="anchor" href="#how-it-fits-with-night-shift-studio">How it fits with Night-Shift Studio</a></h2>
+        <p>The kit is one half of a system. It holds the rules. Night-Shift Studio is the overnight pipeline that follows them, and the team's daytime tools read the same kit.</p>
+        <p>Each Night-Shift release is paired with a kit release. A rule changes in one place, and every tool picks up the change in a planned release.</p>
+      </section>
+  </article>
+
+  <p class="packet-foot">
+    <a href="../../#projects">← All case studies</a>
+    <a href="../../#contact">Start a conversation →</a>
+  </p>
+</main>
+</body>
+</html>

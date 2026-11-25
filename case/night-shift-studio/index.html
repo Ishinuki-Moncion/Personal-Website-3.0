@@ -4,98 +4,155 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Night-Shift Studio — Ishinuki Daikie</title>
-<meta name="description" content="Designing an agent pipeline to run unattended overnight — a generated second edition kept honest by a parity check, a permission model built so an unsupervised run cannot stall, and a system-wide rule that nothing it operates on is ever published, sent or deleted." />
+<meta name="description" content="An AI pipeline that runs overnight with nobody watching. It starts from the team's past work, checks its own output, and never publishes anything." />
 <link rel="canonical" href="https://ishinuki-moncion.github.io/Personal-Website-3.0/case/night-shift-studio/" />
 <meta property="og:type" content="article" />
 <meta property="og:title" content="Night-Shift Studio" />
-<meta property="og:description" content="Designing an agent pipeline to run unattended overnight — a generated second edition kept honest by a parity check, a permission model built so an unsupervised run cannot stall, and a system-wide rule that nothing it operates on is ever published, sent or deleted." />
+<meta property="og:description" content="An AI pipeline that runs overnight with nobody watching. It starts from the team's past work, checks its own output, and never publishes anything." />
 <meta property="og:url" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/case/night-shift-studio/" />
 <meta property="og:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
-<meta property="og:image:alt" content="daikieOS — Ishinuki Daikie, developer and photographer, Tokyo" />
+<meta property="og:image:alt" content="daikieOS — Ishinuki Daikie, technical producer and photographer, Tokyo" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Night-Shift Studio" />
-<meta name="twitter:description" content="Designing an agent pipeline to run unattended overnight — a generated second edition kept honest by a parity check, a permission model built so an unsupervised run cannot stall, and a system-wide rule that nothing it operates on is ever published, sent or deleted." />
+<meta name="twitter:description" content="An AI pipeline that runs overnight with nobody watching. It starts from the team's past work, checks its own output, and never publishes anything." />
 <meta name="twitter:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
-<meta name="twitter:image:alt" content="daikieOS — Ishinuki Daikie, developer and photographer, Tokyo" />
+<meta name="twitter:image:alt" content="daikieOS — Ishinuki Daikie, technical producer and photographer, Tokyo" />
 <link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="../../images/apple-touch-icon.png" />
-<link rel="stylesheet" href="../../css/site.css?v=3.34" />
-<link rel="stylesheet" href="../../css/case.css?v=1" />
+<link rel="stylesheet" href="../../css/site.css?v=3.36" />
+<link rel="stylesheet" href="../../css/case.css?v=2" />
 </head>
 <body class="packet-body">
 <a class="skip-link" href="#packet-main">Skip to content</a>
 
 <header class="packet-head">
   <a class="packet-home" href="../../">← <span>Ishinuki Daikie</span></a>
-  <span class="packet-idx" translate="no">CASE_04</span>
+  <span class="packet-idx" translate="no">CASE_01</span>
 </header>
 
 <main class="packet" id="packet-main">
   <article>
     <p class="packet-kicker">Engineering case study — internal tooling</p>
     <h1>Night-Shift Studio</h1>
-    <p class="packet-summary">An unattended overnight production pipeline: hand over the order at night, and by morning there is a board of checked creative directions and an honest account of what could not be verified.</p>
+    <p class="packet-summary">Hand over an ad order at night. By morning there is a board of checked creative directions, and a plain list of anything it could not verify.</p>
 
     <dl class="packet-meta">
       <div><dt>Period</dt><dd>2026</dd></div>
-      <div><dt>Role</dt><dd>Sole author of the original work.</dd></div>
-      <div><dt>Stack</dt><dd>Python · Claude Code plugin · pytest · Bash</dd></div>
+      <div><dt>Role</dt><dd>I designed and specified it, and built it with Claude Code. Sole author of the original work.</dd></div>
+      <div><dt>Stack</dt><dd>Python · Claude Code plugin · Retrieval (RAG) · pytest</dd></div>
     </dl>
 
-
+    <p class="packet-links">
+          <a class="packet-link" href="../production-kit/">Related: Production Kit: the rules it follows →</a>
+        </p>
 
     <aside class="packet-evidence">
       <h2>Evidence boundary</h2>
-      <p>The source is private and stays private, because it carries extracted client brand systems and shipped creative that are not mine to license. What I can describe is my own work inside it — the plugin, its scripts and parity checks, the tests and the design records — so this entry is about engineering decisions rather than about anything produced with them. No client, brand, campaign or colleague appears here, and no figure is claimed.</p>
+      <p>The source is private because it holds client brand material and shipped ads that are not mine to share. What I can describe is my own work in it: the plugin, its scripts and checks, the tests and the design records. So this page covers engineering decisions only. It names no client, brand, campaign or colleague, and claims no figures.</p>
     </aside>
 
     <nav class="packet-contents" aria-label="Sections">
       <h2>Contents</h2>
       <ol>
-            <li><a href="#context">Context</a></li>
-            <li><a href="#the-interesting-problem-was-two-editions-not-one">The interesting problem was two editions, not one</a></li>
-            <li><a href="#designing-for-nobody-being-there">Designing for nobody being there</a></li>
+            <li><a href="#why-build-it">Why build it</a></li>
+            <li><a href="#it-starts-from-what-already-worked">It starts from what already worked</a></li>
+            <li><a href="#it-never-fakes-an-answer">It never fakes an answer</a></li>
+            <li><a href="#two-editions-one-source">Two editions, one source</a></li>
+            <li><a href="#built-for-nobody-being-there">Built for nobody being there</a></li>
             <li><a href="#nothing-publishes">Nothing publishes</a></li>
-            <li><a href="#what-is-enforced-by-tests">What is enforced by tests</a></li>
+            <li><a href="#what-the-tests-check">What the tests check</a></li>
             <li><a href="#how-it-was-built">How it was built</a></li>
+            <li><a href="#where-it-is-now">Where it is now</a></li>
       </ol>
     </nav>
+    <figure class="packet-figure">
+      <svg class="dg" viewBox="0 0 400 492" role="img" aria-labelledby="dg-title dg-desc">
+      <title id="dg-title">How Night-Shift Studio and the production kit work together</title>
+      <desc id="dg-desc">An ad order arrives in the evening. Night-Shift Studio searches past work in the team's records and the team's Creative Gallery, builds creative directions that follow the production kit's rules, and checks every build with the kit's automatic gate. By morning there is a board of checked directions and a list of anything it could not verify.</desc>
+      <defs><marker id="dg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="dg-head"/></marker><marker id="dg-arrow-kit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="dg-head-kit"/></marker></defs>
+      <rect class="dg-box" x="110" y="8" width="180" height="46" rx="4"/>
+      <text class="dg-t" x="200" y="29" text-anchor="middle">Ad order</text>
+      <text class="dg-m" x="200" y="45" text-anchor="middle">in the evening</text>
+      <rect class="dg-box" x="8" y="86" width="180" height="58" rx="4"/>
+      <text class="dg-t" x="98" y="111" text-anchor="middle">Past work</text>
+      <text class="dg-m" x="98" y="129" text-anchor="middle">records + Creative Gallery</text>
+      <rect class="dg-box dg-kit" x="212" y="86" width="180" height="58" rx="4"/>
+      <text class="dg-t" x="302" y="111" text-anchor="middle">Production kit</text>
+      <text class="dg-m" x="302" y="129" text-anchor="middle">rules + automatic gate</text>
+      <path class="dg-a" d="M200 54 V176" marker-end="url(#dg-arrow)"/>
+      <path class="dg-a" d="M98 144 V176" marker-end="url(#dg-arrow)"/>
+      <path class="dg-a dg-a-kit" d="M302 144 V176" marker-end="url(#dg-arrow-kit)"/>
+      <rect class="dg-box dg-core" x="8" y="180" width="384" height="206" rx="4"/>
+      <text class="dg-t dg-strong" x="24" y="206">Night-Shift Studio</text>
+      <text class="dg-m" x="376" y="206" text-anchor="end">overnight, unattended</text>
+      <path class="dg-rule" d="M24 220 H376"/>
+      <text class="dg-n" x="24" y="248">1</text><text class="dg-t" x="44" y="248">Search past work</text>
+      <text class="dg-m" x="44" y="266">brand · performance · visual · meaning</text>
+      <text class="dg-n" x="24" y="300">2</text><text class="dg-t" x="44" y="300">Build creative directions</text>
+      <text class="dg-m" x="44" y="318">following the kit's rules</text>
+      <text class="dg-n" x="24" y="352">3</text><text class="dg-t" x="44" y="352">Check every build</text>
+      <text class="dg-m" x="44" y="370">with the kit's automatic gate</text>
+      <path class="dg-a" d="M200 386 V416" marker-end="url(#dg-arrow)"/>
+      <rect class="dg-box dg-out" x="40" y="420" width="320" height="64" rx="4"/>
+      <text class="dg-t" x="200" y="447" text-anchor="middle">Morning: a board of checked directions</text>
+      <text class="dg-m" x="200" y="467" text-anchor="middle">and a list of anything it could not verify</text>
+    </svg>
+      <figcaption>How the two tools fit. The production kit holds the rules, and Night-Shift Studio follows them overnight. Each Night-Shift release is paired with a kit release.</figcaption>
+    </figure>
 
-      <section class="packet-section" id="context">
-        <h2><a class="anchor" href="#context">Context</a></h2>
-        <p>Campaign production at volume splits into three kinds of work: the part that is genuinely creative, the part that is identical every time, and the part that only looks identical until it quietly fails. The third kind is what costs evenings.</p>
-        <p>This system takes the order that arrives in the morning and runs the mechanical part of it overnight, unattended. The result waiting the next day is a board of checked directions together with a report of what it could not confirm — because a pipeline that hides its uncertainty is worse than one that does nothing.</p>
+      <section class="packet-section" id="why-build-it">
+        <h2><a class="anchor" href="#why-build-it">Why build it</a></h2>
+        <p>Ad production at volume has three kinds of work. Some of it is truly creative. Some is identical every time. And some looks identical until it fails without warning. That third kind is what costs evenings.</p>
+        <p>Night-Shift takes the day's order and runs the mechanical part overnight, with nobody watching. The next morning there is a board of checked directions and a report of what it could not confirm. A pipeline that hides its doubts is worse than no pipeline.</p>
       </section>
 
-      <section class="packet-section" id="the-interesting-problem-was-two-editions-not-one">
-        <h2><a class="anchor" href="#the-interesting-problem-was-two-editions-not-one">The interesting problem was two editions, not one</a></h2>
-        <p>The system needs to run in two situations: on a machine with full access to its upstream dependencies, and on a machine with none. The obvious answer is to keep a second copy with those dependencies vendored in.</p>
-        <p>That answer had already failed three times. Two hand-maintained trees with overlapping content drifted every time: a stale registry of skills, a dependency frozen at an old pin, and a template fix that landed in one tree and never reached the other. Each was silent, and each was found late.</p>
-        <p>So the second edition is not maintained — it is generated from the first by a build script, never hand-edited, and a parity check asserts the two still agree. The failure mode changed from &quot;someone forgets&quot; to &quot;the check fails&quot;, which is the only version of this problem I know how to keep solved. One of the tests exists purely to stop stray files drifting into the generated tree.</p>
+      <section class="packet-section" id="it-starts-from-what-already-worked">
+        <h2><a class="anchor" href="#it-starts-from-what-already-worked">It starts from what already worked</a></h2>
+        <p>Before it proposes anything, the pipeline looks back. At the start of every job it checks two sources. One is the team's record of past jobs, brand specifications and review decisions. The other is the team's Creative Gallery: an archive of every ad that shipped, with its results.</p>
+        <p>The gallery can be searched four ways: by brand history, by measured performance, by visual similarity and by meaning. The meaning search uses a multilingual AI model, so a Japanese brief can find an English campaign, and the reverse.</p>
+        <p>Every search returns its results in the same shape. So a new kind of search can plug in without changing anything that reads the results.</p>
       </section>
 
-      <section class="packet-section" id="designing-for-nobody-being-there">
-        <h2><a class="anchor" href="#designing-for-nobody-being-there">Designing for nobody being there</a></h2>
-        <p>Unattended is a specific engineering constraint, not just a schedule. An agent that pauses for a confirmation at two in the morning has not run; it has waited. So installation registers a permission allowlist ahead of time, precisely so the overnight run reaches the end without a prompt it cannot answer.</p>
-        <p>The same reasoning applies to missing dependencies. One upstream is required and the run aborts naming it; another is optional, and its absence degrades the run rather than stopping it — but the report says so explicitly. Setup verifies the machine and reports ready, partially ready, or needs attention, rather than claiming success and failing later.</p>
+      <section class="packet-section" id="it-never-fakes-an-answer">
+        <h2><a class="anchor" href="#it-never-fakes-an-answer">It never fakes an answer</a></h2>
+        <p>If one of those searches is unavailable, the run stops and says so. It never swaps in the newest work without saying so. Someone who asked for the best performers could not tell they got the most recent ones. A silent fallback is a wrong answer that looks right.</p>
+        <p>A fixed set of test questions with known answers guards the search. If the answers drift, the build fails.</p>
+      </section>
+
+      <section class="packet-section" id="two-editions-one-source">
+        <h2><a class="anchor" href="#two-editions-one-source">Two editions, one source</a></h2>
+        <p>The pipeline has to run on two kinds of machine: one that can reach everything it depends on, and one that can reach nothing. The obvious fix is a second copy with those dependencies bundled in.</p>
+        <p>That fix had already failed three times. Two hand-maintained copies drifted apart every time. Examples: a stale list of skills, an old pinned dependency, and a fix that reached only one copy. Each failure was silent and found late.</p>
+        <p>So nobody edits the second edition by hand. A build script generates it from the first, and a check confirms that the two still match. The failure changed from &quot;someone forgets&quot; to &quot;the check fails&quot;. One test exists only to stop stray files from slipping into the generated copy.</p>
+      </section>
+
+      <section class="packet-section" id="built-for-nobody-being-there">
+        <h2><a class="anchor" href="#built-for-nobody-being-there">Built for nobody being there</a></h2>
+        <p>Running unattended shapes the design. An AI that stops to ask permission at 2 a.m. has not run. It has waited. So setup grants the permissions the run needs in advance, and the run never meets a prompt it cannot answer.</p>
+        <p>Missing dependencies get the same care. If a required one is missing, the run stops and names it. If an optional one is missing, the run continues with less, and the report says so. Setup checks the machine first and reports &quot;ready&quot;, &quot;partly ready&quot; or &quot;needs attention&quot;, instead of claiming success and failing later.</p>
       </section>
 
       <section class="packet-section" id="nothing-publishes">
         <h2><a class="anchor" href="#nothing-publishes">Nothing publishes</a></h2>
-        <p>The strongest constraint in the system is a negative one: no component publishes to the CMS, sends a message, or deletes anything it did not create. It reads, it produces, it reports.</p>
-        <p>That rule is written down as outranking everything else — if something is found that violates it, fixing that comes before whatever else was in progress. Automation that runs while nobody is watching earns trust by the size of the blast radius it cannot reach, and the cheapest way to bound it is to never grant the capability in the first place.</p>
+        <p>The strongest rule is a negative one. No part of the system publishes to the ad platform, sends a message, or deletes anything it did not create. It reads, it produces, and it reports.</p>
+        <p>That rule outranks everything else: if something breaks it, fixing that comes first. Automation that runs while nobody watches earns trust by what it cannot touch. The simplest way to limit that is to never grant the ability in the first place.</p>
       </section>
 
-      <section class="packet-section" id="what-is-enforced-by-tests">
-        <h2><a class="anchor" href="#what-is-enforced-by-tests">What is enforced by tests</a></h2>
-        <p>The checks that matter are the ones about output being wrong in ways a person would not notice: a build over its weight budget, an asset that was modified when it should have been passed through untouched, and files appearing in the generated edition that were never in the source.</p>
-        <p>The documentation is tested too. Version references in the docs are asserted against the thing they describe, because the failure this project kept hitting was never a broken program — it was a true instruction that had quietly stopped being true.</p>
+      <section class="packet-section" id="what-the-tests-check">
+        <h2><a class="anchor" href="#what-the-tests-check">What the tests check</a></h2>
+        <p>The important tests catch output that is wrong in ways a person would miss. A build goes over its size limit. A file changes when it should pass through untouched. Files appear in the generated edition that were never in the source.</p>
+        <p>The documentation is tested too. Version numbers in the docs are checked against the things they describe. The problem this project kept hitting was an instruction that had stopped being true while the program still ran.</p>
       </section>
 
       <section class="packet-section" id="how-it-was-built">
         <h2><a class="anchor" href="#how-it-was-built">How it was built</a></h2>
-        <p>Each stage began as a dated design record before any of it was written, and the records were kept as written rather than edited to match what shipped — including an audit that went back over completed work and a remediation plan produced after the first end-to-end run met reality.</p>
-        <p>Keeping superseded records intact matters more than it sounds. A document rewritten to agree with the present is no longer evidence of anything; the value of a dated record is precisely that it says what was believed at the time.</p>
+        <p>Each stage started as a dated design record before any code existed. I kept the records as written instead of editing them to match what shipped. That includes an audit of finished work, and a fix plan written after the first full run met reality.</p>
+        <p>A document rewritten to agree with the present proves nothing. A dated record is valuable because it shows what was believed at the time.</p>
+      </section>
+
+      <section class="packet-section" id="where-it-is-now">
+        <h2><a class="anchor" href="#where-it-is-now">Where it is now</a></h2>
+        <p>In November 2026 the pipeline moved into the company's own GitHub organization as a team tool. It follows the rules in the production kit. Each pipeline release is paired with a kit release, so the two change together on purpose.</p>
       </section>
   </article>
 

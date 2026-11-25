@@ -104,16 +104,27 @@
     });
   }
 
+  /* v3.7b (2026-11-25): the line says what the owner does, so it must not make a
+     visitor wait. It used to type at 26ms a character, about 3s for this sentence.
+     Now the reveal is time-based and finishes in TYPE_MS regardless of length or
+     frame rate; a token stops an older run if the hero entrance replays. */
+  const TYPE_MS = 420;
+  let typeToken = 0;
   function typeSub() {
     if (!sub) return;
     const text = sub.dataset.text || sub.textContent;
     if (reduced) { sub.textContent = text; if (caret) caret.style.display = 'none'; return; }
+    const token = ++typeToken;
     sub.textContent = '';
-    let i = 0;
-    const iv = setInterval(() => {
-      sub.textContent = text.slice(0, ++i);
-      if (i >= text.length) { clearInterval(iv); setTimeout(() => { if (caret) caret.style.opacity = '0.4'; }, 600); }
-    }, 26);
+    const t0 = performance.now();
+    const tick = now => {
+      if (token !== typeToken) return;
+      const n = Math.min(text.length, Math.ceil(text.length * Math.max(0, now - t0) / TYPE_MS));
+      sub.textContent = text.slice(0, n);
+      if (n < text.length) requestAnimationFrame(tick);
+      else setTimeout(() => { if (caret && token === typeToken) caret.style.opacity = '0.4'; }, 600);
+    };
+    requestAnimationFrame(tick);
   }
 
   function runHero() {
@@ -397,12 +408,43 @@
     const srcTile = shots[(i + shots.length) % shots.length];
     const media = srcTile && srcTile.querySelector('.media');
     if (!reduced && typeof document.startViewTransition === 'function' && media && lbImg) {
+      /* v3.4h — the morph is the ONLY writer of `.open` on this branch, so a
+         capture that never completes leaves a visitor tapping a photograph on
+         a page that does nothing. Not hypothetical: on a GPU-less CI runner
+         the document stopped producing frames at the click and had still
+         produced none eight seconds later, while script kept executing
+         normally throughout — the browser had begun capturing the old state
+         (a full-viewport WebGL canvas among it) and never finished.
+
+         Past the deadline we abandon the morph and take the ordinary
+         no-View-Transitions path that every engine without the API already
+         runs. openNow() is the sole arbiter — it returns false once an open
+         has been served or superseded — so a late callback and this timer
+         cannot both open, in either order.
+
+         v3.7h — the deadline is armed HERE, before the decode, not after the
+         transition exists. Armed inside the `.then`, it covered only a
+         transition that had started: a startViewTransition() that threw
+         (engines throw or reject when the document is hidden or a transition
+         cannot start), a handle without `finished`, or anything else that
+         stalled before that line left the lightbox closed for good, because
+         nothing else was ever going to open it. One timer from the click now
+         bounds every step, and keeps the old worst case: the 250ms decode
+         bound plus the transition's own. */
+      let vt = null;
+      const abandonMorph = () => {
+        if (!lbOpenPending || request !== lbOpenRequest) return;
+        media.style.viewTransitionName = '';
+        if (vt) { try { vt.skipTransition(); } catch { /* absent in early implementations */ } }
+        openNow();
+      };
+      setTimeout(abandonMorph, 250 + LB_TRANSITION_DEADLINE_MS);
       const pre = new Image();
       pre.src = sources[(i + sources.length) % sources.length];
       Promise.race([pre.decode().catch(() => {}), new Promise(r => setTimeout(r, 250))]).then(() => {
         if (!lbOpenPending || request !== lbOpenRequest) return;
         media.style.viewTransitionName = 'lb-photo';
-        const vt = document.startViewTransition(() => {
+        const update = () => {
           if (!lbOpenPending || request !== lbOpenRequest) {
             media.style.viewTransitionName = '';
             return;
@@ -413,33 +455,28 @@
           sizeLbImgFor(i);                     // this branch bypasses show()'s sizing step
           lbImg.src = pre.src;                 // already decoded — snapshot gets the real photograph
           lbImg.classList.remove('swapping');  // skip the fade show() armed; the morph IS the entrance
-        });
+        };
+        /* A transition that cannot start is not a reason to wait out the
+           deadline: a synchronous throw, or a handle missing the promises the
+           cleanup below hangs off, falls straight through to the plain open.
+           Left to throw, it would reject this chain (a page error) and leave
+           the lightbox to the timer. */
+        try {
+          vt = document.startViewTransition(update);
+        } catch {
+          vt = null;
+        }
+        if (!vt || !vt.finished || !vt.ready) {
+          if (vt) Promise.resolve(vt.ready).catch(() => {});  // the skip below may reject it
+          abandonMorph();
+          return;
+        }
         vt.finished.finally(() => { lbImg.style.viewTransitionName = ''; });
         /* Skipping a transition REJECTS its `ready`, and an unobserved rejection
-           is reported as a page error. The deadline below skips deliberately,
+           is reported as a page error. The deadline above skips deliberately,
            so claim that rejection rather than let a working fallback announce
            itself as a fault. */
-        vt.ready?.catch(() => {});
-        /* v3.4h — the morph is the ONLY writer of `.open` on this branch, so a
-           capture that never completes leaves a visitor tapping a photograph on
-           a page that does nothing. Not hypothetical: on a GPU-less CI runner
-           the document stopped producing frames at the click and had still
-           produced none eight seconds later, while script kept executing
-           normally throughout — the browser had begun capturing the old state
-           (a full-viewport WebGL canvas among it) and never finished.
-
-           The decode above is already bounded against the same class of stall;
-           the transition itself was not. Past the deadline we abandon the morph
-           and take the ordinary no-View-Transitions path that every engine
-           without the API already runs. openNow() is the sole arbiter — it
-           returns false once an open has been served or superseded — so a late
-           callback and this timer cannot both open, in either order. */
-        setTimeout(() => {
-          if (!lbOpenPending || request !== lbOpenRequest) return;
-          media.style.viewTransitionName = '';
-          try { vt.skipTransition(); } catch { /* absent in early implementations */ }
-          openNow();
-        }, LB_TRANSITION_DEADLINE_MS);
+        vt.ready.catch(() => {});
       });
     } else {
       openNow();

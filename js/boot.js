@@ -7,8 +7,15 @@
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const coarse = matchMedia('(hover: none), (pointer: coarse)').matches;
-  const pace = coarse ? 0.42 : 1;
-  const hardCap = coarse ? 1500 : 9000;
+  /* v3.7b (2026-11-25): one pace for every pointer. Desktop used to run at 1.0,
+     about 2.5s of boot screen before any content; a recruiter skimming from a
+     resume link waited for it. At 0.42 the whole sequence is about 1s everywhere. */
+  const pace = 0.42;
+  /* v3.7b: desktop cap 9000 -> 2500ms. On a busy main thread (a weak GPU, or the
+     scene's first frames) the boot timers starve and the sequence only ended at
+     the cap: measured 9.4s on a GPU-less desktop. 2500ms bounds that, still well
+     inside index.html's 10000ms catastrophic watchdog. */
+  const hardCap = coarse ? 1500 : 2500;
   const GLYPHS = 'ｱｲｳｴｵｶｷｸ01<>/\\#$%&*+=日本開発写真ABCDEF';
   const rand = s => s[Math.floor(Math.random() * s.length)];
 

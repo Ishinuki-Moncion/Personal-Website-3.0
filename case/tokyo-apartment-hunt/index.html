@@ -4,37 +4,37 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Tokyo Apartment Hunt — Ishinuki Daikie</title>
-<meta name="description" content="A scheduled personal search pipeline with a bilingual, server-rendered interface that runs only on the machine that owns it — no hosted service, no account, and a local server that shuts itself down when the last tab closes." />
+<meta name="description" content="A personal search tool that runs on a schedule, with a Japanese and English interface. It runs only on my own computer, with no hosting and no account." />
 <link rel="canonical" href="https://ishinuki-moncion.github.io/Personal-Website-3.0/case/tokyo-apartment-hunt/" />
 <meta property="og:type" content="article" />
 <meta property="og:title" content="Tokyo Apartment Hunt" />
-<meta property="og:description" content="A scheduled personal search pipeline with a bilingual, server-rendered interface that runs only on the machine that owns it — no hosted service, no account, and a local server that shuts itself down when the last tab closes." />
+<meta property="og:description" content="A personal search tool that runs on a schedule, with a Japanese and English interface. It runs only on my own computer, with no hosting and no account." />
 <meta property="og:url" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/case/tokyo-apartment-hunt/" />
 <meta property="og:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
-<meta property="og:image:alt" content="daikieOS — Ishinuki Daikie, developer and photographer, Tokyo" />
+<meta property="og:image:alt" content="daikieOS — Ishinuki Daikie, technical producer and photographer, Tokyo" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Tokyo Apartment Hunt" />
-<meta name="twitter:description" content="A scheduled personal search pipeline with a bilingual, server-rendered interface that runs only on the machine that owns it — no hosted service, no account, and a local server that shuts itself down when the last tab closes." />
+<meta name="twitter:description" content="A personal search tool that runs on a schedule, with a Japanese and English interface. It runs only on my own computer, with no hosting and no account." />
 <meta name="twitter:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
-<meta name="twitter:image:alt" content="daikieOS — Ishinuki Daikie, developer and photographer, Tokyo" />
+<meta name="twitter:image:alt" content="daikieOS — Ishinuki Daikie, technical producer and photographer, Tokyo" />
 <link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="../../images/apple-touch-icon.png" />
-<link rel="stylesheet" href="../../css/site.css?v=3.34" />
-<link rel="stylesheet" href="../../css/case.css?v=1" />
+<link rel="stylesheet" href="../../css/site.css?v=3.36" />
+<link rel="stylesheet" href="../../css/case.css?v=2" />
 </head>
 <body class="packet-body">
 <a class="skip-link" href="#packet-main">Skip to content</a>
 
 <header class="packet-head">
   <a class="packet-home" href="../../">← <span>Ishinuki Daikie</span></a>
-  <span class="packet-idx" translate="no">CASE_05</span>
+  <span class="packet-idx" translate="no">CASE_06</span>
 </header>
 
 <main class="packet" id="packet-main">
   <article>
     <p class="packet-kicker">Engineering case study — personal tool</p>
     <h1>Tokyo Apartment Hunt</h1>
-    <p class="packet-summary">A self-running apartment search that does the looking on a schedule and reduces the human job to two things: adjust the criteria, and read the results.</p>
+    <p class="packet-summary">An apartment search that runs itself on a schedule. My only jobs are to adjust the criteria and read the results.</p>
 
     <dl class="packet-meta">
       <div><dt>Period</dt><dd>2026</dd></div>
@@ -46,41 +46,45 @@
 
     <aside class="packet-evidence">
       <h2>Evidence boundary</h2>
-      <p>Built for my own apartment search in Tokyo. The repository is private and no listing data, price, address or source site is described here — what is worth writing down is the design, not the search.</p>
+      <p>Built for my own apartment search in Tokyo. The repository is private. This page describes no listing, price, address or source website. The design is the part worth writing down.</p>
     </aside>
 
     <nav class="packet-contents" aria-label="Sections">
       <h2>Contents</h2>
       <ol>
-            <li><a href="#the-problem-is-repetition-not-searching">The problem is repetition, not searching</a></li>
-            <li><a href="#a-local-tool-deliberately">A local tool, deliberately</a></li>
-            <li><a href="#bilingual-and-rendered-as-one-language">Bilingual, and rendered as one language</a></li>
+            <li><a href="#the-problem-is-repetition">The problem is repetition</a></li>
+            <li><a href="#a-local-tool-on-purpose">A local tool, on purpose</a></li>
+            <li><a href="#two-languages-each-rendered-whole">Two languages, each rendered whole</a></li>
             <li><a href="#comparing-and-watching-change">Comparing, and watching change</a></li>
       </ol>
     </nav>
 
-      <section class="packet-section" id="the-problem-is-repetition-not-searching">
-        <h2><a class="anchor" href="#the-problem-is-repetition-not-searching">The problem is repetition, not searching</a></h2>
-        <p>Looking for an apartment in Tokyo under a fixed budget, in specific wards, near specific stations, is not a hard search. It is the same search, run again every day, for weeks — and the cost is entirely in remembering to run it and in noticing what changed since yesterday.</p>
-        <p>So the design goal was to remove the human from the repetition without removing them from the decision: a scheduled run does the whole pipeline and produces a digest. Adjusting the criteria and looking at the results is the entire remaining job.</p>
+
+      <section class="packet-section" id="the-problem-is-repetition">
+        <h2><a class="anchor" href="#the-problem-is-repetition">The problem is repetition</a></h2>
+        <p>Finding an apartment in Tokyo on a fixed budget, in certain wards, near certain stations, is not a hard search. It is the same search, every day, for weeks.</p>
+        <p>The cost is remembering to run it, and noticing what changed since yesterday.</p>
+        <p>So the goal was to take me out of the repetition but keep me in the decision. A scheduled run does the whole search and produces a summary. Adjusting the criteria and reading the results is all that is left for me.</p>
       </section>
 
-      <section class="packet-section" id="a-local-tool-deliberately">
-        <h2><a class="anchor" href="#a-local-tool-deliberately">A local tool, deliberately</a></h2>
-        <p>This runs on one machine and serves one person. It is not a hosted service, there is no account, and no data leaves the laptop — which for a search tied to where somebody is about to live is the correct default rather than a limitation.</p>
-        <p>The front door is a double-clickable launcher that opens a browser page. The local server picks a free port if its default is already taken, and shuts itself down a few minutes after the last tab closes — never mid-run. Software that runs on your own machine should not need to be remembered about, or manually stopped.</p>
+      <section class="packet-section" id="a-local-tool-on-purpose">
+        <h2><a class="anchor" href="#a-local-tool-on-purpose">A local tool, on purpose</a></h2>
+        <p>It runs on one computer for one person. There is no hosting, no account, and no data leaves the laptop. For a search about where someone will live, that is the right default.</p>
+        <p>You start it by double-clicking a launcher that opens a browser page. If the usual port is taken, the local server picks a free one.</p>
+        <p>It shuts itself down a few minutes after the last tab closes, but never during a run. Software on your own computer should not need remembering or a manual shutdown.</p>
       </section>
 
-      <section class="packet-section" id="bilingual-and-rendered-as-one-language">
-        <h2><a class="anchor" href="#bilingual-and-rendered-as-one-language">Bilingual, and rendered as one language</a></h2>
-        <p>The interface is Japanese and English, and the choice persists. It is rendered server-side in the selected language and delivered as that language — rather than shipping both and toggling in the browser, or handing the page to a machine translator.</p>
-        <p>That matters for a housing search specifically. Japanese listing vocabulary is precise, and terms of the trade — deposit and key money, the guarantor arrangement, the stove type, the move-in window — do not survive being approximated. Where a term is a term, it stays in Japanese in both renderings.</p>
+      <section class="packet-section" id="two-languages-each-rendered-whole">
+        <h2><a class="anchor" href="#two-languages-each-rendered-whole">Two languages, each rendered whole</a></h2>
+        <p>The interface is in Japanese and English, and it remembers your choice. The server renders each page in the chosen language. It does not ship both and switch in the browser, and it does not use machine translation.</p>
+        <p>That matters for housing. Japanese listing terms are precise: deposit and key money, the guarantor arrangement, the stove type, the move-in window. Where a term is a term, it stays in Japanese in both versions.</p>
       </section>
 
       <section class="packet-section" id="comparing-and-watching-change">
         <h2><a class="anchor" href="#comparing-and-watching-change">Comparing, and watching change</a></h2>
-        <p>Results are a filterable table with a seen state, so a listing already dismissed stays dismissed on later runs. Favourites open into a side-by-side ledger grouped by what actually decides these choices: cost, commute and location, and the property itself — including the parts that are easy to miss until move-in.</p>
-        <p>Because every run is retained, the tool also shows its own history: how prices and availability have moved over time. A single run tells you what is on the market; the series tells you whether waiting is working, which is the question you actually have.</p>
+        <p>Results appear in a filterable table that remembers what you have seen, so a dismissed listing stays dismissed.</p>
+        <p>Favourites open side by side, grouped by what decides these choices: cost, commute and location, and the property itself. That includes details that are easy to miss until move-in.</p>
+        <p>Every run is kept, so the tool also shows how prices and availability move over time. One run shows what is on the market. The history shows whether waiting is working.</p>
       </section>
   </article>
 

@@ -37,8 +37,8 @@ import { classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes }
   });
   const profiles = {
     reduced: { name: 'reduced', dprCap: 1, globeParticles: 2600, fieldCounts: [360, 180, 120], haloLabels: 1, haloTicks: 8, haloRings: 1, postFX: false, postFXSamples: { final: 0, bloom: 0 }, bloomScale: 0.5, wells: false, labelPriority: 1, graticuleFull: false, shellSegments: [24, 16], beadCap: 0, refractBeads: false, rivulet: false },
-    lite: { name: 'lite', dprCap: 1.5, globeParticles: 2600, fieldCounts: [1100, 520, 360], haloLabels: 2, haloTicks: 12, haloRings: 1, postFX: false, postFXSamples: { final: 0, bloom: 0 }, bloomScale: 0.5, wells: false, labelPriority: 1, graticuleFull: false, shellSegments: [24, 16], beadCap: 12, refractBeads: false, rivulet: false },
-    'mobile-rich': { name: 'mobile-rich', dprCap: 1.75, globeParticles: 5000, fieldCounts: [1800, 850, 620], haloLabels: 5, haloTicks: 24, haloRings: 2, postFX: true, postFXSamples: { final: 2, bloom: 0 }, bloomScale: 0.5, wells: true, labelPriority: 3, graticuleFull: true, shellSegments: [48, 32], beadCap: 16, refractBeads: true, rivulet: false },
+    lite: { name: 'lite', dprCap: 1.5, globeParticles: 4500, fieldCounts: [1100, 520, 360], haloLabels: 2, haloTicks: 12, haloRings: 1, postFX: false, postFXSamples: { final: 0, bloom: 0 }, bloomScale: 0.5, wells: false, labelPriority: 1, graticuleFull: false, shellSegments: [24, 16], beadCap: 12, refractBeads: false, rivulet: false },
+    'mobile-rich': { name: 'mobile-rich', dprCap: 1.75, globeParticles: 7000, fieldCounts: [1800, 850, 620], haloLabels: 5, haloTicks: 24, haloRings: 2, postFX: true, postFXSamples: { final: 2, bloom: 0 }, bloomScale: 0.5, wells: true, labelPriority: 3, graticuleFull: true, shellSegments: [48, 32], beadCap: 16, refractBeads: true, rivulet: false },
     high: { name: 'high', dprCap: 2, globeParticles: 7000, fieldCounts: [2600, 1200, 900], haloLabels: 5, haloTicks: 24, haloRings: 2, postFX: true, postFXSamples: { final: 4, bloom: 4 }, bloomScale: 1, wells: true, labelPriority: 3, graticuleFull: true, shellSegments: [48, 32], beadCap: 24, refractBeads: true, rivulet: RIVULET_GATE },
   };
   const quality = { ...profiles[tier] };
@@ -561,7 +561,10 @@ import { classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes }
     const aspect = w / h;
     const defs = tier === 'lite'
       ? [{ n: 80, size: 0.26, speed: [4.5, 6.5], op: 0.32, z: [-5, -9], len: 0.7, head: 0.85 },
-         { n: 130, size: 0.16, speed: [2.4, 3.8], op: 0.22, z: [-8, -14], len: 0.45, head: 0.7 }]
+         { n: 130, size: 0.16, speed: [2.4, 3.8], op: 0.22, z: [-8, -14], len: 0.45, head: 0.7 },
+         /* v3.7e (2026-11-25): a far, faint third layer, as mobile-rich and high have.
+            Without it phone rain read flat. Instanced streaks: about the cost of nothing. */
+         { n: 120, size: 0.13, speed: [2.0, 3.6], op: 0.18, z: [-12, -18], len: 0.32, head: 0.6 }]
       : tier === 'mobile-rich'
         ? [{ n: 50, size: 0.38, speed: [7.5, 13], op: 0.48, z: [-4, -7], len: 0.8, head: 0.9 },
            { n: 100, size: 0.23, speed: [4, 7], op: 0.35, z: [-6, -11], len: 0.55, head: 0.8 },
@@ -570,7 +573,7 @@ import { classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes }
            { n: 150, size: 0.24, speed: [4.2, 7.5], op: 0.36, z: [-6, -11], len: 0.55, head: 0.8 },
            { n: 250, size: 0.15, speed: [2.2, 4.2], op: 0.24, z: [-9, -16], len: 0.35, head: 0.65 }];
     const group = new THREE.Group(); group.name = 'depth-rain';
-    const total = defs.reduce((sum, d) => sum + d.n, 0);   // 470 high / 320 mobile-rich / 210 lite
+    const total = defs.reduce((sum, d) => sum + d.n, 0);   // 470 high / 320 mobile-rich / 330 lite (v3.7e)
     const base = new THREE.PlaneGeometry(1, 1);
     base.translate(0, 0, -8);   // dark-swap safety (v3.1g law): the bloom pass renders the RAW quads under MeshBasicMaterial (instance attrs ignored, all quads collapse onto the base geometry) — park them mid-band, never at the camera plane where w -> 0
     const geo = new THREE.InstancedBufferGeometry();
@@ -2135,8 +2138,9 @@ import { classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes }
     clearUniformValues(pass.compositeMaterial?.uniforms);
     clearUniformValues(pass.blendMaterial?.uniforms);
     for (const material of pass.separableBlurMaterials || []) clearUniformValues(material?.uniforms);
-    if (pass.basic) pass.basic.map = null;
-    if (pass.fsQuad) pass.fsQuad.material = null;
+    /* three r171+ renamed these internals (r158: basic, fsQuad). */
+    if (pass._basic) pass._basic.map = null;
+    if (pass._fsQuad) pass._fsQuad.material = null;
     if (Array.isArray(pass.renderTargetsHorizontal)) pass.renderTargetsHorizontal.length = 0;
     if (Array.isArray(pass.renderTargetsVertical)) pass.renderTargetsVertical.length = 0;
     if (Array.isArray(pass.separableBlurMaterials)) pass.separableBlurMaterials.length = 0;
@@ -2148,7 +2152,7 @@ import { classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes }
     pass._oldClearColor = null;
     pass.material = null;
     pass.uniforms = null;
-    pass.fsQuad = null;
+    pass._fsQuad = null;
     pass.renderTargetsHorizontal = [];
     pass.renderTargetsVertical = [];
     pass.renderTargetBright = null;
@@ -2159,7 +2163,7 @@ import { classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes }
     pass.bloomTintColors = [];
     pass.copyUniforms = null;
     pass.blendMaterial = null;
-    pass.basic = null;
+    pass._basic = null;
     pass.resolution = null;
   }
 
@@ -2175,7 +2179,7 @@ import { classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes }
     composer.readBuffer = null;
     composer.copyPass = null;
     composer.renderer = null;
-    composer.clock = null;
+    composer.timer = null;   // three r17x: EffectComposer's Clock became a Timer
   }
 
   function auditPostFxReferences(composers, passes) {
@@ -2186,7 +2190,7 @@ import { classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes }
     for (const [name, composer] of composers) {
       if (!composer) continue;
       if (composer.passes?.length) retained.push(name + '.passes');
-      for (const key of ['renderTarget1', 'renderTarget2', 'writeBuffer', 'readBuffer', 'copyPass', 'renderer', 'clock']) {
+      for (const key of ['renderTarget1', 'renderTarget2', 'writeBuffer', 'readBuffer', 'copyPass', 'renderer', 'timer']) {
         record(name, key, composer[key]);
       }
     }
@@ -2194,9 +2198,9 @@ import { classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes }
       if (!pass) return;
       const name = 'pass[' + index + ']';
       for (const key of [
-        'scene', 'camera', 'overrideMaterial', 'material', 'uniforms', 'fsQuad',
+        'scene', 'camera', 'overrideMaterial', 'material', 'uniforms', '_fsQuad',
         'renderTargetBright', 'highPassUniforms', 'materialHighPassFilter',
-        'compositeMaterial', 'copyUniforms', 'blendMaterial', 'basic', 'resolution'
+        'compositeMaterial', 'copyUniforms', 'blendMaterial', '_basic', 'resolution'
       ]) record(name, key, pass[key]);
       for (const key of ['renderTargetsHorizontal', 'renderTargetsVertical', 'separableBlurMaterials', 'bloomTintColors']) {
         if (pass[key]?.length) retained.push(name + '.' + key);
@@ -2827,7 +2831,25 @@ import { classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes }
     if (droplets) droplets.update(dt, flash);   // after render: lenses sample THIS frame's buffer; flash drives the C4 glint
     if (!coarse) interrogate(dt);          // SP3: pointer interrogation (touch uses tap-select)
   }
-  raf = requestAnimationFrame(loop);
+
+  /* v3.7c (2026-11-25): compile the scene's shaders in parallel BEFORE the first
+     frame. renderer.compileAsync uses KHR_parallel_shader_compile where the
+     driver has it, so the main thread is not frozen while every material links
+     on the first render (measured as one ~0.2s long task on a phone viewport).
+     Bounded at 1.5s and fail-open: a slow, missing or throwing compileAsync
+     starts the loop anyway. `started` keeps the pause/resume handler below from
+     launching a second loop chain before this one has begun. */
+  let started = false;
+  const startLoop = () => {
+    if (started) return;
+    started = true;
+    last = performance.now();
+    if (running && !document.hidden) raf = requestAnimationFrame(loop);
+  };
+  const precompile = typeof renderer.compileAsync === 'function'
+    ? Promise.resolve().then(() => renderer.compileAsync(scene, camera)).catch(() => {})
+    : Promise.resolve();
+  Promise.race([precompile, new Promise(resolve => setTimeout(resolve, 1500))]).then(startLoop);
 
   /* Re-entry-guarded pause/resume — the old `running = !hidden; if (running)
      requestAnimationFrame(loop)` could start a SECOND concurrent loop chain on
@@ -2840,7 +2862,7 @@ import { classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes }
     } else if (!running) {
       running = true;
       last = performance.now();   // don't lerp across the hidden gap
-      raf = requestAnimationFrame(loop);
+      if (started) raf = requestAnimationFrame(loop);   // v3.7c: before the precompile settles, startLoop owns the first frame
     }
   });
 })();

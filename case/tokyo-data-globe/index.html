@@ -4,37 +4,37 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Tokyo Data Globe — Ishinuki Daikie</title>
-<meta name="description" content="A standalone three.js scene lab: a land-only particle Earth, a pulsing Tokyo node, and a self-drawing great-circle arc — built with no build step so the scene stays the only variable." />
+<meta name="description" content="A small three.js test bench: a globe of land-only points, a pulsing Tokyo marker and a self-drawing arc. It has no build step, so the scene is the only variable." />
 <link rel="canonical" href="https://ishinuki-moncion.github.io/Personal-Website-3.0/case/tokyo-data-globe/" />
 <meta property="og:type" content="article" />
 <meta property="og:title" content="Tokyo Data Globe" />
-<meta property="og:description" content="A standalone three.js scene lab: a land-only particle Earth, a pulsing Tokyo node, and a self-drawing great-circle arc — built with no build step so the scene stays the only variable." />
+<meta property="og:description" content="A small three.js test bench: a globe of land-only points, a pulsing Tokyo marker and a self-drawing arc. It has no build step, so the scene is the only variable." />
 <meta property="og:url" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/case/tokyo-data-globe/" />
 <meta property="og:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
-<meta property="og:image:alt" content="daikieOS — Ishinuki Daikie, developer and photographer, Tokyo" />
+<meta property="og:image:alt" content="daikieOS — Ishinuki Daikie, technical producer and photographer, Tokyo" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Tokyo Data Globe" />
-<meta name="twitter:description" content="A standalone three.js scene lab: a land-only particle Earth, a pulsing Tokyo node, and a self-drawing great-circle arc — built with no build step so the scene stays the only variable." />
+<meta name="twitter:description" content="A small three.js test bench: a globe of land-only points, a pulsing Tokyo marker and a self-drawing arc. It has no build step, so the scene is the only variable." />
 <meta name="twitter:image" content="https://ishinuki-moncion.github.io/Personal-Website-3.0/images/og.png" />
-<meta name="twitter:image:alt" content="daikieOS — Ishinuki Daikie, developer and photographer, Tokyo" />
+<meta name="twitter:image:alt" content="daikieOS — Ishinuki Daikie, technical producer and photographer, Tokyo" />
 <link rel="icon" href="../../favicon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="../../images/apple-touch-icon.png" />
-<link rel="stylesheet" href="../../css/site.css?v=3.34" />
-<link rel="stylesheet" href="../../css/case.css?v=1" />
+<link rel="stylesheet" href="../../css/site.css?v=3.36" />
+<link rel="stylesheet" href="../../css/case.css?v=2" />
 </head>
 <body class="packet-body">
 <a class="skip-link" href="#packet-main">Skip to content</a>
 
 <header class="packet-head">
   <a class="packet-home" href="../../">← <span>Ishinuki Daikie</span></a>
-  <span class="packet-idx" translate="no">CASE_02</span>
+  <span class="packet-idx" translate="no">CASE_05</span>
 </header>
 
 <main class="packet" id="packet-main">
   <article>
     <p class="packet-kicker">Scene and interaction case study</p>
     <h1>Tokyo Data Globe</h1>
-    <p class="packet-summary">A particle Earth built from land-only points, with a great-circle arc that draws itself Dallas to Tokyo. Plain three.js, no build step.</p>
+    <p class="packet-summary">A globe of light points that shows only land, with an arc that draws itself from Dallas to Tokyo. Plain three.js, no build step.</p>
 
     <dl class="packet-meta">
       <div><dt>Period</dt><dd>2026</dd></div>
@@ -49,41 +49,44 @@
 
     <aside class="packet-evidence">
       <h2>Evidence boundary</h2>
-      <p>Public repository with a live demo. The scene is a single readable module, deliberately — the repository README maps every tunable to the line that owns it.</p>
+      <p>Public repository with a live demo. The scene is one readable file on purpose, and the README points each setting to the line that controls it.</p>
     </aside>
 
     <nav class="packet-contents" aria-label="Sections">
       <h2>Contents</h2>
       <ol>
-            <li><a href="#why-a-separate-lab">Why a separate lab</a></li>
+            <li><a href="#why-a-separate-test-bench">Why a separate test bench</a></li>
             <li><a href="#an-earth-made-only-of-land">An Earth made only of land</a></li>
             <li><a href="#motion-that-costs-nothing-per-frame">Motion that costs nothing per frame</a></li>
-            <li><a href="#behaving-when-the-browser-stops-cooperating">Behaving when the browser stops cooperating</a></li>
+            <li><a href="#when-the-browser-stops-cooperating">When the browser stops cooperating</a></li>
       </ol>
     </nav>
 
-      <section class="packet-section" id="why-a-separate-lab">
-        <h2><a class="anchor" href="#why-a-separate-lab">Why a separate lab</a></h2>
-        <p>The globe is the centrepiece of the portfolio, which makes it the worst place to experiment. This repository exists so the scene can be changed in isolation, with no page choreography, no scroll coupling and no boot sequence in the way.</p>
-        <p>It runs from any static server with no build step, so the scene is the only variable.</p>
+
+      <section class="packet-section" id="why-a-separate-test-bench">
+        <h2><a class="anchor" href="#why-a-separate-test-bench">Why a separate test bench</a></h2>
+        <p>The globe is the centrepiece of the portfolio, which makes it the worst place to experiment. This repository lets me change the scene on its own, with no page animation, scroll effects or startup sequence in the way.</p>
+        <p>It runs from any static web server with no build step, so the scene is the only thing that changes.</p>
       </section>
 
       <section class="packet-section" id="an-earth-made-only-of-land">
         <h2><a class="anchor" href="#an-earth-made-only-of-land">An Earth made only of land</a></h2>
-        <p>The globe is a particle field rather than a textured sphere. Points are accepted or rejected against a land mask baked from Natural Earth 110m land polygons into a 384×192 equirectangular bitmask, embedded in the source and decoded once at startup.</p>
-        <p>That keeps the silhouette recognisable at a glance while leaving the oceans genuinely empty — the shape reads as coastline rather than as a texture.</p>
+        <p>The globe is a cloud of points. A land map built from Natural Earth's 1:110m land outlines decides which points to keep.</p>
+        <p>The map is a 384×192 grid of land and sea, stored in the source code and decoded once at startup.</p>
+        <p>So the coastlines are easy to recognise, and the oceans stay truly empty. The shape reads as coastline.</p>
       </section>
 
       <section class="packet-section" id="motion-that-costs-nothing-per-frame">
         <h2><a class="anchor" href="#motion-that-costs-nothing-per-frame">Motion that costs nothing per frame</a></h2>
-        <p>The particle breathing is computed in the vertex shader from a single time uniform. Nothing is uploaded per frame: there is no buffer rewrite, no per-point CPU work, and the cost is independent of the particle count.</p>
-        <p>The Dallas to Tokyo arc is a spherical interpolation between two coordinates, revealed by advancing the geometry draw range rather than by rebuilding it. The timebase is scaled by real elapsed time, so the motion is frame-rate independent.</p>
+        <p>The GPU computes the points' gentle pulse from a single time value. Nothing is uploaded each frame, there is no per-point work on the CPU, and the cost does not grow with the number of points.</p>
+        <p>The Dallas-to-Tokyo arc is a curve along the globe's surface between the two cities. It appears by drawing a little more of the same shape each frame, and the shape is never rebuilt.</p>
+        <p>Its speed follows real time, so it moves the same at any frame rate.</p>
       </section>
 
-      <section class="packet-section" id="behaving-when-the-browser-stops-cooperating">
-        <h2><a class="anchor" href="#behaving-when-the-browser-stops-cooperating">Behaving when the browser stops cooperating</a></h2>
-        <p>The render loop pauses when the tab is hidden and resumes without duplicating itself. A lost WebGL context is handled rather than left to freeze the canvas.</p>
-        <p>Reduced motion renders a single meaningful static frame — Tokyo rotated to face the camera and the arc fully drawn — rather than an empty or arbitrary one. The still frame has to tell the same story as the animation.</p>
+      <section class="packet-section" id="when-the-browser-stops-cooperating">
+        <h2><a class="anchor" href="#when-the-browser-stops-cooperating">When the browser stops cooperating</a></h2>
+        <p>The animation pauses when the tab is hidden and resumes without starting twice. If the browser loses the 3D context, the page handles it and does not freeze.</p>
+        <p>With reduced motion on, the globe shows one still frame that tells the same story: Tokyo turned toward the viewer, and the arc fully drawn.</p>
       </section>
   </article>
 
