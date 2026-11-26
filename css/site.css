@@ -769,7 +769,15 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
   transition: opacity .4s var(--ease-out), visibility 0s linear .4s; }
 .lightbox.open { opacity: 1; pointer-events: auto; visibility: visible;
   transition: opacity .4s var(--ease-out), visibility 0s; }
-.lb-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: clamp(40px,6vw,90px) 20px 20px; position: relative; }
+.lb-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: clamp(40px,6vw,90px) 20px 20px; position: relative;
+  /* v3.7j: reserve the tallest photograph's height (.lb-img's 80vh cap, which
+     includes its border under border-box) plus this padding. Where the stage
+     plus controls plus strip do not fit the viewport (1440x900, 1280x720) the
+     stage was sized by its photograph, so NEXT/PREV moved whenever the next
+     photograph had a different height: y 826 -> 788 at 1440x900. A press held
+     across show()'s 180 ms swap was then released on the stage and the click
+     went to .lightbox, which closed it. Now the controls stay put. */
+  min-height: calc(80vh + clamp(40px,6vw,90px) + 20px); }
 /* v3.4b: width/height MUST stay auto. The width/height content attributes on
    .lb-img exist to give the browser this photograph's aspect ratio before decode
    (no layout shift), but they map into CSS as real width/height in the

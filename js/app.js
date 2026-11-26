@@ -527,7 +527,21 @@
   $('.lb-close') && $('.lb-close').addEventListener('click', closeLb);
   $('.lb-prev') && $('.lb-prev').addEventListener('click', () => show(lbIndex - 1));
   $('.lb-next') && $('.lb-next').addEventListener('click', () => show(lbIndex + 1));
-  lb && lb.addEventListener('click', e => { if (e.target === lb || e.target.classList.contains('lb-stage')) closeLb(); });
+  /* Click outside the photograph closes — but only a click that was ALSO
+     pressed there. When the press and the release land on different elements
+     the browser sends the click to their nearest common ancestor, which is
+     .lightbox itself, so a press on NEXT released anywhere else used to read as
+     a backdrop click and close the viewer (v3.7j). A click on the photograph
+     itself never closes: it is the thing being looked at, and a tap on it
+     should not lose the viewer. */
+  const isLbBackdrop = el => el === lb || (el && el.classList && el.classList.contains('lb-stage'));
+  let lbPressOnBackdrop = false;
+  lb && lb.addEventListener('pointerdown', e => { lbPressOnBackdrop = isLbBackdrop(e.target); });
+  lb && lb.addEventListener('click', e => {
+    const pressedHere = lbPressOnBackdrop;
+    lbPressOnBackdrop = false;
+    if (pressedHere && isLbBackdrop(e.target)) closeLb();
+  });
   /* Tab trap shared by every fullscreen overlay (lightbox + mobile menu):
      cycle focus among the container's visible interactive elements. */
   function trapTab(container, e) {
