@@ -1452,21 +1452,24 @@ import { classifyTier, createFpsDemoter, DEMOTE_BELOW_FPS, estimatePostFxBytes }
   /* Kiroshi scan-and-tag (dossier: CP2077 — scanned things acquire bracket
      tags with readouts, one confident tick; GITS — tags ASSEMBLE FROM
      PARTICLES). One tag live at a time; pointer-hover only (skipped under mobile layout
-     and reduced). Coordinates below are PLACEHOLDERS until the owner supplies
-     real shot locations — swap values in this one map. */
+     and reduced). Places are the owner's own (2026-11-26) and are AREAS, not
+     shot positions: each lat/lon is the centre of the city or region named, so
+     nothing here claims where a frame was taken. Photographs from one area share
+     one point (the globe tap opens the first of them; hover/focus on each tile
+     still tags its own place). */
   const GALLERY_PLACES = {
-    'gallery-01': { lat: 43.06, lon: 141.35, en: 'HOKKAIDO', jp: '北海道' },
-    'gallery-02': { lat: 35.66, lon: 139.70, en: 'SHIBUYA', jp: '渋谷' },
-    'gallery-03': { lat: 35.31, lon: 139.55, en: 'KAMAKURA', jp: '鎌倉' },
-    'gallery-04': { lat: 34.69, lon: 135.50, en: 'OSAKA', jp: '大阪' },
-    'gallery-05': { lat: 35.01, lon: 135.77, en: 'KYOTO', jp: '京都' },
-    'gallery-07': { lat: 36.55, lon: 138.32, en: 'NAGANO', jp: '長野' },
-    'gallery-08': { lat: 35.36, lon: 138.73, en: 'FUJI', jp: '富士' },
-    'gallery-09': { lat: 32.75, lon: -96.80, en: 'DALLAS', jp: 'ダラス' },
-    'gallery-10': { lat: 35.71, lon: 139.80, en: 'ASAKUSA', jp: '浅草' },
-    'gallery-11': { lat: 26.21, lon: 127.68, en: 'OKINAWA', jp: '沖縄' },
-    'gallery-13': { lat: 33.59, lon: 130.40, en: 'FUKUOKA', jp: '福岡' },
-    'gallery-16': { lat: 38.26, lon: 140.87, en: 'SENDAI', jp: '仙台' },
+    'gallery-01': { lat: 35.04, lon: 135.73, en: 'KINKAKU-JI, KYOTO', jp: '京都・金閣寺' },
+    'gallery-02': { lat: 35.01, lon: 135.77, en: 'KYOTO', jp: '京都' },
+    'gallery-03': { lat: 31.80, lon: 130.80, en: 'SOUTHERN KYUSHU', jp: '南九州' },
+    'gallery-04': { lat: 35.66, lon: 139.70, en: 'SHIBUYA, TOKYO', jp: '東京・渋谷' },
+    'gallery-05': { lat: 32.75, lon: -96.80, en: 'DALLAS', jp: 'ダラス' },
+    'gallery-07': { lat: 38.83, lon: -104.82, en: 'COLORADO SPRINGS', jp: 'コロラドスプリングス' },
+    'gallery-08': { lat: 38.83, lon: -104.82, en: 'COLORADO SPRINGS', jp: 'コロラドスプリングス' },
+    'gallery-09': { lat: 38.83, lon: -104.82, en: 'COLORADO SPRINGS', jp: 'コロラドスプリングス' },
+    'gallery-10': { lat: 39.74, lon: -104.99, en: 'DENVER', jp: 'デンバー' },
+    'gallery-11': { lat: 33.59, lon: 130.40, en: 'FUKUOKA', jp: '福岡' },
+    'gallery-13': { lat: 35.01, lon: 135.77, en: 'KYOTO', jp: '京都' },
+    'gallery-16': { lat: 40.71, lon: -74.01, en: 'NEW YORK', jp: 'ニューヨーク' },
   };
   const scanTag = (function () {
     if (reduced) return null;
