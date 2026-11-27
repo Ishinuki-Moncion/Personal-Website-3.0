@@ -46,7 +46,7 @@
   if (next) document.documentElement.dataset.scene = 'next';
 })();
 </script>
-<link rel="stylesheet" href="../css/site.css?v=3.45" />
+<link rel="stylesheet" href="../css/site.css?v=3.46" />
 <noscript>
   <style>
     /* No-JS truth: kill the boot screen and reveal everything the engine would */
@@ -368,6 +368,43 @@
             </div>
           </div>
         </article>
+        <!-- OWN ADS (t3b): three live ads made for this site, between the row's claim and the door to the client work.
+             Each is a page of its own under ads/, shown at its true size in a frame (never scaled). The frames load
+             lazily; js/own-ads.mjs tells each ad to run while it is near the screen and to pause otherwise
+             (postMessage), and wires the replay buttons. Below 1024 px the 970x250 is not shown, and
+             being lazy and hidden it is not requested either. With scripting off each ad shows its own still (its
+             resting state). The copy is English on both pages, marked lang="en", with no data-ja: Japanese wording
+             needs the owner's approval. sandbox: scripts, and a top-level navigation only on a person's press
+             (target="_top"); no same origin, so an ad cannot reach into this page (its fonts load by CORS). -->
+        <div class="own-ads" id="own-ads" lang="en" role="group" aria-labelledby="own-ads-title">
+          <p class="own-ads-label" id="own-ads-title">Live ads, made for this site</p>
+          <div class="own-ads-grid">
+            <figure class="adt adt--wide" data-ad="carousel">
+              <div class="adt-view"><iframe class="adt-frame" src="../ads/carousel/" width="970" height="250" loading="lazy" title="970 by 250 carousel ad: AI tools for ad production, ads for the open web, photography" sandbox="allow-scripts allow-top-navigation-by-user-activation"></iframe></div>
+              <figcaption class="adt-cap">
+                <span class="adt-size">970×250</span><span class="adt-fmt">Carousel</span><span class="adt-own">Own work</span>
+                <span class="adt-state" data-state="paused"><span class="adt-on">Running</span><span class="adt-off">Paused</span></span>
+                <button class="adt-replay" type="button" hidden aria-label="Replay the 970 by 250 carousel ad"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M13 8a5 5 0 1 1-1.5-3.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M12.6 1.6v3.2H9.4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></button>
+              </figcaption>
+            </figure>
+            <figure class="adt adt--side" data-ad="hotspot">
+              <div class="adt-view"><iframe class="adt-frame" src="../ads/hotspot/" width="300" height="600" loading="lazy" title="300 by 600 hotspot ad: Night-Shift Studio" sandbox="allow-scripts allow-top-navigation-by-user-activation"></iframe></div>
+              <figcaption class="adt-cap">
+                <span class="adt-size">300×600</span><span class="adt-fmt">Hotspot</span><span class="adt-own">Own work</span>
+                <span class="adt-state" data-state="paused"><span class="adt-on">Running</span><span class="adt-off">Paused</span></span>
+                <button class="adt-replay" type="button" hidden aria-label="Replay the 300 by 600 hotspot ad"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M13 8a5 5 0 1 1-1.5-3.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M12.6 1.6v3.2H9.4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></button>
+              </figcaption>
+            </figure>
+            <figure class="adt adt--side" data-ad="pointer">
+              <div class="adt-view"><iframe class="adt-frame" src="../ads/pointer/" width="300" height="250" loading="lazy" title="300 by 250 ad: Ishinuki Daikie, Technical Producer in Tokyo" sandbox="allow-scripts allow-top-navigation-by-user-activation"></iframe></div>
+              <figcaption class="adt-cap">
+                <span class="adt-size">300×250</span><span class="adt-fmt">Pointer</span><span class="adt-own">Own work</span>
+                <span class="adt-state" data-state="paused"><span class="adt-on">Running</span><span class="adt-off">Paused</span></span>
+                <button class="adt-replay" type="button" hidden aria-label="Replay the 300 by 250 pointer ad"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M13 8a5 5 0 1 1-1.5-3.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M12.6 1.6v3.2H9.4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></button>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
         <!-- PRIVATE WORK (rebuild phase 2, decision 11): the door to the invitation-only Work site.
              It stands directly under the Technical Producer row, on the owner's word (2026-11-27):
              that row claims the campaigns, and this is the way to see them. Switched on by the owner
@@ -752,6 +789,7 @@ document.getElementById('year').textContent = new Date().getFullYear();
 })();
 </script>
 
-<script type="module" src="../js/boot.mjs?v=49"></script>
+<script type="module" src="../js/boot.mjs?v=50"></script>
+<script type="module" src="../js/own-ads.mjs?v=1"></script>
 </body>
 </html>

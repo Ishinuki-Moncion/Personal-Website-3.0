@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=300, height=600" />
+<meta name="robots" content="noindex" />
+<title>Night-Shift Studio: 300×600 hotspot</title>
+<!-- A 300 x 600 hotspot ad on Night-Shift Studio: one photograph (the owner's, an alley at night) and three
+     hotspots that open three short notes, in order. While it runs and nobody has touched it, it shows the notes
+     one by one and then all three together; a press on a hotspot ends that tour. The resting state, and the
+     still under reduced motion or with scripting off, is all three notes together. Motion is CSS (transform and
+     opacity); the script holds state only. The page that holds the ad says when it may run (postMessage). -->
+<style>
+@font-face { font-family: 'Hanken Grotesk'; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url('../../fonts/hanken-grotesk-latin.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400 800; font-display: swap;
+  src: url('../../fonts/jetbrains-mono-latin.woff2') format('woff2'); }
+:root {
+  /* the site's tokens (css/site.css :root), copied verbatim */
+  --ink-1: #05060a; --ink-2: #0a0c12; --ink-3: #10131b;
+  --text-1: #eef2f5; --text-2: #aab5bf; --text-3: #7d8994;
+  --line-1: rgb(57 240 255 / 0.10); --line-2: rgb(57 240 255 / 0.22); --line-3: rgb(57 240 255 / 0.46);
+  --signal: #39f0ff; --signal-hot: #b4f7ff; --signal-ink: #7fe6f2; --signal-deep: #0e5f6e; --signal-wash: rgb(57 240 255 / 0.10);
+  --event: #ff9e2c; --event-hot: #ffd9a0; --event-ink: #ffb866; --event-wash: rgb(255 158 44 / 0.12);
+  --glow-signal: 0 0 2px rgb(180 247 255 / 0.55), 0 0 22px rgb(57 240 255 / 0.30), 0 0 70px rgb(57 240 255 / 0.10);
+  --glow-event: 0 0 2px rgb(255 217 160 / 0.55), 0 0 20px rgb(255 158 44 / 0.36), 0 0 64px rgb(255 158 44 / 0.12);
+  --bloom-signal: 0 0 30px rgb(57 240 255 / 0.35), 0 0 80px rgb(57 240 255 / 0.14);
+  --glass-sheen: rgb(233 241 244 / 0.07);
+  --name-cool: #f4feff; --name-warm: #fff6ec;
+  --font-display: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --step--1: 0.75rem;
+  --track-label: 0.14em;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --mark: 10px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 300px; height: 600px; overflow: hidden; background: var(--ink-1); }
+body { position: relative; font: 400 16px/1.4 var(--font-display); color: var(--text-1); -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+/* ---------- the photograph and its light ---------- */
+.photo { position: absolute; inset: 0; overflow: hidden; background: var(--ink-2); }
+.photo img { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.02); transform-origin: 40% 62%; filter: saturate(1.06) contrast(1.05); }
+/* night and morning: the second note is morning, and the light in the alley turns warm */
+.tint { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 1.4s var(--ease-io); }
+.tint-night { background: linear-gradient(180deg, rgb(14 95 110 / 0.5), rgb(5 6 10 / 0.1) 60%); mix-blend-mode: multiply; }
+.tint-morning { background: linear-gradient(180deg, rgb(255 217 160 / 0.42), rgb(255 158 44 / 0.16) 50%, rgb(255 158 44 / 0.04) 80%); mix-blend-mode: screen; }
+[data-note="1"] .tint-night { opacity: 1; }
+[data-note="2"] .tint-morning { opacity: 1; }
+.scrim { position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgb(5 6 10 / 0.94) 0, rgb(5 6 10 / 0.72) 120px, rgb(5 6 10 / 0.0) 230px),
+    linear-gradient(0deg, var(--ink-1) 0, rgb(5 6 10 / 0.9) 92px, rgb(5 6 10 / 0) 210px); }
+.glass { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.glass::before { content: ''; position: absolute; top: -20%; left: -60%; width: 40%; height: 140%;
+  background: linear-gradient(90deg, transparent, var(--glass-sheen) 45%, rgb(233 241 244 / 0.1) 50%, var(--glass-sheen) 55%, transparent);
+  transform: rotate(14deg); }
+
+/* ---------- the head ---------- */
+.head { position: absolute; left: 20px; right: 20px; top: 22px; }
+.kicker { display: flex; align-items: center; gap: 10px; font: 500 var(--step--1)/1 var(--font-mono); letter-spacing: var(--track-label);
+  text-transform: uppercase; color: var(--signal-ink); }
+.kicker::before { content: ''; width: 24px; height: 1px; background: var(--signal-hot); box-shadow: var(--glow-signal); }
+.title { margin-top: 12px; font-weight: 250; font-size: 36px; line-height: 0.98; letter-spacing: -0.03em; color: var(--text-1);
+  text-shadow: 0 0 1px rgb(180 247 255 / 0.35), 0 0 26px rgb(57 240 255 / 0.22); }
+
+/* ---------- the notes ---------- */
+.note { position: absolute; left: 16px; right: 16px; top: 128px; padding: 14px 16px 16px;
+  background: rgb(5 6 10 / 0.66); -webkit-backdrop-filter: blur(10px) saturate(1.2); backdrop-filter: blur(10px) saturate(1.2);
+  box-shadow: inset 0 0 0 1px var(--line-2), 0 18px 40px rgb(0 0 0 / 0.45); transition: box-shadow .5s var(--ease-out); }
+.note::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(var(--line-3), var(--line-3)) left top / var(--mark) 1px no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) left top / 1px var(--mark) no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) right top / var(--mark) 1px no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) right top / 1px var(--mark) no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) left bottom / var(--mark) 1px no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) left bottom / 1px var(--mark) no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) right bottom / var(--mark) 1px no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) right bottom / 1px var(--mark) no-repeat; }
+.note[data-lit] { box-shadow: inset 0 0 0 1px var(--line-3), 0 0 24px rgb(57 240 255 / 0.16), 0 18px 40px rgb(0 0 0 / 0.45); }
+.pips { display: flex; gap: 6px; margin-bottom: 12px; }
+.pips i { width: 18px; height: 2px; background: var(--line-2); transition: background-color .4s, box-shadow .4s; }
+[data-note="0"] .pips i, [data-note="1"] .pips i:nth-child(1), [data-note="2"] .pips i:nth-child(2), [data-note="3"] .pips i:nth-child(3) {
+  background: var(--signal-hot); box-shadow: var(--glow-signal); }
+[data-note="2"] .pips i:nth-child(2) { background: var(--event-hot); box-shadow: var(--glow-event); }
+.notes { list-style: none; display: grid; gap: 9px; }
+.notes li { font-size: 15px; line-height: 1.38; color: var(--text-1); text-wrap: pretty; }
+.notes li + li { color: var(--text-1); }
+/* one note open: it alone, larger */
+[data-note="1"] .notes li:not(:nth-child(1)), [data-note="2"] .notes li:not(:nth-child(2)), [data-note="3"] .notes li:not(:nth-child(3)) { display: none; }
+[data-note="1"] .notes li, [data-note="2"] .notes li, [data-note="3"] .notes li { font-size: 19px; line-height: 1.3; font-weight: 350; }
+
+/* ---------- the hotspots ---------- */
+.spot { position: absolute; display: grid; place-items: center; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; }
+.spot-1 { left: 56px; top: 382px; }
+.spot-2 { left: 184px; top: 334px; }
+.spot-3 { left: 150px; top: 452px; }
+.ring { position: relative; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  background: rgb(5 6 10 / 0.55); box-shadow: inset 0 0 0 1.5px var(--signal-hot), var(--glow-signal);
+  transition: background-color .3s, box-shadow .3s, transform .45s var(--ease-out); }
+.ring::before, .ring::after { content: ''; position: absolute; width: 8px; height: 1.5px; background: var(--signal-hot); }
+.ring::after { transform: rotate(90deg); }
+.halo { position: absolute; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--signal); opacity: 0; pointer-events: none; }
+.spot:hover .ring, .spot:focus-visible .ring { transform: scale(1.12); }
+.spot[aria-expanded="true"] .ring { background: var(--signal); transform: rotate(45deg); box-shadow: inset 0 0 0 1.5px var(--signal-hot), var(--bloom-signal); }
+.spot[aria-expanded="true"] .ring::before, .spot[aria-expanded="true"] .ring::after { background: var(--ink-1); }
+.spot-2[aria-expanded="true"] .ring { background: var(--event-hot); box-shadow: inset 0 0 0 1.5px var(--event-hot), var(--glow-event); }
+
+/* ---------- the foot ---------- */
+.foot { position: absolute; left: 16px; right: 16px; bottom: 22px; display: grid; gap: 14px; }
+.sign { display: flex; align-items: baseline; justify-content: space-between; padding-inline: 4px; }
+.sign-name { font-weight: 250; font-size: 20px; letter-spacing: -0.02em; color: var(--name-cool); text-shadow: 0 0 18px rgb(57 240 255 / 0.35); }
+.sign-name b { font-weight: 250; color: var(--name-warm); text-shadow: 0 0 18px rgb(255 158 44 / 0.4); }
+.cta { position: relative; display: flex; align-items: center; justify-content: center; gap: 12px; height: 46px;
+  font: 600 var(--step--1)/1 var(--font-mono); letter-spacing: var(--track-label); text-transform: uppercase;
+  color: var(--ink-1); background: var(--signal); box-shadow: var(--glow-signal); transition: background-color .25s, box-shadow .25s; }
+.cta:hover, .cta:focus-visible { background: var(--signal-hot); box-shadow: var(--bloom-signal); }
+.cta:focus-visible { outline-color: var(--signal-hot); outline-offset: 3px; }
+.cta span { transition: transform .35s var(--ease-out); }
+.cta:hover span, .cta:focus-visible span { transform: translateX(4px); }
+/* its light on the floor under it */
+.cta::after { content: ''; position: absolute; left: 8%; right: 8%; top: calc(100% + 2px); height: 14px; pointer-events: none;
+  background: radial-gradient(50% 100% at 50% 0, rgb(57 240 255 / 0.32), transparent 80%); }
+
+/* ---------- motion (only with the script, only while the page lets it run, never under reduced motion) ---------- */
+.motion .photo img { animation: drift 16s var(--ease-io) infinite alternate; }
+@keyframes drift { from { transform: scale(1.02); } to { transform: scale(1.09) translateY(-6px); } }
+.motion .halo { animation: halo 2.6s var(--ease-out) infinite; }
+.motion .spot-2 .halo { animation-delay: .85s; }
+.motion .spot-3 .halo { animation-delay: 1.7s; }
+@keyframes halo { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(2.6); opacity: 0; } }
+.motion.ran .glass::before { animation: sweep 11s var(--ease-io) 2s infinite; }
+@keyframes sweep { 0% { transform: translateX(0) rotate(14deg); } 30%, 100% { transform: translateX(480%) rotate(14deg); } }
+/* the tour's clock: an invisible bar whose run is one step */
+.clock { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.motion.tour .clock.go { animation: tick var(--step, 4.6s) linear forwards; }
+@keyframes tick { to { transform: translateX(1px); } }
+.paused *, .paused *::before, .paused *::after { animation-play-state: paused !important; }
+</style>
+</head>
+<body data-note="0">
+<div class="photo" aria-hidden="true"><img src="alley.webp" alt="" width="420" height="840" /></div>
+<div class="tint tint-night" aria-hidden="true"></div>
+<div class="tint tint-morning" aria-hidden="true"></div>
+<div class="scrim" aria-hidden="true"></div>
+<div class="glass" aria-hidden="true"></div>
+
+<div class="head">
+  <p class="kicker">Projects</p>
+  <h1 class="title">Night-Shift<br />Studio</h1>
+</div>
+
+<div class="note" id="note" aria-live="off">
+  <div class="pips" aria-hidden="true"><i></i><i></i><i></i></div>
+  <ol class="notes">
+    <li>Hand over an ad order at night.</li>
+    <li>By morning there is a board of checked creative directions.</li>
+    <li>And a plain list of anything it could not verify.</li>
+  </ol>
+</div>
+
+<button class="spot spot-1" type="button" data-n="1" aria-controls="note" aria-expanded="false" aria-label="Hand over an ad order at night."><span class="halo"></span><span class="ring"></span></button>
+<button class="spot spot-2" type="button" data-n="2" aria-controls="note" aria-expanded="false" aria-label="By morning there is a board of checked creative directions."><span class="halo"></span><span class="ring"></span></button>
+<button class="spot spot-3" type="button" data-n="3" aria-controls="note" aria-expanded="false" aria-label="And a plain list of anything it could not verify."><span class="halo"></span><span class="ring"></span></button>
+
+<div class="foot">
+  <p class="sign"><span class="sign-name">Ishinuki <b>Daikie</b></span></p>
+  <a class="cta" href="../../case/night-shift-studio/" target="_top">Read the case study <span aria-hidden="true">→</span></a>
+</div>
+<div class="clock" aria-hidden="true"></div>
+
+<script>
+(function () {
+  'use strict';
+  var root = document.documentElement;
+  var body = document.body;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var embedded = window.parent !== window;
+  var spots = [].slice.call(document.querySelectorAll('.spot'));
+  var note = document.getElementById('note');
+  var clock = document.querySelector('.clock');
+  var running = false, step = 0;
+  /* the tour: each note, then all three, then again; the numbers are seconds each step stands */
+  var TOUR = [[1, 4.4], [2, 4.8], [3, 4.6], [0, 5.2]];
+  root.classList.remove('no-js');
+
+  function open(n) {
+    body.setAttribute('data-note', String(n));
+    spots.forEach(function (s) { s.setAttribute('aria-expanded', Number(s.getAttribute('data-n')) === n ? 'true' : 'false'); });
+    if (n) note.setAttribute('data-lit', ''); else note.removeAttribute('data-lit');
+  }
+  function tick() {
+    clock.classList.remove('go');
+    void clock.offsetWidth;                       // restart the clock's run
+    clock.style.setProperty('--step', TOUR[step][1] + 's');
+    clock.classList.add('go');
+  }
+  clock.addEventListener('animationend', function () {
+    if (!root.classList.contains('tour')) return;
+    step = (step + 1) % TOUR.length;
+    open(TOUR[step][0]);
+    tick();
+  });
+  function settle() {
+    root.classList.toggle('motion', !reduce.matches);
+    root.classList.toggle('paused', !running);
+  }
+  function run(on) {
+    running = !!on;
+    if (running && !root.classList.contains('ran')) {
+      root.classList.add('ran');
+      if (!reduce.matches) {
+        root.classList.add('tour');
+        step = TOUR.length - 1;                     // the tour opens on the still, then walks the notes
+        open(0);
+        tick();
+      }
+    }
+    settle();
+  }
+  /* a press ends the tour; pressing the open hotspot again shows all three */
+  spots.forEach(function (s) {
+    s.addEventListener('click', function () {
+      root.classList.remove('tour');
+      note.setAttribute('aria-live', 'polite');      // announced once a person opens one, never during the tour
+      var n = Number(s.getAttribute('data-n'));
+      open(s.getAttribute('aria-expanded') === 'true' ? 0 : n);
+    });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || body.getAttribute('data-note') === '0') return;
+    var was = document.querySelector('.spot[aria-expanded="true"]');
+    root.classList.remove('tour');
+    open(0);
+    if (was) was.focus();
+  });
+  window.addEventListener('message', function (e) {
+    if (e.source !== window.parent || e.origin !== location.origin || !e.data || e.data.ns !== 'own-ad') return;
+    if (e.data.type === 'run') run(true);
+    else if (e.data.type === 'pause') run(false);
+  });
+  if (reduce.addEventListener) reduce.addEventListener('change', function () { if (reduce.matches) root.classList.remove('tour'); settle(); });
+  settle();
+  if (embedded) window.parent.postMessage({ ns: 'own-ad', type: 'ready' }, location.origin);
+  else run(true);
+}());
+</script>
+</body>
+</html>

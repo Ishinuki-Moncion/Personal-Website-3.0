@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=300, height=250" />
+<meta name="robots" content="noindex" />
+<title>Ishinuki Daikie: 300×250 pointer</title>
+<!-- A 300 x 250 ad whose light answers the pointer (and a tap on touch): a cool light and a warmer one that
+     follows it a beat late, over a field of out-of-focus city light (a crop of the owner's photograph), and the
+     name turning a little towards them. With nobody pointing, the light drifts on its own while the ad runs.
+     The resting state, and the still under reduced motion or with scripting off, has the light standing
+     top right. Motion is CSS (transform and opacity); the script only writes where the pointer is. -->
+<style>
+@font-face { font-family: 'Hanken Grotesk'; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url('../../fonts/hanken-grotesk-latin.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400 800; font-display: swap;
+  src: url('../../fonts/jetbrains-mono-latin.woff2') format('woff2'); }
+:root {
+  /* the site's tokens (css/site.css :root), copied verbatim */
+  --ink-1: #05060a; --ink-2: #0a0c12;
+  --text-1: #eef2f5; --text-2: #aab5bf; --text-3: #7d8994;
+  --line-1: rgb(57 240 255 / 0.10); --line-2: rgb(57 240 255 / 0.22); --line-3: rgb(57 240 255 / 0.46);
+  --signal: #39f0ff; --signal-hot: #b4f7ff; --signal-ink: #7fe6f2; --signal-wash: rgb(57 240 255 / 0.10);
+  --event: #ff9e2c; --event-hot: #ffd9a0; --event-ink: #ffb866;
+  --glow-signal: 0 0 2px rgb(180 247 255 / 0.55), 0 0 22px rgb(57 240 255 / 0.30), 0 0 70px rgb(57 240 255 / 0.10);
+  --glow-event: 0 0 2px rgb(255 217 160 / 0.55), 0 0 20px rgb(255 158 44 / 0.36), 0 0 64px rgb(255 158 44 / 0.12);
+  --name-cool: #f4feff; --name-warm: #fff6ec;
+  --bloom-signal: 0 0 30px rgb(57 240 255 / 0.35), 0 0 80px rgb(57 240 255 / 0.14);
+  --bloom-event: 0 0 30px rgb(255 158 44 / 0.4);
+  --graticule: rgb(57 240 255 / 0.045);
+  --glass-sheen: rgb(233 241 244 / 0.07);
+  --font-display: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --step--1: 0.75rem;
+  --track-label: 0.14em;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  /* where the light stands (css px in the ad), and the same as -1..1 for the name's turn; the script writes these */
+  --x: 236; --y: 64; --nx: 0.57; --ny: -0.49;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 300px; height: 250px; overflow: hidden; background: var(--ink-1); }
+body { position: relative; font: 400 16px/1.4 var(--font-display); color: var(--text-1); -webkit-font-smoothing: antialiased; touch-action: manipulation; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+/* ---------- the field and the light ---------- */
+.field { position: absolute; inset: 0; overflow: hidden; }
+.field img { position: absolute; left: -10px; top: -10px; width: 320px; height: 270px; object-fit: cover; opacity: 0.34; filter: saturate(1.15);
+  transform: translate(calc(var(--nx) * -6px), calc(var(--ny) * -5px)); transition: transform 1.2s var(--ease-out); }
+.field::after { content: ''; position: absolute; inset: 0;
+  background:
+    linear-gradient(var(--graticule) 1px, transparent 1px) 0 0 / 25px 25px,
+    linear-gradient(90deg, var(--graticule) 1px, transparent 1px) 0 0 / 25px 25px,
+    radial-gradient(140% 110% at 30% 40%, transparent 30%, rgb(5 6 10 / 0.75) 100%); }
+.light { position: absolute; left: 0; top: 0; pointer-events: none; mix-blend-mode: screen; border-radius: 50%; }
+.light-cool { width: 360px; height: 360px;
+  background: radial-gradient(closest-side, rgb(180 247 255 / 0.5), rgb(57 240 255 / 0.22) 30%, rgb(57 240 255 / 0.06) 62%, transparent);
+  transform: translate(calc(var(--x) * 1px - 180px), calc(var(--y) * 1px - 180px)); transition: transform .5s var(--ease-out); }
+.light-warm { width: 240px; height: 240px;
+  background: radial-gradient(closest-side, rgb(255 217 160 / 0.30), rgb(255 158 44 / 0.12) 40%, transparent);
+  transform: translate(calc(var(--x) * 1px - 150px), calc(var(--y) * 1px - 90px)); transition: transform 1.3s var(--ease-out); }
+/* the glass: a streak that slides the other way from the light, as a reflection does */
+.sheen { position: absolute; top: -30%; left: 30%; width: 26%; height: 160%; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--glass-sheen) 45%, rgb(233 241 244 / 0.1) 50%, var(--glass-sheen) 55%, transparent);
+  transform: translateX(calc(var(--nx) * -70px)) rotate(18deg); transition: transform 1s var(--ease-out); }
+.edge { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 1px var(--line-1); }
+
+/* ---------- the copy ---------- */
+.role { position: absolute; left: 20px; top: 20px; display: flex; align-items: center; gap: 8px;
+  font: 500 var(--step--1)/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-2); }
+.role::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--event); box-shadow: var(--glow-event); }
+.name { position: absolute; left: 18px; top: 44px; perspective: 600px; }
+.name-in { display: block; transform-origin: 30% 60%;
+  transform: rotateY(calc(var(--nx) * 9deg)) rotateX(calc(var(--ny) * -9deg)); transition: transform .8s var(--ease-out); }
+.name h1 { font-weight: 200; font-size: 56px; line-height: 0.86; letter-spacing: -0.035em; }
+.name h1 span { display: block; }
+.cool { color: var(--name-cool); text-shadow: 0 0 2px rgb(180 247 255 / 0.5), var(--bloom-signal); }
+.warm { color: var(--name-warm); text-shadow: 0 0 2px rgb(255 217 160 / 0.5), var(--bloom-event); }
+/* the wet floor: the second line, mirrored and fading */
+.mirror { display: block; font-weight: 200; font-size: 56px; line-height: 0.86; letter-spacing: -0.035em; color: var(--name-warm);
+  transform: scaleY(-1); opacity: 0.16; margin-top: 0; height: 24px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(0deg, transparent 0, rgb(0 0 0 / 0.9) 100%); mask-image: linear-gradient(0deg, transparent 0, rgb(0 0 0 / 0.9) 100%);
+  filter: blur(0.6px); }
+.mirror span { display: block; transform: translateY(-22px); }
+.cta { position: absolute; left: 20px; bottom: 20px; display: inline-flex; align-items: center; gap: 12px; height: 42px; padding: 0 18px;
+  font: 600 var(--step--1)/1 var(--font-mono); letter-spacing: var(--track-label); text-transform: uppercase;
+  color: var(--ink-1); background: var(--signal); box-shadow: var(--glow-signal); transition: background-color .25s, box-shadow .25s; }
+.cta:hover, .cta:focus-visible { background: var(--signal-hot); box-shadow: var(--bloom-signal); }
+.cta:focus-visible { outline-color: var(--signal-hot); outline-offset: 3px; }
+.cta span { transition: transform .35s var(--ease-out); }
+.cta:hover span, .cta:focus-visible span { transform: translateX(4px); }
+
+/* ---------- motion ---------- */
+/* with nobody pointing, the light drifts on its own (a wrapper moves; the light keeps its own place in it) */
+.drift { position: absolute; inset: 0; pointer-events: none; }
+.motion.idle .drift { animation: drift 14s var(--ease-io) infinite; }
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0); }
+  30% { transform: translate(-150px, 70px); }
+  55% { transform: translate(-60px, 130px); }
+  80% { transform: translate(-190px, 10px); }
+}
+/* inside the light the city comes into colour: a round window moves with the light, and the photograph in it moves
+   back by the same amount, so it stays put under the window (two transforms with one timing; no mask moves) */
+.reveal { position: absolute; left: 0; top: 0; width: 200px; height: 200px; overflow: hidden; border-radius: 50%;
+  -webkit-mask-image: radial-gradient(closest-side, #000 35%, transparent); mask-image: radial-gradient(closest-side, #000 35%, transparent);
+  transform: translate(calc(var(--x) * 1px - 100px), calc(var(--y) * 1px - 100px)); transition: transform .5s var(--ease-out); }
+.reveal-in { position: absolute; left: 0; top: 0; width: 300px; height: 250px;
+  transform: translate(calc(100px - var(--x) * 1px), calc(100px - var(--y) * 1px)); transition: transform .5s var(--ease-out); }
+.reveal-in img { position: absolute; left: -10px; top: -10px; width: 320px; height: 270px; object-fit: cover; opacity: 0.95;
+  filter: saturate(1.5) brightness(1.3);
+  transform: translate(calc(var(--nx) * -6px), calc(var(--ny) * -5px)); transition: transform 1.2s var(--ease-out); }
+.motion.idle .reveal-in { animation: drift-back 14s var(--ease-io) infinite; }
+@keyframes drift-back {
+  0%, 100% { translate: 0 0; }
+  30% { translate: 150px -70px; }
+  55% { translate: 60px -130px; }
+  80% { translate: 190px -10px; }
+}
+.still .reveal, .still .reveal-in, .still .reveal-in img { transition: none; }
+.motion.idle.ran .sheen { animation: glint 9s var(--ease-io) infinite; }
+@keyframes glint { 0%, 100% { transform: translateX(-40px) rotate(18deg); } 50% { transform: translateX(60px) rotate(18deg); } }
+.still .light-cool, .still .light-warm, .still .sheen, .still .name-in, .still .field img { transition: none; }
+.paused *, .paused *::before, .paused *::after { animation-play-state: paused !important; }
+</style>
+</head>
+<body>
+<div class="field" aria-hidden="true"><img src="night.webp" alt="" width="420" height="350" /></div>
+<div class="drift" aria-hidden="true"><div class="reveal"><div class="reveal-in"><img src="night.webp" alt="" width="420" height="350" /></div></div><div class="light light-warm"></div><div class="light light-cool"></div></div>
+<div class="sheen" aria-hidden="true"></div>
+<div class="edge" aria-hidden="true"></div>
+<p class="role">Technical Producer in Tokyo</p>
+<div class="name">
+  <div class="name-in">
+    <h1><span class="cool">Ishinuki</span><span class="warm">Daikie</span></h1>
+    <span class="mirror" aria-hidden="true"><span>Daikie</span></span>
+  </div>
+</div>
+<a class="cta" href="../../#contact" target="_top" data-go="#contact">Start a conversation <span aria-hidden="true">→</span></a>
+
+<script>
+(function () {
+  'use strict';
+  var root = document.documentElement;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var embedded = window.parent !== window;
+  var cta = document.querySelector('.cta');
+  var running = false, rest = 0;
+  var W = 300, H = 250;
+  root.classList.remove('no-js');
+
+  /* the light goes where the pointer is; the name turns a little towards it */
+  function aim(x, y) {
+    var s = root.style;
+    s.setProperty('--x', String(Math.round(x)));
+    s.setProperty('--y', String(Math.round(y)));
+    s.setProperty('--nx', ((x - W / 2) / (W / 2)).toFixed(3));
+    s.setProperty('--ny', ((y - H / 2) / (H / 2)).toFixed(3));
+  }
+  function home() { root.style.removeProperty('--x'); root.style.removeProperty('--y'); root.style.removeProperty('--nx'); root.style.removeProperty('--ny'); }
+  function idle(on) { root.classList.toggle('idle', on); }
+  function point(e) {
+    if (reduce.matches) return;
+    idle(false);
+    aim(e.clientX, e.clientY);
+    clearTimeout(rest);
+  }
+  function release() {
+    if (reduce.matches) return;
+    clearTimeout(rest);
+    rest = setTimeout(function () { home(); idle(true); }, 1600);
+  }
+  document.addEventListener('pointermove', point);
+  document.addEventListener('pointerdown', point);           // a tap on touch
+  document.addEventListener('pointerleave', release);
+  document.documentElement.addEventListener('pointerleave', release);
+  document.addEventListener('pointerup', function (e) { if (e.pointerType !== 'mouse') release(); });
+  /* the keyboard has a light too: on the button while it has focus */
+  cta.addEventListener('focus', function () {
+    if (reduce.matches) return;
+    var r = cta.getBoundingClientRect();
+    idle(false); clearTimeout(rest);
+    aim(r.left + r.width * 0.7, r.top + r.height / 2);
+  });
+  cta.addEventListener('blur', release);
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[data-go]');
+    if (!a || !embedded) return;
+    e.preventDefault();
+    window.parent.postMessage({ ns: 'own-ad', type: 'go', to: a.getAttribute('data-go') }, location.origin);
+  });
+  function settle() {
+    root.classList.toggle('motion', !reduce.matches);
+    root.classList.toggle('still', reduce.matches);
+    root.classList.toggle('paused', !running);
+    if (reduce.matches) { home(); idle(false); }
+  }
+  function run(on) {
+    running = !!on;
+    if (running && !root.classList.contains('ran')) { root.classList.add('ran'); idle(true); }
+    settle();
+  }
+  window.addEventListener('message', function (e) {
+    if (e.source !== window.parent || e.origin !== location.origin || !e.data || e.data.ns !== 'own-ad') return;
+    if (e.data.type === 'run') run(true);
+    else if (e.data.type === 'pause') run(false);
+  });
+  if (reduce.addEventListener) reduce.addEventListener('change', settle);
+  settle();
+  if (embedded) window.parent.postMessage({ ns: 'own-ad', type: 'ready' }, location.origin);
+  else run(true);
+}());
+</script>
+</body>
+</html>

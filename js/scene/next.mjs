@@ -33,12 +33,12 @@
 import * as THREE from 'three';
 import { classifyTier } from '../quality-policy.mjs?v=5';
 import { composition, isPhone, pixelRatioFor, readHeroAnchors, PIXEL_BUDGET, STAGE } from './layout.mjs?v=1';
-import { createGlobe, INTRO_S } from './globe.mjs?v=3';
+import { createGlobe, INTRO_S } from './globe.mjs?v=4';
 import { createStars } from './stars.mjs?v=1';
 import { createWeather } from './weather.mjs?v=1';
-import { createEye } from './eye.mjs?v=2';
+import { createEye } from './eye.mjs?v=3';
 import { createOverlay } from './overlay.mjs?v=2';
-import { createStory, createVeil, SECTIONS } from './story.mjs?v=1';
+import { createStory, createVeil, SECTIONS } from './story.mjs?v=2';
 import { PHOTO_PLACES } from './data/places.mjs?v=2';
 
 const scriptStart = performance.now();
@@ -60,6 +60,14 @@ const ARRIVED_KEY = 'scene.next.arrived';
 const RING_IN = 0.45;    // s: the ring comes up from the first frame
 const HOLD = 0.5;        // s after the arrival starts: the pure ring alone, before the Earth assembles
 const RIM = 0.8;         // the ring's strength (the study's default)
+/* T2a, the cursor follow (the owner's original site): the Earth looks at the mouse or pen, turning so its face moves
+   toward the cursor, on top of where the story points it (follow(), in mountScene). */
+/* The amount is the owner's (2026-11-27): 3.5 and 2.5 degrees "feels too little"; he chose three times that on a real screen. */
+const FOLLOW_YAW = 10.5;     // degrees of turn (left-right) at orbit with the cursor half a viewport from the Earth's centre
+const FOLLOW_PITCH = 7.5;    // degrees of tilt (up-down) at orbit, the same way; both are divided by the zoom below orbit
+const FOLLOW_RATE = 3;       // 1/s: how fast it eases after the cursor, the floor's lean (LEAN_RATE)
+const FOLLOW_EPS = 1e-4;     // degrees: nearer its target than this it lands on it exactly, so the scene comes to rest
+const FOLLOW_BLEND_S = 0.6;  // s: it fades out under a drag and back in after the drag's take-over, over this long
 
 export function mountScene({ probe = null } = {}) {
   const mount = document.getElementById('scene-root');
@@ -426,6 +434,46 @@ export function mountScene({ probe = null } = {}) {
     weather.U.uCam.value.set(M.lean, M.travel, Math.exp(-GROUND_K * lz));
     weather.U.uCamV.value.set(M.vel, Math.max(-10, Math.min(10, M.vel)));
   }
+  /* T2a: the Earth looks at the cursor (FOLLOW_*, top of the file). Measured from the Earth's centre on screen and
+     normalised by half the viewport; below orbit the angles are divided by the zoom (the magnification of the ground
+     under the viewer), so the face shifts about as far on screen at Japan and Tokyo as at orbit. A turn of the Earth's
+     group about the screen's own axes (globe.setFollow), outside the story's pose: the story's targets and the
+     stars' rest pose never see it; the orbit ring and the eye do not hang from it. Eased like the floor's lean and
+     landing exactly, so the scene still comes to rest. A drag has priority: under its take-over the strength (k)
+     goes to 0, and comes back over FOLLOW_BLEND_S once the take-over lapses or is released.
+     Nothing at all on touch (a finger has no resting place), under reduced motion (no listener) and before any
+     mouse or pen has moved: F.live stays false and the frame returns at once. While the Earth is away (presence.e
+     at 1) it is zeroed once and then skipped; it blends back in when the Earth returns. */
+  const DEG = Math.PI / 180;
+  const F = { live: false, on: false, x: 0, y: 0, yaw: 0, pitch: 0, kLin: 1, k: 0, outYaw: 0, outPitch: 0, t: 0 };
+  if (!still) {
+    addEventListener('pointermove', e => {
+      if (e.pointerType !== 'touch') { F.x = e.clientX; F.y = e.clientY; F.live = true; }
+    }, { passive: true });
+  }
+  function follow() {
+    if (!F.live) return;
+    if (PRES.e >= 1) {
+      if (F.on) { F.on = false; F.yaw = F.pitch = F.outYaw = F.outPitch = F.k = F.kLin = 0; globe.setFollow(0, 0); }
+      return;
+    }
+    const now = performance.now();
+    let dt = 0;
+    if (F.on) dt = Math.min(0.25, Math.max(0, (now - F.t) / 1000));
+    F.on = true; F.t = now;
+    const z = Math.max(1, globe.zoom());
+    const nx = Math.max(-1, Math.min(1, (F.x - disc.cx) / Math.max(1, W / 2)));
+    const ny = Math.max(-1, Math.min(1, (disc.cy - F.y) / Math.max(1, H / 2)));   // up is positive
+    const ty = nx * FOLLOW_YAW / z, tp = ny * FOLLOW_PITCH / z;
+    const a = 1 - Math.exp(-dt * FOLLOW_RATE);
+    F.yaw += (ty - F.yaw) * a; if (Math.abs(ty - F.yaw) < FOLLOW_EPS) F.yaw = ty;
+    F.pitch += (tp - F.pitch) * a; if (Math.abs(tp - F.pitch) < FOLLOW_EPS) F.pitch = tp;
+    const handled = story.handled();
+    F.kLin = Math.max(0, Math.min(1, F.kLin + (handled ? -dt : dt) / FOLLOW_BLEND_S));
+    F.k = smooth(0, 1, F.kLin);
+    F.outYaw = F.yaw * F.k; F.outPitch = F.pitch * F.k;
+    globe.setFollow(F.outYaw * DEG, F.outPitch * DEG);
+  }
   function step(dt) {
     clock += dt;
     if (rimIn < 1) rimIn = Math.min(1, clock / RING_IN);
@@ -447,6 +495,7 @@ export function mountScene({ probe = null } = {}) {
     weather.setStage(stage.k);
     weather.setAway(smooth(0.25, 1, PRES.e));   // the room's own light as the Earth goes
     applyStage();
+    follow();                // T2a: before the globe composes its pose for this frame
     globe.update(dt);
     eye.update(dt, !still && story.eyeDrifts());
     weather.update(dt);
@@ -533,7 +582,7 @@ export function mountScene({ probe = null } = {}) {
   function loadControls() {
     if (late.controls !== 'waiting') return;
     late.controls = 'loading';
-    import('./controls.mjs?v=1').then(m => {
+    import('./controls.mjs?v=2').then(m => {
       controls = m.createControls({ story, globe, overlay, onChange: redraw, follow: true });
       controls.place(comp, W, H);
       controls.setLevel(story.level());
@@ -726,6 +775,7 @@ export function mountScene({ probe = null } = {}) {
       sky: { ...stars.debug(), restRedraws, atFirstFrame: starsAtFirstFrame },
       motion: { on: motionOn, lean: +M.lean.toFixed(4), travel: +M.travel.toFixed(3), owed: +M.owed.toFixed(3), vel: +M.vel.toFixed(2), pointer: +M.ptr.toFixed(3),
         sky: +M.sky.toFixed(5), skyOwed: +(Math.abs(M.skyMOwed) * SKY_SCROLL + Math.abs(M.skyLzOwed) * SKY_PUSH).toFixed(5), skyK },
+      follow: { on: F.on, k: +F.k.toFixed(3) || 0, yaw: +F.outYaw.toFixed(3) || 0, pitch: +F.outPitch.toFixed(3) || 0 },
       lens: (() => { const v = globe.view(); return { dist: +v.dist.toFixed(5), fov: +v.fov.toFixed(3), limbPx: +v.limbPx.toFixed(2), ringPx: +v.ringPx.toFixed(2) }; })(),
       sun: (() => { const g = globe.geoOf(globe.U.uSun.value); return { lat: +g.lat.toFixed(3), lon: +g.lon.toFixed(3) }; })(),
       tokyo: { x: +tk.x.toFixed(1), y: +tk.y.toFixed(1), facing: +tk.facing.toFixed(3), world: [tk.wx, tk.wy, tk.wz].map(v => +v.toFixed(5)), markPx: +globe.tokyoMarkPx().toFixed(2) },

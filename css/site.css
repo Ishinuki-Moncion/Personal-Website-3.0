@@ -1416,6 +1416,94 @@ a.row:active { background: var(--ink-3); }
   .door-in { justify-content: flex-start; padding-inline: 0; }   /* its text starts where the button starts */
 }
 
+/* ---- 10. Own live ads (t3b): three ads made for this site, between the Technical Producer row and the door.
+   Each stands at its TRUE size (the iframe's width and height attributes; nothing here scales it) in the
+   creative tile of the Work site (docs/rebuild/prototypes/language, "Creative tile"; work.css .wk-view): a
+   hairline frame with corner brackets, light falling on it from above and pooling on the floor under it, the
+   brackets heating while the ad runs. Captions: size, format, own work, the running light, replay.
+   Layout: from 1024 px the 970x250 has a line of its own and the 300x600 and 300x250 stand side by side with
+   their captions beside them; below 1024 px the 970x250 is not shown (and, lazy and hidden, not loaded); on a
+   phone the two stack with captions under them; under 340 px nothing fits at true size and the block is not
+   shown. Where the shell is narrower than the wide frame (1024 to about 1080 px) the frame reaches into the
+   shell's side padding, centred, rather than scale. ---- */
+.own-ads { --adt-pad: clamp(8px, 2vw, 12px); --adt-mark: 12px; --adt-btn: 28px;
+  margin-block: 0 clamp(26px, 3.4vw, 46px); }
+.own-ads-label { display: flex; align-items: center; gap: var(--s-4); margin-bottom: var(--s-5);
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label); text-transform: uppercase;
+  color: var(--signal-ink); }
+.own-ads-label::before { content: ''; flex: none; width: 40px; height: 1px; background: var(--signal-hot); box-shadow: var(--glow-signal); }
+.own-ads-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-2), transparent); }
+.own-ads + .door { margin-block: 0 clamp(26px, 3.4vw, 46px); }
+.own-ads-grid { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s-6) var(--s-6); }
+.adt { margin: 0; display: grid; gap: var(--s-3); justify-items: start; align-items: end; min-width: 0; }
+.adt--wide { flex: 0 0 100%; }
+.adt-view { position: relative; width: fit-content; padding: var(--adt-pad);
+  background: linear-gradient(to bottom, var(--signal-wash), transparent 40%);
+  box-shadow: inset 0 0 0 1px var(--line-2); transition: box-shadow var(--t-base) var(--ease-out); }
+.adt--wide .adt-view, .adt--wide .adt-cap { margin-left: min(0px, calc((100% - 970px - 2 * var(--adt-pad)) / 2)); }
+.adt-frame { display: block; border: 0; background: var(--ink-2); color-scheme: normal; }
+/* corner brackets */
+.adt-view::after { --mk: var(--line-3);
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(var(--mk), var(--mk)) left top / var(--adt-mark) 1px no-repeat,
+    linear-gradient(var(--mk), var(--mk)) left top / 1px var(--adt-mark) no-repeat,
+    linear-gradient(var(--mk), var(--mk)) right top / var(--adt-mark) 1px no-repeat,
+    linear-gradient(var(--mk), var(--mk)) right top / 1px var(--adt-mark) no-repeat,
+    linear-gradient(var(--mk), var(--mk)) left bottom / var(--adt-mark) 1px no-repeat,
+    linear-gradient(var(--mk), var(--mk)) left bottom / 1px var(--adt-mark) no-repeat,
+    linear-gradient(var(--mk), var(--mk)) right bottom / var(--adt-mark) 1px no-repeat,
+    linear-gradient(var(--mk), var(--mk)) right bottom / 1px var(--adt-mark) no-repeat;
+  transition: filter var(--t-base) var(--ease-out); }
+/* the reflection: the frame's light pooled on the floor under it */
+.adt-view::before { content: ''; position: absolute; left: 4%; right: 4%; top: calc(100% + 1px); height: var(--s-4);
+  pointer-events: none; opacity: 0.55; transition: opacity var(--t-base) var(--ease-out);
+  background: radial-gradient(ellipse 50% 100% at 50% 0, color-mix(in srgb, var(--signal) 40%, transparent), transparent 78%); }
+.adt:has(.adt-state[data-state="running"]) .adt-view::after { --mk: var(--signal-ink); }
+.adt:hover .adt-view, .adt.is-focus .adt-view { box-shadow: inset 0 0 0 1px var(--line-3), var(--glow-signal); }
+.adt:hover .adt-view::after, .adt.is-focus .adt-view::after { --mk: var(--signal-hot); filter: drop-shadow(0 0 6px var(--signal)); }
+.adt:hover .adt-view::before, .adt.is-focus .adt-view::before { opacity: 1; }
+.adt.is-focus .adt-view { outline: 2px solid var(--signal); outline-offset: 3px; }
+
+/* caption: a row under the wide ad; a column beside the two side by side */
+.adt-cap { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4);
+  min-height: var(--adt-btn); padding-right: calc(var(--adt-btn) + var(--s-2));
+  font-family: var(--font-mono); font-size: var(--step--1); line-height: 1.3; letter-spacing: 0.08em; text-transform: uppercase;
+  font-variant-numeric: tabular-nums slashed-zero; }
+.adt-size { color: var(--text-1); }
+.adt-fmt { color: var(--signal-ink); }
+.adt-own { color: var(--text-3); }
+.adt-state { display: inline-flex; align-items: center; gap: var(--s-2); letter-spacing: var(--track-label); color: var(--event-ink);
+  transition: color var(--t-fast) var(--ease-out); }
+.adt-state::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--event); box-shadow: var(--glow-event); }
+.adt-off { display: none; }
+.adt-state[data-state="paused"] { color: var(--text-3); }
+.adt-state[data-state="paused"]::before { background: var(--text-3); box-shadow: none; }
+.adt-state[data-state="paused"] .adt-on { display: none; }
+.adt-state[data-state="paused"] .adt-off { display: inline; }
+.adt-replay { position: absolute; right: 0; top: 50%; translate: 0 -50%;
+  display: inline-grid; place-items: center; width: var(--adt-btn); height: var(--adt-btn); padding: 0;
+  color: var(--text-2); background: none; border: 0; border-radius: 0; box-shadow: inset 0 0 0 1px var(--line-2); cursor: pointer;
+  transition: color var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out), background-color var(--t-fast) var(--ease-out); }
+.adt-replay[hidden] { display: none; }
+.adt-replay:hover, .adt-replay:focus-visible { color: var(--signal-hot); background-color: var(--signal-wash);
+  box-shadow: inset 0 0 0 1px var(--signal), var(--glow-signal); }
+.adt-replay:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+.adt-replay svg { display: block; }
+.adt-replay.is-turning svg { animation: adtTurn var(--t-slow) var(--ease-out); }
+@keyframes adtTurn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .adt-replay.is-turning svg { animation: none; } }
+@media (pointer: coarse) { .own-ads { --adt-btn: 44px; } }
+
+@media (min-width: 600px) {
+  .adt--side { grid-template-columns: auto auto; column-gap: var(--s-4); }
+  .adt--side .adt-cap { flex-direction: column; align-items: flex-start; gap: var(--s-2); padding-right: 0; padding-bottom: var(--s-1); }
+  .adt--side .adt-replay { position: static; translate: none; margin-top: var(--s-2); }
+}
+/* 1200, not 1024: from 1024 to about 1184 px the page's right-hand rail (.scroll-hud) stands over the 970's right edge */
+@media (max-width: 1199.98px) { .adt--wide { display: none; } }
+@media (max-width: 339.98px) { .own-ads { display: none; } }
+
 /* ---- Touch: every control is at least 44 x 44 CSS px on a coarse pointer. The
    look on a fine pointer is unchanged; where the visual size may stay, the hit
    area grows by padding or min-size only. (The burger, close buttons, language

@@ -25,7 +25,7 @@
    wherever that text sits; the hero is the approved composition and is left as it is. */
 import * as THREE from 'three';
 import { TOKYO, DALLAS, latLonToXYZ, xyzToLatLon } from './data/places.mjs?v=2';
-import { EYE_PERIOD_S } from './eye.mjs?v=2';
+import { EYE_PERIOD_S } from './eye.mjs?v=3';
 
 export const IDLE_MS = 4000;
 const LZ_FULL = Math.log(8);
@@ -88,6 +88,7 @@ export function createStory({ globe, eye, drawSets, still = false, onArrive = ()
   let free = true;                 // the hero at rest: the globe's own idle turn and the eye's drift
   let move = null;                 // { cause, to, D0, switched, gateTurn, gateZoom }
   let takenOver = false, holding = false, idleTimer = 0;
+  let handOn = false;              // T2a: this take-over began with a hand on the globe (a drag); the cursor follow stands down for it
   const stats = { moves: 0, cuts: 0, retargets: 0, userTurn: 0, lastPick: null, lastMoveS: null };
 
   // ---------------------------------------------------------------- views
@@ -200,7 +201,7 @@ export function createStory({ globe, eye, drawSets, still = false, onArrive = ()
     const next = SECTIONS[id] ? id : 'home';
     if (next === section && !takenOver) return;   // the same section again: nothing to do
     section = next;
-    takenOver = false; clearTimeout(idleTimer);
+    takenOver = false; handOn = false; clearTimeout(idleTimer);
     leaveFree();
     sectionView(section);
     startMove('section');
@@ -247,19 +248,22 @@ export function createStory({ globe, eye, drawSets, still = false, onArrive = ()
   /** Escape, or the idle timer: back to the section's own view. */
   function release() {
     clearTimeout(idleTimer);
+    handOn = false;
     if (!takenOver) return;
     takenOver = false;
     leaveFree();
     sectionView(section);
     startMove('return');
   }
-  function hold(on) { holding = on; if (!on && takenOver) armIdle(); }
+  function hold(on) { holding = on; if (on) handOn = true; if (!on && takenOver) armIdle(); }
   const moving = () => Boolean(move);
 
   return {
     LEVELS, focus, update, takeOver, stepLevel, nudge, release, hold,
     section: () => section, level: () => dominant, sectionLevel: () => (SECTIONS[section] || SECTIONS.home).level,
     viewLevel: () => T.level, takenOver: () => takenOver, moving, isFree: () => free && !move,
+    /** T2a: a drag's take-over: from the drag's start until the take-over lapses or is released. */
+    handled: () => holding || (takenOver && handOn),
     solid: () => C.solid.b, veil: () => C.veil.b, eyeDrifts: () => free && !move && T.eye === 'drift',
     debug: () => ({
       level: dominant, sectionLevel: (SECTIONS[section] || SECTIONS.home).level, viewLevel: T.level, takenOver, moving: Boolean(move),

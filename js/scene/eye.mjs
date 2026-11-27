@@ -12,7 +12,7 @@
    the far-side dots do. It fades in as the Earth assembles. The lite tier draws a point only (amber in shadow).
    Whether it is night in Tokyo comes from the globe's own sun (globe.tokyoIsNight). */
 import * as THREE from 'three';
-import { GLSL_GLOBE, ORBIT_R } from './globe.mjs?v=3';
+import { GLSL_GLOBE, ORBIT_R } from './globe.mjs?v=4';
 import { TOKYO, latLonToXYZ } from './data/places.mjs?v=2';
 import { inEarthShadow } from './sky-math.mjs?v=1';
 

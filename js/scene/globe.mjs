@@ -106,10 +106,14 @@ export function createGlobe({ candidates, sunHour = null, footDim = 0 }) {
   const TX = { land: { value: blank() }, lightsW: { value: blank() }, lightsJ: { value: blank() } };
 
   const camera = new THREE.PerspectiveCamera(22, 1, 0.1, 50);
-  const root = new THREE.Group();        // added to the scene: tilt group + orbit ring
+  const root = new THREE.Group();        // added to the scene: follow group + orbit ring
+  /* T2a: the cursor follow (next.mjs, FOLLOW_*): a small turn about the screen's own axes, on top of the story's
+     pose and outside it (pose() and the story never see it). The orbit ring and the eye hang from root, so they
+     stay where they are; the stars never read the Earth's pose. */
+  const followGroup = new THREE.Group();
   const tiltGroup = new THREE.Group();   // X tilt (north toward the viewer)
   const earth = new THREE.Group();       // Y spin; every globe mesh lives in object (earth) space
-  tiltGroup.add(earth); root.add(tiltGroup);
+  tiltGroup.add(earth); followGroup.add(tiltGroup); root.add(followGroup);
   const meshes = [];
   /* screen: the study drew the globe in its own canvas and screen-blended the rain (with the ring and the
      floor) over it. The meshes that cross the ring and the floor reflections (body, dots, atmosphere,
@@ -776,6 +780,9 @@ export function createGlobe({ candidates, sunHour = null, footDim = 0 }) {
   let driven = false;
   function drive(on) { if (on === driven) return; driven = on; if (on) turn = null; else vel = 0; }
   function setPose(s, t) { spin = s; tilt = t; }
+  /** T2a: the cursor follow, radians. yaw > 0 turns the face to the right on screen, pitch > 0 up. Applied at the
+      next pose(), every frame (update). */
+  function setFollow(yaw, pitch) { followGroup.rotation.set(-pitch, yaw, 0, 'YXZ'); }
   /** spin and tilt that face lat/lon to the viewer (spin unwrapped to the one nearest `near`). */
   function poseFor(lat, lon, near = spin) {
     const p = latLonToXYZ(lat, lon);
@@ -1003,7 +1010,7 @@ export function createGlobe({ candidates, sunHour = null, footDim = 0 }) {
     setCities, citiesSet: () => citiesSet, orbit, earth, sun: sunObj, tokyoIsNight, geoOf, facing, project, projectBase, marks, placeMarks, setHover, turnTo, hold,
     turning: () => (turn ? { lat: turn.lat, lon: turn.lon, landed: turn.landed } : null),
     // step 2: the journey
-    drive, setPose, poseFor, setZoom, pick: pickAt, inLens,
+    drive, setPose, poseFor, setZoom, pick: pickAt, inLens, setFollow,
     /** The view, for the tests: the camera's distance from the Earth's centre (Earth radii), its lens (degrees,
         vertical) and where the Earth's edge falls on screen (css px from the disc's centre: the ring's radius). */
     view: () => { const d = camera.position.z; return { dist: d, fov: camera.fov, limbPx: (Math.tan(Math.asin(1 / d)) / Math.tan(camera.fov * DEG / 2)) * (L.h / 2), ringPx: L.r }; },
