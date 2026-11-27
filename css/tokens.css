@@ -1,0 +1,111 @@
+/* GENERATED FILE: do not edit.
+   Written by tools/build-tokens.mjs from the token block in css/site.css
+   (between "tokens:start" and "tokens:end"). Edit that block, then run
+   `npm run build:tokens`; `npm run check:tokens` fails when this copy is stale.
+   No page links this file: site.css carries the same block. It exists for the
+   owner's private site, which copies it. */
+:root {
+  /* ---- 1. FLOOR. Kept exactly: the owner's deep space black (v3.1 law). ---- */
+  --void: #05060a;
+  --ink-1: #05060a;   /* page */
+  --ink-2: #0a0c12;   /* raised panel */
+  --ink-3: #10131b;   /* hover / pressed surface */
+  --ink-4: #181c26;   /* highest surface (menus, tooltips) */
+
+  /* ---- 2. TEXT. Neutral and slightly cool. ---- */
+  --text-1: #eef2f5;  /* 17.99:1  headings, body */
+  --text-2: #aab5bf;  /*  9.71:1  secondary copy */
+  --text-3: #7d8994;  /*  5.67:1  labels, metadata: the dimmest text allowed */
+
+  /* ---- 3. LINES. Neon; three strengths. ---- */
+  --line-1: rgb(57 240 255 / 0.10);   /* structure: grids, long rules */
+  --line-2: rgb(57 240 255 / 0.22);   /* frames, brackets, dividers */
+  --line-3: rgb(57 240 255 / 0.46);   /* the one emphasised edge in view */
+  --line-quiet: rgb(170 195 215 / 0.14);  /* inside long body copy only (tables, case-study prose) */
+
+  /* ---- 4. SIGNAL (cool). ---- */
+  --signal: #39f0ff;       /* 14.55:1 */
+  --signal-hot: #b4f7ff;   /* the hot core of a light: still cyan, never neutral white */
+  --signal-ink: #7fe6f2;   /* 13.99:1 link text at small sizes */
+  --signal-deep: #0e5f6e;  /* shadow side of the same light; never text (3.3:1) */
+  --signal-wash: rgb(57 240 255 / 0.10);
+
+  /* ---- 5. EVENT (warm). "Now": Tokyo, live, current. ---- */
+  --event: #ff9e2c;        /* 9.82:1 */
+  --event-hot: #ffd9a0;
+  --event-ink: #ffb866;    /* 11.86:1 */
+  --event-deep: #7a4310;   /* never text (2.6:1) */
+  --event-wash: rgb(255 158 44 / 0.12);
+
+  /* ---- 6. LIGHT. A white-hot core and a falloff. ---- */
+  --glow-signal: 0 0 2px rgb(180 247 255 / 0.55), 0 0 22px rgb(57 240 255 / 0.30), 0 0 70px rgb(57 240 255 / 0.10);
+  --glow-event: 0 0 2px rgb(255 217 160 / 0.55), 0 0 20px rgb(255 158 44 / 0.36), 0 0 64px rgb(255 158 44 / 0.12);
+
+  /* ---- PROPOSED: a line below structure. The live site's oscilloscope graticule
+          (behind the stats, the gallery and the lightbox, and the boot and menu grids)
+          is a substrate under the data; at --line-1 it reads as a pattern and competes
+          with the photograph in the lightbox (v3.2o: the photo is the one light). ---- */
+  --graticule: rgb(57 240 255 / 0.045);  /* PROPOSED */
+
+  /* ---- PROPOSED: the name. An identity element: the two-temperature name keeps its
+          live fills and wide blooms exactly. --glow-signal/--glow-event are for small UI. ---- */
+  --name-cool: #f4feff;                                   /* PROPOSED: "Ishinuki", cyan-tinted white */
+  --name-warm: #fff6ec;                                   /* PROPOSED: "Daikie", cream */
+  --bloom-signal: 0 0 30px rgb(57 240 255 / 0.35), 0 0 80px rgb(57 240 255 / 0.14);  /* PROPOSED: wide cool halo (name, route line, CTA hover) */
+  --bloom-event: 0 0 30px rgb(255 158 44 / 0.4);          /* PROPOSED: wide warm halo (the name's second line) */
+
+  /* ---- PROPOSED: live hues the approved set has no token for (phase 1 changes no hue). ---- */
+  --glass-sheen: rgb(233 241 244 / 0.07);  /* PROPOSED: the neutral streak on the scene glass */
+  --event-bed: rgb(255 158 44 / 0.045);    /* PROPOSED: the case-study evidence box's warm bed */
+  --signal-dim: #1c6f7a;                   /* PROPOSED: diagram arrows (live; --signal-deep is a different hue) */
+  --event-dim: #7a4d14;                    /* PROPOSED: diagram arrows, warm (live; --event-deep is a different hue) */
+
+  /* ---- PROPOSED: surfaces the live site has and the approved set lacks. ---- */
+  --veil: rgb(5 6 10 / 0.86);        /* PROPOSED: the floor behind sticky chrome (nav fade, case header) */
+  --scrim: rgb(3 4 7 / 0.97);        /* PROPOSED: the floor under the mobile menu (live value) */
+  --scrim-photo: rgb(2 3 6 / 0.985); /* PROPOSED: the lightbox floor, a notch deeper (live value, v3.2o) */
+  --panel-bed: rgb(10 12 18 / 0.92); /* PROPOSED: --ink-2 under small floating panels (deck, burger, skip link) */
+  --text-bed: rgb(5 6 10 / 0.62);    /* --ink-1 under small controls that stand on the scene's own light (the hero's second button, Contact's pills) */
+
+  /* ---- PROPOSED: print. Ink on paper; never on screen. ---- */
+  --print-paper: #fff;
+  --print-ink: #111;
+  --print-ink-2: #333;
+  --print-ink-3: #555;
+  --print-rule: #ccc;
+  --print-wash: #f4f4f4;
+
+  /* ---- 7. TYPE. ---- */
+  --font-display: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-jp: 'Zen Kaku Gothic New', 'Hanken Grotesk', sans-serif;
+  --step--2: 0.625rem;                                  /* 10  micro-text as TEXTURE only: decorative, faint, aria-hidden */
+  --step--1: 0.75rem;                                   /* 12  the smallest text that carries information */
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);     /* 16-18 body */
+  --step-1: clamp(1.2rem, 1.1rem + 0.5vw, 1.5rem);      /* lead */
+  --step-2: clamp(1.6rem, 1.3rem + 1.4vw, 2.5rem);      /* row titles */
+  --step-3: clamp(2.6rem, 1.6rem + 4.6vw, 5.5rem);      /* section titles */
+  --step-4: clamp(3.6rem, 1.2rem + 11vw, 10rem);        /* the name */
+  --wght-hair: 220; --wght-light: 320; --wght-body: 420; --wght-strong: 620;
+  --track-display: -0.035em; --track-title: -0.02em; --track-label: 0.14em;
+  --measure: 62ch;
+
+  /* ---- 8. SPACE. 4 px base, eight steps. ---- */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 40px; --s-7: 64px; --s-8: 112px;
+  --shell: min(1440px, 100%);
+  --gutter: clamp(20px, 2.8vw, 40px);
+
+  /* ---- 9. MOTION. Declared; nothing is migrated to these until phase 3. ---- */
+  --t-instant: 90ms;
+  --t-fast: 160ms;
+  --t-base: 280ms;
+  --t-slow: 520ms;
+  --t-scene: 900ms;
+  --t-ambient: 2400ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-in: cubic-bezier(0.55, 0, 0.9, 0.3);
+  --ease-spring: linear(0, 0.36 9%, 0.86 22%, 1.06 33%, 1.02 46%, 0.995 62%, 1);
+  --stagger: 45ms;
+  --shift-1: 8px; --shift-2: 16px; --shift-3: 32px;
+}

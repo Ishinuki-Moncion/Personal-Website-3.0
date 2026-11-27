@@ -3,6 +3,130 @@
    Design system + motion primitives
    ============================================================ */
 
+/* ============================================================
+   DESIGN TOKENS (rebuild phase 1). The approved set is
+   docs/rebuild/prototypes/shared/tokens.css (decision 6, 2026-11-26),
+   copied here name for name and value for value. Everything between the
+   two markers is written to css/tokens.css by `npm run build:tokens`
+   (`npm run check:tokens` fails when that copy is stale); the owner's
+   private site copies that file, so only tokens belong between the markers.
+   Tokens marked PROPOSED are not in the approved set: each names a job the
+   live site has and the set lacks (docs/rebuild/p1-notes.md).
+   Not copied from the prototype: `color-scheme` (a property, not a token;
+   it would change UA scrollbars and controls) and the reduced-motion
+   override, which cannot live inside `:root` and follows this block.
+   ============================================================ */
+:root {
+  /* tokens:start */
+  /* ---- 1. FLOOR. Kept exactly: the owner's deep space black (v3.1 law). ---- */
+  --void: #05060a;
+  --ink-1: #05060a;   /* page */
+  --ink-2: #0a0c12;   /* raised panel */
+  --ink-3: #10131b;   /* hover / pressed surface */
+  --ink-4: #181c26;   /* highest surface (menus, tooltips) */
+
+  /* ---- 2. TEXT. Neutral and slightly cool. ---- */
+  --text-1: #eef2f5;  /* 17.99:1  headings, body */
+  --text-2: #aab5bf;  /*  9.71:1  secondary copy */
+  --text-3: #7d8994;  /*  5.67:1  labels, metadata: the dimmest text allowed */
+
+  /* ---- 3. LINES. Neon; three strengths. ---- */
+  --line-1: rgb(57 240 255 / 0.10);   /* structure: grids, long rules */
+  --line-2: rgb(57 240 255 / 0.22);   /* frames, brackets, dividers */
+  --line-3: rgb(57 240 255 / 0.46);   /* the one emphasised edge in view */
+  --line-quiet: rgb(170 195 215 / 0.14);  /* inside long body copy only (tables, case-study prose) */
+
+  /* ---- 4. SIGNAL (cool). ---- */
+  --signal: #39f0ff;       /* 14.55:1 */
+  --signal-hot: #b4f7ff;   /* the hot core of a light: still cyan, never neutral white */
+  --signal-ink: #7fe6f2;   /* 13.99:1 link text at small sizes */
+  --signal-deep: #0e5f6e;  /* shadow side of the same light; never text (3.3:1) */
+  --signal-wash: rgb(57 240 255 / 0.10);
+
+  /* ---- 5. EVENT (warm). "Now": Tokyo, live, current. ---- */
+  --event: #ff9e2c;        /* 9.82:1 */
+  --event-hot: #ffd9a0;
+  --event-ink: #ffb866;    /* 11.86:1 */
+  --event-deep: #7a4310;   /* never text (2.6:1) */
+  --event-wash: rgb(255 158 44 / 0.12);
+
+  /* ---- 6. LIGHT. A white-hot core and a falloff. ---- */
+  --glow-signal: 0 0 2px rgb(180 247 255 / 0.55), 0 0 22px rgb(57 240 255 / 0.30), 0 0 70px rgb(57 240 255 / 0.10);
+  --glow-event: 0 0 2px rgb(255 217 160 / 0.55), 0 0 20px rgb(255 158 44 / 0.36), 0 0 64px rgb(255 158 44 / 0.12);
+
+  /* ---- PROPOSED: a line below structure. The live site's oscilloscope graticule
+          (behind the stats, the gallery and the lightbox, and the boot and menu grids)
+          is a substrate under the data; at --line-1 it reads as a pattern and competes
+          with the photograph in the lightbox (v3.2o: the photo is the one light). ---- */
+  --graticule: rgb(57 240 255 / 0.045);  /* PROPOSED */
+
+  /* ---- PROPOSED: the name. An identity element: the two-temperature name keeps its
+          live fills and wide blooms exactly. --glow-signal/--glow-event are for small UI. ---- */
+  --name-cool: #f4feff;                                   /* PROPOSED: "Ishinuki", cyan-tinted white */
+  --name-warm: #fff6ec;                                   /* PROPOSED: "Daikie", cream */
+  --bloom-signal: 0 0 30px rgb(57 240 255 / 0.35), 0 0 80px rgb(57 240 255 / 0.14);  /* PROPOSED: wide cool halo (name, route line, CTA hover) */
+  --bloom-event: 0 0 30px rgb(255 158 44 / 0.4);          /* PROPOSED: wide warm halo (the name's second line) */
+
+  /* ---- PROPOSED: live hues the approved set has no token for (phase 1 changes no hue). ---- */
+  --glass-sheen: rgb(233 241 244 / 0.07);  /* PROPOSED: the neutral streak on the scene glass */
+  --event-bed: rgb(255 158 44 / 0.045);    /* PROPOSED: the case-study evidence box's warm bed */
+  --signal-dim: #1c6f7a;                   /* PROPOSED: diagram arrows (live; --signal-deep is a different hue) */
+  --event-dim: #7a4d14;                    /* PROPOSED: diagram arrows, warm (live; --event-deep is a different hue) */
+
+  /* ---- PROPOSED: surfaces the live site has and the approved set lacks. ---- */
+  --veil: rgb(5 6 10 / 0.86);        /* PROPOSED: the floor behind sticky chrome (nav fade, case header) */
+  --scrim: rgb(3 4 7 / 0.97);        /* PROPOSED: the floor under the mobile menu (live value) */
+  --scrim-photo: rgb(2 3 6 / 0.985); /* PROPOSED: the lightbox floor, a notch deeper (live value, v3.2o) */
+  --panel-bed: rgb(10 12 18 / 0.92); /* PROPOSED: --ink-2 under small floating panels (deck, burger, skip link) */
+  --text-bed: rgb(5 6 10 / 0.62);    /* --ink-1 under small controls that stand on the scene's own light (the hero's second button, Contact's pills) */
+
+  /* ---- PROPOSED: print. Ink on paper; never on screen. ---- */
+  --print-paper: #fff;
+  --print-ink: #111;
+  --print-ink-2: #333;
+  --print-ink-3: #555;
+  --print-rule: #ccc;
+  --print-wash: #f4f4f4;
+
+  /* ---- 7. TYPE. ---- */
+  --font-display: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-jp: 'Zen Kaku Gothic New', 'Hanken Grotesk', sans-serif;
+  --step--2: 0.625rem;                                  /* 10  micro-text as TEXTURE only: decorative, faint, aria-hidden */
+  --step--1: 0.75rem;                                   /* 12  the smallest text that carries information */
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);     /* 16-18 body */
+  --step-1: clamp(1.2rem, 1.1rem + 0.5vw, 1.5rem);      /* lead */
+  --step-2: clamp(1.6rem, 1.3rem + 1.4vw, 2.5rem);      /* row titles */
+  --step-3: clamp(2.6rem, 1.6rem + 4.6vw, 5.5rem);      /* section titles */
+  --step-4: clamp(3.6rem, 1.2rem + 11vw, 10rem);        /* the name */
+  --wght-hair: 220; --wght-light: 320; --wght-body: 420; --wght-strong: 620;
+  --track-display: -0.035em; --track-title: -0.02em; --track-label: 0.14em;
+  --measure: 62ch;
+
+  /* ---- 8. SPACE. 4 px base, eight steps. ---- */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 40px; --s-7: 64px; --s-8: 112px;
+  --shell: min(1440px, 100%);
+  --gutter: clamp(20px, 2.8vw, 40px);
+
+  /* ---- 9. MOTION. Declared; nothing is migrated to these until phase 3. ---- */
+  --t-instant: 90ms;
+  --t-fast: 160ms;
+  --t-base: 280ms;
+  --t-slow: 520ms;
+  --t-scene: 900ms;
+  --t-ambient: 2400ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-in: cubic-bezier(0.55, 0, 0.9, 0.3);
+  --ease-spring: linear(0, 0.36 9%, 0.86 22%, 1.06 33%, 1.02 46%, 0.995 62%, 1);
+  --stagger: 45ms;
+  --shift-1: 8px; --shift-2: 16px; --shift-3: 32px;
+  /* tokens:end */
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --t-instant: 0ms; --t-fast: 0ms; --t-base: 0ms; --t-slow: 0ms; --t-scene: 0ms; --stagger: 0ms; --shift-1: 0px; --shift-2: 0px; --shift-3: 0px; }
+}
+
 /* v3.2j — self-hosted Latin instrument faces (Google Fonts CDN retired for
    Latin). css2 serves one variable woff2 per family for both requested weights;
    the font-weight descriptor selects the instance. */
@@ -47,30 +171,29 @@
   src: url('../fonts/zen-kaku-gothic-new-700.woff2') format('woff2');
   unicode-range: U+0020-007E, U+00A0-00FF, U+0192, U+03B1, U+2010-2027, U+2030-205E, U+2190, U+2192-2193, U+2197, U+21B5, U+21BB, U+2212, U+2248, U+25C6, U+25CF, U+2713, U+2715, U+3000-30FF, U+4E00, U+4E0A-4E0B, U+4E26, U+4E2D, U+4E5D, U+4E86, U+4E8B, U+4EAC, U+4EBA, U+4ED5, U+4EF6, U+4EFB, U+4F1A, U+4F34, U+4F4D, U+4F4F, U+4F5C, U+4F7F, U+4F8B, U+4F9D, U+4FA1, U+4FDD, U+4FE1, U+4FEE, U+505C, U+5074, U+50CD, U+5100, U+5171, U+518D, U+5199, U+51FA, U+5206, U+521D, U+5236, U+5275, U+529B, U+52D5, U+52D9, U+5316, U+5352, U+5354, U+5357, U+53B3, U+5408, U+540C, U+5411, U+544A, U+5473, U+54C1, U+554F, U+56FD, U+570F, U+5728, U+5730, U+578B, U+5831, U+5834, U+58EB, U+5909, U+591A, U+591C, U+5927, U+5931, U+597D, U+59D4, U+5B66, U+5B88, U+5B9F, U+5BB6, U+5BB9, U+5BFA, U+5C0E, U+5C65, U+5CA1, U+5DDE, U+5DE5, U+5E2B, U+5E38, U+5E45, U+5E74, U+5E83, U+5EA6, U+5F53, U+5F62, U+5F71, U+5F8C, U+5FC3, U+6027, U+60F3, U+610F, U+6210, U+6240, U+624B, U+62C5, U+62E0, U+6301, U+6307, U+63A2, U+63A5, U+63CF, U+63DB, U+64AE, U+6557, U+6587, U+65B9, U+65E5, U+666F, U+66F8, U+6700, U+6708-6709, U+671D, U+671F, U+672B-672C, U+6750, U+6765, U+6771, U+67FB, U+6821, U+691C, U+696D, U+6982, U+69CB, U+69D8, U+6A5F, U+6B62, U+6B74, U+6C7A, U+6CBF, U+6E08, U+6E0B, U+6E21, U+6E2C, U+6F14, U+70B9, U+7121, U+73FE, U+7403, U+7406, U+751F, U+7528, U+753B, U+767A, U+7684, U+76E3, U+76F4, U+76F8, U+771F, U+7814, U+78BA, U+793A, U+798F, U+79FB, U+7A0B, U+7A76, U+7AEF, U+7B97, U+7BC9, U+7C73, U+7D20, U+7D42, U+7D4C, U+7D61, U+7D99-7D9A, U+7DD2, U+7DE8, U+8005, U+8077, U+80CC, U+80FD, U+81EA, U+82F1, U+884C, U+8868, U+8907, U+8981, U+898B, U+89A7, U+8A00, U+8A08, U+8A17, U+8A2D, U+8A3C, U+8A71, U+8A8D, U+8A9E, U+8AC7, U+8B1B, U+8C37, U+8CAB, U+8CEA, U+8D70, U+8D77, U+8D85, U+8D8A, U+8DA3, U+8DF5, U+8F09, U+9001, U+901F, U+9023, U+904B, U+9053, U+90E8, U+90FD, U+914D, U+91CD, U+91CF, U+91D1, U+9589, U+958B, U+95A3, U+9650, U+9678, U+969B, U+96C6, U+9762, U+983C, U+9A13, U+9AD8, U+FF01-FF5E, U+FFE0-FFE6; }
 
+/* Site names, kept so no selector breaks. Every colour here is an alias of a
+   token above (docs/rebuild/p1-notes.md maps each one); --void itself is a
+   token (the floor, matching the scene fog 0x05060a). */
 :root {
-  --void: #05060a;    /* v3.1 deep-black floor: owner-directed revert to deep space black; matches scene fog 0x05060a */
-  --void-2: #080a10;
-  --void-deep: #030407;  /* v3.1: deepest overlay-scrim floor (near-black, cool-neutral) */
-  --panel-solid: rgba(7, 9, 14, 0.92);  /* v3.1: deep-black chrome panel bed */
-  --cyan: #39f0ff;
-  --cyan-dim: #1c6f7a;
-  --amber: #ff9e2c;
-  --amber-dim: #7a4d14;
-  --fg: #e9f1f4;
-  --muted: #76858f;
-  --line: rgba(57, 240, 255, 0.16);
-  --line-strong: rgba(57, 240, 255, 0.36);
+  --void-2: var(--ink-2);         /* was #080a10: the raised surface under a tile or a diagram box */
+  --void-deep: var(--void);       /* was #030407: the boot floor */
+  --panel-solid: var(--panel-bed);
+  --cyan: var(--signal);
+  --cyan-dim: var(--signal-dim);
+  --amber: var(--event);
+  --amber-dim: var(--event-dim);
+  --fg: var(--text-1);            /* was #e9f1f4 */
+  --muted: var(--text-3);         /* was #76858f */
+  --line: var(--line-2);          /* was cyan 0.16; rules now name their strength directly */
+  --line-strong: var(--line-3);   /* was cyan 0.36 */
 
-  --bloom-cyan: 0 0 30px rgba(57, 240, 255, 0.35), 0 0 80px rgba(57, 240, 255, 0.14);
-  --bloom-amber: 0 0 26px rgba(255, 158, 44, 0.45);
+  --bloom-cyan: var(--bloom-signal);
+  --bloom-amber: var(--bloom-event);   /* was 0 0 26px amber 0.45, used by no rule */
 
   --scene-glass-base: 0.16;
 
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
-
-  --font-display: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  /* Fonts are not this phase's to change: the site's Japanese accent face
+     stays M PLUS Rounded (the approved set names Zen Kaku Gothic New). */
   --font-jp: 'M PLUS Rounded 1c', 'Hanken Grotesk', sans-serif;
   --font-ja-hero: 'Zen Kaku Gothic New', var(--font-jp);  /* L5: JP-as-content display face (angular signage authority, distinct from the rounded --font-jp accent) */
 
@@ -84,8 +207,6 @@
   --track-11: 0.12em;
   --track-12: 0.1em;
   --track-13: 0.04em;
-
-  --shell: min(1440px, 100%);
 
   /* v3.2h — tokenized z-ladder (fixed stack law). Values preserve the working
      order except boot, which now outranks the lightbox (confirmed defect: deck
@@ -126,8 +247,8 @@ body {
 ::selection { background: var(--cyan); color: var(--void); }
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(57, 240, 255, 0.22); }
-::-webkit-scrollbar-thumb:hover { background: rgba(57, 240, 255, 0.4); }
+::-webkit-scrollbar-thumb { background: var(--line-2); }
+::-webkit-scrollbar-thumb:hover { background: var(--line-3); }
 
 a { color: inherit; text-decoration: none; }
 img { display: block; max-width: 100%; }
@@ -155,10 +276,10 @@ body[data-booting] { overflow: hidden; }
 .scene-debug {
   position: fixed; right: 18px; bottom: 18px; z-index: 220;
   max-width: min(360px, calc(100vw - 36px)); padding: 10px 12px;
-  border: 1px solid var(--line-strong); background: rgba(5, 6, 10, 0.82);
-  color: var(--cyan); font-family: var(--font-mono); font-size: 10px;
+  border: 1px solid var(--line-2); background: var(--panel-bed);
+  color: var(--cyan); font-family: var(--font-mono); font-size: var(--step--2);
   letter-spacing: 0.08em; line-height: 1.55; text-transform: uppercase;
-  box-shadow: 0 0 24px rgba(57, 240, 255, 0.18);
+  box-shadow: var(--glow-signal);
   pointer-events: none; opacity: 0; visibility: hidden;
 }
 .scene-debug.on { opacity: 0.9; visibility: visible; }
@@ -182,8 +303,8 @@ body[data-booting] { overflow: hidden; }
   inset: -12%;
   opacity: var(--scene-glass-base);
   background:
-    linear-gradient(105deg, transparent 0 42%, rgba(233, 241, 244, 0.07) 46%, transparent 52%),
-    radial-gradient(circle at 74% 34%, rgba(57, 240, 255, 0.12), transparent 30%);
+    linear-gradient(105deg, transparent 0 42%, var(--glass-sheen) 46%, transparent 52%),
+    radial-gradient(circle at 74% 34%, var(--signal-wash), transparent 30%);
 }
 @media (hover: none), (pointer: coarse) {
   :root {
@@ -199,7 +320,7 @@ body[data-booting] { overflow: hidden; }
 .frame-hud { position: fixed; inset: 0; z-index: 88; pointer-events: none; }
 .frame-hud span {
   position: absolute; width: 26px; height: 26px;
-  border: 1px solid var(--line-strong); opacity: 0;
+  border: 1px solid var(--line-3); opacity: 0;
   animation: hudIn 1s var(--ease-out) forwards;
 }
 body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
@@ -237,10 +358,10 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
 .cursor.is-down .cursor-ring { transform: scale(0.8); }
 .cursor-label {
   position: fixed; top: 0; left: 0; z-index: 9998; pointer-events: none;
-  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em;
+  font-family: var(--font-mono); font-size: var(--step--2); letter-spacing: var(--track-9);
   text-transform: uppercase; color: var(--amber); white-space: nowrap;
   transform: translate(18px, 8px); opacity: 0; transition: opacity .2s;
-  text-shadow: 0 0 10px rgba(255,158,44,0.6);
+  text-shadow: var(--glow-event);
 }
 .cursor-label.show { opacity: 0.95; }
 @media (hover: none), (pointer: coarse) {
@@ -262,37 +383,46 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
 }
 .boot::before { /* scanline sweep during boot — transform, not `top` (no layout/frame) */
   content: ''; position: absolute; left: 0; right: 0; top: -140px; height: 140px;
-  background: linear-gradient(180deg, transparent, rgba(57,240,255,0.06), transparent);
+  background: linear-gradient(180deg, transparent, var(--signal-wash), transparent);
   animation: bootScan 2.6s linear infinite; pointer-events: none;
 }
 @keyframes bootScan { from { transform: translateY(0); } to { transform: translateY(calc(100vh + 280px)); } }
 .boot-grid {
   position: absolute; inset: 0; opacity: 0.5; pointer-events: none;
   background-image:
-    linear-gradient(rgba(57,240,255,0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(57,240,255,0.05) 1px, transparent 1px);
+    linear-gradient(var(--graticule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--graticule) 1px, transparent 1px);
   background-size: 44px 44px;
-  mask-image: radial-gradient(circle at 30% 50%, #000 10%, transparent 70%);
+  mask-image: radial-gradient(circle at 30% 50%, var(--void) 10%, transparent 70%);
 }
 .boot-inner { position: relative; max-width: 680px; width: 100%; }
 .boot-title {
   font-size: clamp(13px, 1.6vw, 16px); letter-spacing: 0.5em; color: var(--cyan);
-  text-transform: uppercase; margin-bottom: 26px; text-shadow: 0 0 14px rgba(57,240,255,0.5);
+  text-transform: uppercase; margin-bottom: 26px; text-shadow: var(--glow-signal);
 }
-.boot-line { font-size: clamp(11px, 1.3vw, 13px); line-height: 1.9; color: var(--muted);
+/* phase 1: reserve the boot log's final height (js/boot.js SEQ has 8 lines), the same
+   move v3.6f made for the hero line. The centred block then never moves as lines
+   arrive. Measured on the frame meter's phone profile: 12 px lines took first-visit
+   CLS from 0.028 to 0.034-0.037 with a growing block; see docs/rebuild/p1-notes.md. */
+.boot-lines { min-height: calc(8 * clamp(20.9px, 2.47vw, 24.7px)); }
+.boot-line { font-size: clamp(var(--step--1), 1.3vw, 13px); color: var(--muted);
+  /* phase 1: the line pitch stays what it was (11 px x 1.9 = 20.9 px) when the floor
+     rises to 12 px. The block is centred and grows one line at a time, so a taller
+     pitch moved it further per line: first-visit phone CLS went 0.028 -> 0.037. */
+  line-height: clamp(20.9px, 2.47vw, 24.7px);   /* = 1.9 x the old clamp(11px, 1.3vw, 13px) */
   letter-spacing: 0.04em; white-space: pre-wrap; opacity: 0; }
 .boot-line .ok { color: var(--cyan); }
 .boot-line .warn { color: var(--amber); }
 .boot-line.in { opacity: 1; }
-.boot-bar-wrap { margin-top: 22px; height: 2px; background: rgba(57,240,255,0.12); overflow: hidden; }
+.boot-bar-wrap { margin-top: 22px; height: 2px; background: var(--line-1); overflow: hidden; }
 .boot-bar { height: 100%; width: 0; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
-.boot-pct { margin-top: 10px; font-size: 11px; color: var(--cyan); letter-spacing: 0.2em; }
+.boot-pct { margin-top: 10px; font-size: var(--step--1); color: var(--cyan); letter-spacing: var(--track-label); }
 .boot-skip {
   position: absolute; bottom: clamp(20px, 5vw, 50px); right: clamp(20px, 5vw, 60px);
-  font-size: 10px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase;
-  border: 1px solid var(--line); padding: 7px 14px; cursor: none; transition: .25s;
+  font-size: var(--step--1); letter-spacing: var(--track-label); color: var(--muted); text-transform: uppercase;
+  border: 1px solid var(--line-2); padding: 7px 14px; cursor: none; transition: .25s;
 }
-.boot-skip:hover { color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 14px rgba(57,240,255,0.3); }
+.boot-skip:hover { color: var(--cyan); border-color: var(--cyan); box-shadow: var(--glow-signal); }
 
 /* ============================================================
    NAV
@@ -305,19 +435,19 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
   mix-blend-mode: normal;
 }
 .nav.scrolled {
-  background: linear-gradient(180deg, rgba(5,6,10,0.85), rgba(5,6,10,0));
+  background: linear-gradient(180deg, var(--veil), transparent);
   backdrop-filter: blur(6px); padding-top: 14px; padding-bottom: 14px;
 }
 .brand { display: flex; align-items: center; gap: 9px; }
-.brand .dia { color: var(--cyan); font-size: 13px; text-shadow: 0 0 10px rgba(57,240,255,0.7);
+.brand .dia { color: var(--cyan); font-size: 13px; text-shadow: var(--glow-signal);
   animation: spinDia 6s linear infinite; display: inline-block; }
 @keyframes spinDia { to { transform: rotate(360deg); } }
 .brand .name { font-family: var(--font-mono); font-size: 13px; letter-spacing: var(--track-13); color: var(--fg); }
 .nav-right { display: flex; align-items: center; gap: clamp(14px, 2vw, 28px); }
 .nav-links { display: flex; align-items: center; gap: clamp(14px, 2vw, 28px); }
 .nav-link {
-  position: relative; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
-  letter-spacing: 0.18em; color: var(--muted); transition: color .3s; padding: 4px 0;
+  position: relative; font-family: var(--font-mono); font-size: var(--step--1); text-transform: uppercase;
+  letter-spacing: var(--track-label); color: var(--muted); transition: color .3s; padding: 4px 0;
 }
 .nav-link::before { content: '['; color: var(--amber); opacity: 0;
   margin-right: 4px; transform: translateX(6px); display: inline-block; transition: .3s; }
@@ -326,28 +456,34 @@ body:not([data-booting]) .frame-hud span { animation-delay: 0.3s; }
 .nav-link:hover, .nav-link:focus-visible, .nav-link.active { color: var(--cyan); }
 .nav-link:hover::before, .nav-link:focus-visible::before, .nav-link.active::before,
 .nav-link:hover::after, .nav-link:focus-visible::after, .nav-link.active::after { opacity: 0.8; transform: translateX(0); }
-.nav-meta { font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--track-10); color: var(--muted);
+.nav-meta { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label); color: var(--muted);
   display: flex; flex-direction: column; align-items: flex-end; line-height: 1.5; white-space: nowrap; }
 .nav-meta span { white-space: nowrap; }
 .nav-meta .clock { color: var(--cyan); }
 .hud-btn {
-  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; color: var(--cyan);
-  border: 1px solid var(--line); padding: 5px 11px; transition: .25s; position: relative; overflow: hidden;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.1em; color: var(--cyan);
+  border: 1px solid var(--line-2); padding: 5px 11px; transition: .25s; position: relative; overflow: hidden;
 }
-.hud-btn:hover { border-color: var(--cyan); box-shadow: 0 0 14px rgba(57,240,255,0.35); }
+.hud-btn:hover { border-color: var(--cyan); box-shadow: var(--glow-signal); }
 .hud-btn .swap { display: inline-block; transition: transform .4s var(--ease-out), opacity .3s; }
 
 /* hamburger — hidden on desktop */
-.nav-burger { display: none; width: 40px; height: 40px; border: 1px solid var(--line);
+.nav-burger { display: none; width: 40px; height: 40px; border: 1px solid var(--line-2);
   background: var(--panel-solid); flex-direction: column; align-items: center; justify-content: center;
   gap: 5px; cursor: none; transition: .25s; }
-.nav-burger:hover { border-color: var(--cyan); box-shadow: 0 0 14px rgba(57,240,255,0.3); }
+.nav-burger:hover { border-color: var(--cyan); box-shadow: var(--glow-signal); }
 .nav-burger span { display: block; width: 18px; height: 1.5px; background: var(--cyan);
-  box-shadow: 0 0 6px rgba(57,240,255,0.5); transition: transform .35s var(--ease-out), opacity .25s; }
+  box-shadow: var(--glow-signal); transition: transform .35s var(--ease-out), opacity .25s; }
 body.menu-open .nav-burger span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
 body.menu-open .nav-burger span:nth-child(2) { opacity: 0; transform: scaleX(0.2); }
 body.menu-open .nav-burger span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
 
+/* phase 1: at 12 px the nav row is about 30 px wider; between 821 and 900 px the
+   five gaps give that back (measured: brand-to-links gap at 821 px was 30 px at
+   11 px type, 0 and wrapping at 12 px with the old gaps, back to ~30 with these). */
+@media (max-width: 900px) {
+  .nav-right, .nav-links { gap: 10px; }
+}
 @media (max-width: 820px) {
   .nav-links, .nav-meta { display: none; }
   .nav-burger { display: flex; }
@@ -356,7 +492,7 @@ body.menu-open .nav-burger span:nth-child(3) { transform: translateY(-6.5px) rot
 /* ============================================================
    MOBILE MENU overlay
    ============================================================ */
-.mobile-menu { position: fixed; inset: 0; z-index: var(--z-menu); background: rgba(3,4,7,0.97);
+.mobile-menu { position: fixed; inset: 0; z-index: var(--z-menu); background: var(--scrim);
   backdrop-filter: blur(10px); display: flex; flex-direction: column;
   padding: clamp(20px, 6vw, 40px); opacity: 0; visibility: hidden; pointer-events: none;
   overflow-y: auto; -webkit-overflow-scrolling: touch;
@@ -365,20 +501,20 @@ body.menu-open .nav-burger span:nth-child(3) { transform: translateY(-6.5px) rot
 body.menu-open .mobile-menu { opacity: 1; visibility: visible; pointer-events: auto; transform: none;
   transition: opacity .42s var(--ease-out), transform .55s var(--ease-out), visibility 0s; }
 .mm-grid { position: absolute; inset: 0; pointer-events: none; opacity: 0.6;
-  background-image: linear-gradient(rgba(57,240,255,0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(57,240,255,0.045) 1px, transparent 1px);
-  background-size: 40px 40px; mask-image: radial-gradient(circle at 70% 20%, #000 5%, transparent 75%); }
+  background-image: linear-gradient(var(--graticule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--graticule) 1px, transparent 1px);
+  background-size: 40px 40px; mask-image: radial-gradient(circle at 70% 20%, var(--void) 5%, transparent 75%); }
 .mm-head { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1;
   padding-top: 6px; }
-.mm-tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase;
-  color: var(--cyan); text-shadow: 0 0 12px rgba(57,240,255,0.5); }
-.mm-close { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; color: var(--muted);
-  border: 1px solid var(--line); padding: 7px 13px; cursor: none; transition: .25s; }
+.mm-tag { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label); text-transform: uppercase;
+  color: var(--cyan); text-shadow: var(--glow-signal); }
+.mm-close { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label); color: var(--muted);
+  border: 1px solid var(--line-2); padding: 7px 13px; cursor: none; transition: .25s; }
 .mm-close:hover { color: var(--amber); border-color: var(--amber); }
 .mm-links { flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; z-index: 1;
   gap: clamp(2px, 1vw, 8px); }
 .mm-links a { display: flex; align-items: baseline; gap: 16px; padding: clamp(8px, 2vw, 14px) 0;
-  border-bottom: 1px solid var(--line); position: relative;
+  border-bottom: 1px solid var(--line-2); position: relative;
   opacity: 0; transform: translateX(-24px); transition: opacity .5s var(--ease-out), transform .5s var(--ease-out); }
 body.menu-open .mm-links a { opacity: 1; transform: none; }
 body.menu-open .mm-links a:nth-child(1) { transition-delay: .12s; }
@@ -394,10 +530,10 @@ body.menu-open .mm-links a:nth-child(6) { transition-delay: .42s; }
 .mm-ja { font-family: var(--font-jp); font-size: clamp(13px, 3vw, 17px); color: var(--muted);
   letter-spacing: 0.1em; margin-left: auto; }
 .mm-links a:active .mm-label,
-.mm-links a:hover .mm-label { color: var(--cyan); text-shadow: 0 0 26px rgba(57,240,255,0.4); }
+.mm-links a:hover .mm-label { color: var(--cyan); text-shadow: var(--glow-signal); }
 .mm-links a:hover .mm-ja { color: var(--cyan); }
 .mm-foot { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px;
-  position: relative; z-index: 1; font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--track-10);
+  position: relative; z-index: 1; font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label);
   text-transform: uppercase; color: var(--muted); padding-top: 14px; }
 .mm-foot .clock { color: var(--cyan); }
 .mm-coord { color: var(--cyan); }
@@ -413,7 +549,7 @@ body.menu-open .mm-links a:nth-child(6) { transition-delay: .42s; }
      (index.html:107 vs :103), so at equal z-index it painted over this sticky
      header — the CLOSE control was visually covered and hit-blocked by the
      destination links exactly where scrolling is required to reach them. */
-  .mm-head { position: sticky; top: 0; z-index: 2; padding-bottom: 12px; background: rgba(3,4,7,0.97); }
+  .mm-head { position: sticky; top: 0; z-index: 2; padding-bottom: 12px; background: var(--scrim); }
   .mm-links { display: block; margin-block: 20px; }
   .mm-links a { padding: 10px 0; }
   .mm-label { font-size: clamp(30px, 9vh, 42px); }
@@ -426,7 +562,7 @@ body.menu-open .mm-links a:nth-child(6) { transition-delay: .42s; }
   transition: opacity 1s var(--ease-out); mix-blend-mode: difference;
 }
 .scroll-hud a { display: flex; align-items: center; gap: 9px; font-family: var(--font-mono);
-  font-size: 9px; letter-spacing: var(--track-9); color: var(--muted); text-transform: uppercase; }
+  font-size: var(--step--2); letter-spacing: var(--track-10); color: var(--muted); text-transform: uppercase; }
 .scroll-hud .tick { width: 18px; height: 1px; background: var(--muted); transition: .35s; }
 .scroll-hud .lbl { opacity: 0; transform: translateX(6px); transition: .35s; }
 .scroll-hud a:hover .lbl, .scroll-hud a.active .lbl { opacity: 1; transform: translateX(0); color: var(--cyan); }
@@ -447,10 +583,10 @@ section { position: relative; }
 .shell { width: var(--shell); margin: 0 auto; padding-inline: clamp(20px, 4vw, 40px); }
 
 .sec-label { display: flex; align-items: center; gap: 16px; font-family: var(--font-mono);
-  font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: clamp(32px, 5vw, 56px); }
+  font-size: var(--step--1); letter-spacing: var(--track-label); text-transform: uppercase; margin-bottom: clamp(32px, 5vw, 56px); }
 .sec-label .idx { color: var(--muted); }
 .sec-label .txt { color: var(--cyan); }
-.sec-label .rule { flex: 1; height: 1px; background: var(--line); position: relative; overflow: hidden; }
+.sec-label .rule { flex: 1; height: 1px; background: var(--line-2); position: relative; overflow: hidden; }
 .sec-label .rule::after { content: ''; position: absolute; inset: 0; width: 40%;
   background: linear-gradient(90deg, transparent, var(--cyan), transparent);
   transform: translateX(-120%); }
@@ -500,26 +636,30 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
    ============================================================ */
 .hero { height: 100svh; min-height: 620px; position: relative; display: flex;
   flex-direction: column; justify-content: center; padding-inline: clamp(20px, 4vw, 40px); }
-.hero-kicker { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.35em;
-  font-size: clamp(10px, 1.1vw, 12px); color: var(--cyan); margin-bottom: clamp(18px, 3vw, 30px);
-  text-shadow: 0 0 12px rgba(57,240,255,0.6); display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.hero-kicker { font-family: var(--font-mono); text-transform: uppercase;
+  /* phase 1: 12 px at every width. Tracking eases below 1091 px so each letter
+     keeps the advance it had (1.1vw x 0.6 + 0.385vw); at 1091 px and up it is
+     the signature 0.35em, as before. */
+  letter-spacing: clamp(var(--track-label), calc(1.045vw - 7.2px), 0.35em);
+  font-size: var(--step--1); color: var(--cyan); margin-bottom: clamp(18px, 3vw, 30px);
+  text-shadow: var(--glow-signal); display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .hero-kicker .bar { width: 46px; height: 1px; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
 .hero h1 { min-height: 1.64em; /* v3.6f: two lines at line-height .82, held during the scramble */ font-weight: 200; letter-spacing: -0.035em; line-height: 0.82;
-  font-size: clamp(64px, 13vw, 230px); color: #f4feff; text-shadow: var(--bloom-cyan); }
-.hero h1 .amberline { color: #fff6ec; text-shadow: 0 0 30px rgba(255,158,44,0.4); }
+  font-size: clamp(64px, 13vw, 230px); color: var(--name-cool); text-shadow: var(--bloom-signal); }
+.hero h1 .amberline { color: var(--name-warm); text-shadow: var(--bloom-event); }
 .hero h1 .ch { display: inline-block; }
 /* occasional RGB-split glitch for drama (driven by JS, gated on reduced-motion) */
 .hero h1.glx { animation: heroGlx .4s linear; }
 @keyframes heroGlx {
   0%   { transform: none; filter: none; }
   18%  { transform: translateX(-3px) skewX(-1.2deg);
-         filter: drop-shadow(4px 0 rgba(255,158,44,0.75)) drop-shadow(-4px 0 rgba(57,240,255,0.75)); }
+         filter: drop-shadow(4px 0 var(--event)) drop-shadow(-4px 0 var(--signal)); }
   34%  { transform: translateX(3px);
-         filter: drop-shadow(-3px 0 rgba(255,158,44,0.6)) drop-shadow(3px 0 rgba(57,240,255,0.6)); }
+         filter: drop-shadow(-3px 0 var(--event)) drop-shadow(3px 0 var(--signal)); }
   50%  { transform: translateX(-2px) skewX(0.6deg); clip-path: inset(8% 0 62% 0); filter: none; }
   52%  { clip-path: inset(0 0 0 0); }
   68%  { transform: translateX(1px);
-         filter: drop-shadow(2px 0 rgba(57,240,255,0.5)); }
+         filter: drop-shadow(2px 0 var(--line-3)); }
   100% { transform: none; filter: none; }
 }
 @media (prefers-reduced-motion: reduce) { .hero h1.glx { animation: none; } }
@@ -540,13 +680,13 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
 .hero-foot { position: absolute; bottom: clamp(22px, 4vw, 40px); left: clamp(20px, 4vw, 40px);
   right: clamp(20px, 4vw, 40px); display: flex; justify-content: flex-end; align-items: flex-end; gap: 16px; }
 .scroll-cue { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
-  font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.25em;
-  font-size: 9px; color: var(--cyan); display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.scroll-cue .track { width: 1px; height: 40px; background: var(--line); position: relative; overflow: hidden; }
+  font-family: var(--font-mono); text-transform: uppercase; letter-spacing: var(--track-10);  /* phase 1: 0.25em at 9px -> 0.14em at 10px, so the line is no wider (it meets .sys-online at 360px) */
+  font-size: var(--step--2); color: var(--cyan); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.scroll-cue .track { width: 1px; height: 40px; background: var(--line-1); position: relative; overflow: hidden; }
 .scroll-cue .track::after { content: ''; position: absolute; left: 0; right: 0; top: -14px; height: 14px;
   background: var(--cyan); box-shadow: 0 0 8px var(--cyan); animation: cueDrop 2.2s var(--ease-io) infinite; }
 @keyframes cueDrop { 0% { transform: translateY(0); } 60%, 100% { transform: translateY(54px); } }
-.sys-online { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.25em; color: var(--amber);
+.sys-online { font-family: var(--font-mono); font-size: var(--step--2); letter-spacing: var(--track-10); color: var(--amber);
   animation: flick 4s steps(1) infinite; }
 @keyframes flick { 0%,97%,100% { opacity: 0.9; } 98% { opacity: 0.2; } }
 
@@ -567,7 +707,7 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
 .about { padding-block: clamp(88px, 12vw, 150px); }  /* v3.2o: −50px top/bottom at desktop — scarcity should look chosen, not leftover */
 .about-lead { font-weight: 200; letter-spacing: -0.02em; line-height: 1.06;
   font-size: clamp(30px, 5.2vw, 72px); max-width: 17ch; color: var(--fg);
-  text-shadow: 0 0 40px rgba(57,240,255,0.1); }
+  text-shadow: 0 0 40px var(--signal-wash); }
 .about-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(36px, 6vw, 80px);
   margin-top: clamp(48px, 8vw, 96px); align-items: start; }
 .about-bio { display: grid; gap: 28px; align-self: stretch; align-content: space-between; }  /* v3.2o: stat row bottom-aligns with the portrait's bottom edge — closes the dead bottom-left quadrant */
@@ -575,10 +715,10 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
 .about-bio p + p { color: var(--muted); }
 .geo-trail {
   display: grid; gap: 8px; max-width: 780px; padding-block: 4px 2px;
-  border-top: 1px solid var(--line); border-bottom: 1px solid rgba(255, 158, 44, 0.18);
+  border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--event-wash);
 }
 .geo-kicker {
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label);
   color: var(--muted); text-transform: uppercase;
 }
 .geo-line {
@@ -586,7 +726,6 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
   letter-spacing: 0.12em; color: var(--cyan); text-transform: uppercase;
   text-shadow: var(--bloom-cyan);
 }
-.geo-copy { color: var(--muted); font-size: clamp(14px, 1.1vw, 16px); line-height: 1.65; max-width: 68ch; }
 .about-portrait { position: relative; aspect-ratio: 3 / 4; }
 /* v3.1 — same dim-at-rest treatment as the gallery tiles (duotone layer stays);
    hover restores the photograph. */
@@ -595,30 +734,30 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
   transition: filter .45s var(--ease-out); }
 .about-portrait:hover .media { filter: none; }
 .about-portrait .duo { position: absolute; inset: 0; mix-blend-mode: color;
-  background: linear-gradient(160deg, rgba(57,240,255,0.28), rgba(57,240,255,0.06)); pointer-events: none; }
-.about-portrait .scanmask { position: absolute; inset: 0; pointer-events: none;
-  background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,0.18) 3px 4px); }
+  background: linear-gradient(160deg, var(--line-2), var(--signal-wash)); pointer-events: none; }
+.about-portrait .scanmask { position: absolute; inset: 0; pointer-events: none; opacity: 0.18;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, var(--void) 3px 4px); }
 .about-portrait .pcorner { position: absolute; width: 18px; height: 18px; border: 1px solid var(--cyan); }
 .about-portrait .pc1 { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
 .about-portrait .pc2 { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
 .about-portrait .ptag { position: absolute; bottom: 10px; left: 12px; font-family: var(--font-mono);
-  font-size: 10px; letter-spacing: 0.1em; color: var(--cyan); text-shadow: 0 0 8px rgba(57,240,255,0.6); }
+  font-size: var(--step--1); letter-spacing: 0.1em; color: var(--cyan); text-shadow: var(--glow-signal); }
 .stat-row { display: flex; gap: clamp(20px, 4vw, 48px); margin-top: 36px; flex-wrap: wrap; }
 
 /* P5 — persistent oscilloscope graticule substrate behind data-dense regions
-   (reuses the .boot-grid gradient recipe, dimmed to ~0.04α — well below --line 0.16
-   and the data, near-black-preserving; painted as a background so it stays under all
+   (reuses the .boot-grid gradient recipe at --graticule, 0.045α — well below the
+   line ladder and the data, near-black-preserving; painted as a background so it stays under all
    content with zero z-index risk). The graticule the whole HUD grammar descends from. */
 .stat-row, .gallery-grid, .lb-stage {
   background-image:
-    linear-gradient(rgba(57, 240, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(57, 240, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(var(--graticule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--graticule) 1px, transparent 1px);
   background-size: 34px 34px;
 }
 .stat { font-family: var(--font-mono); }
 .stat .n { font-weight: 400; font-size: clamp(34px, 4vw, 56px);
   color: var(--cyan); line-height: 1; } /* composition L1: resting glow removed — mono stats read as crisp instrument output, one fewer bloom competing for the eye */
-.stat .l { font-size: 10px; letter-spacing: var(--track-10); text-transform: uppercase; color: var(--muted); margin-top: 8px; }
+.stat .l { font-size: var(--step--1); letter-spacing: var(--track-label); text-transform: uppercase; color: var(--muted); margin-top: 8px; }
 /* v3.2k — sanctioned .readout pattern (P3 unit-triad deferral, first unit born):
    value + typographically-demoted unit; the unit never glows. */
 .readout { display: inline-flex; align-items: baseline; }
@@ -632,35 +771,35 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
   font-size: clamp(44px, 9vw, 120px); color: var(--fg); margin-bottom: clamp(24px, 4vw, 48px); }
 .work, .projects { padding-block: clamp(72px, 11vw, 150px); }
 
-.row { display: block; border-top: 1px solid var(--line); padding-block: clamp(26px, 3.4vw, 46px);
+.row { display: block; border-top: 1px solid var(--line-2); padding-block: clamp(26px, 3.4vw, 46px);
   position: relative; transition: background .5s var(--ease-out); }
 .row::before { content: ''; position: absolute; left: 0; top: -1px; height: 1px; width: 100%;
   background: linear-gradient(90deg, var(--cyan), transparent); box-shadow: 0 0 10px var(--cyan);
   transform: scaleX(0); transform-origin: left;
   transition: transform .6s var(--ease-out); }
 .row:hover::before, .row:focus-visible::before { transform: scaleX(1); }
-.row:hover, .row:focus-visible { background: linear-gradient(90deg, rgba(57,240,255,0.04), transparent 70%); }
+.row:hover, .row:focus-visible { background: linear-gradient(90deg, var(--signal-wash), transparent 70%); }
 .work-grid { display: grid; grid-template-columns: 7fr 5fr; gap: clamp(16px, 3vw, 44px); align-items: baseline; }
 .proj-grid { display: grid; grid-template-columns: auto 7fr 4fr; gap: clamp(12px, 2.5vw, 44px); align-items: baseline; }
 .row-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.row-date { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: var(--track-11); }
-.live-tag { font-family: var(--font-mono); font-size: 10px; color: var(--amber);
-  text-shadow: 0 0 10px rgba(255,158,44,0.7); display: inline-flex; align-items: center; gap: 5px;
+.row-date { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); letter-spacing: var(--track-11); }
+.live-tag { font-family: var(--font-mono); font-size: var(--step--1); color: var(--amber);
+  text-shadow: var(--glow-event); display: inline-flex; align-items: center; gap: 5px;
   border: 1px solid var(--amber); border-radius: 2px; padding: 2px 7px; }
 .live-tag .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber);
   box-shadow: 0 0 8px var(--amber); animation: pulse 2s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
 .row-title { font-weight: 200; letter-spacing: -0.02em; line-height: 1.02;
   font-size: clamp(26px, 4.4vw, 56px); color: var(--fg); transition: color .35s, text-shadow .35s; }
-.row:hover .row-title, .row:focus-visible .row-title { color: var(--cyan); text-shadow: 0 0 24px rgba(57,240,255,0.4); }
+.row:hover .row-title, .row:focus-visible .row-title { color: var(--cyan); text-shadow: var(--glow-signal); }
 .row-sub { margin-top: 8px; font-size: clamp(14px, 1.2vw, 18px); color: var(--muted); }
 .row-desc { font-size: clamp(15px, 1.2vw, 18px); line-height: 1.55; color: var(--fg); max-width: 42ch; }
 .proj-idx { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: var(--track-12);
   padding-top: 6px; }
 .proj-end { display: flex; justify-content: space-between; gap: 10px; flex-direction: column; }
 @media (min-width: 760px) { .proj-end { flex-direction: row; } }
-.proj-tech { font-family: var(--font-mono); font-size: 11px; color: var(--cyan); max-width: 24ch; }
-.proj-year { font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.proj-tech { font-family: var(--font-mono); font-size: var(--step--1); color: var(--cyan); max-width: 24ch; }
+.proj-year { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); white-space: nowrap; }
 /* Skills — grouped by layer, because which layer a tool belongs to IS the
    information. Borrows .geo-kicker for the heading and .tags/.tag for the
    chips, so this adds a layout and no new visual language. */
@@ -668,19 +807,19 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
 .skill-group { margin-top: 18px; }
 .skill-group .tags { margin-top: 8px; }
 .skill-label {
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label);
   color: var(--muted); text-transform: uppercase;
 }
 
 .tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
-.tag { font-family: var(--font-mono); font-size: 10px; color: var(--cyan); border: 1px solid var(--line);
+.tag { font-family: var(--font-mono); font-size: var(--step--1); color: var(--cyan); border: 1px solid var(--line-2);
   padding: 3px 8px; transition: .25s; }
-.row:hover .tag, .row:focus-visible .tag { border-color: var(--line-strong); }
+.row:hover .tag, .row:focus-visible .tag { border-color: var(--line-3); }
 .tag:hover { border-color: var(--cyan); }
 .row-arrow { font-family: var(--font-mono); color: var(--cyan); display: inline-block;
   transition: transform .35s var(--ease-out); }
 .row:hover .row-arrow, .row:focus-visible .row-arrow { transform: translate(4px, -4px); }
-.row-end-rule { border-top: 1px solid var(--line); }
+.row-end-rule { border-top: 1px solid var(--line-2); }
 @media (max-width: 720px) {
   .work-grid, .proj-grid { grid-template-columns: 1fr; }
   .proj-grid .proj-idx { display: none; }
@@ -695,7 +834,7 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
 /* v3.1f: the count gets its own clear line — at ~1440px it fit the headline's row with
    almost no slack and sat tight against the headline's right end. Basis-100% forces the
    wrap at every width; right-aligned to keep the HUD right-rail grammar. */
-.gallery-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: var(--track-11);
+.gallery-count { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); letter-spacing: var(--track-11);
   flex-basis: 100%; text-align: right; }
 .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(10px, 1.4vw, 18px); }
 /* Composition lever 6+7: one cinematic letterbox break in the otherwise-uniform field —
@@ -725,9 +864,9 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
 .state-flash {
   position: fixed; left: 50%; bottom: 42px; transform: translateX(-50%);
   z-index: 180; pointer-events: none;
-  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.28em; text-transform: uppercase;
   color: var(--cyan); border: 1px solid var(--cyan); border-radius: 2px; padding: 6px 16px;
-  box-shadow: 0 0 20px rgba(57, 240, 255, 0.18); opacity: 0; visibility: hidden;
+  box-shadow: var(--glow-signal); opacity: 0; visibility: hidden;
 }
 .state-flash.show { animation: stateFlash 1.9s var(--ease-out) forwards; }
 @keyframes stateFlash {
@@ -736,9 +875,9 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
   70%  { opacity: 1; transform: translateX(-50%) translateY(0); }
   100% { opacity: 0; visibility: hidden; transform: translateX(-50%) translateY(0); }
 }
-.shot { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border: 1px solid var(--line);
+.shot { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border: 1px solid var(--line-2);
   cursor: none; transition: border-color .4s, box-shadow .4s; background: var(--void-2); }
-.shot:hover, .shot:focus-visible { border-color: var(--cyan); box-shadow: 0 0 30px rgba(57,240,255,0.22); }
+.shot:hover, .shot:focus-visible { border-color: var(--cyan); box-shadow: var(--glow-signal); }
 /* v3.1 — photos join the world: dim-at-rest (sunk into the noir frame),
    full-on-demand (hover/keyboard focus lifts the filter entirely; the lightbox
    is the full-color payoff). Transition covered by the reduced-motion kill-switch. */
@@ -747,12 +886,12 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
   transition: transform .9s cubic-bezier(0.22,1,0.36,1), filter .45s var(--ease-out); transform: scale(1.04); }
 .shot:hover .media, .shot:focus-visible .media { transform: scale(1.12); filter: none; }
 .shot .sweep { position: absolute; inset: 0; pointer-events: none; opacity: 0;
-  background: linear-gradient(180deg, transparent, rgba(57,240,255,0.12), transparent);
+  background: linear-gradient(180deg, transparent, var(--signal-wash), transparent);
   transition: opacity .3s; }
 .shot:hover .sweep, .shot:focus-visible .sweep { opacity: 1; animation: shotScan 1.4s linear infinite; }
 @keyframes shotScan { from { transform: translateY(-100%); } to { transform: translateY(100%); } }
-.shot .id { position: absolute; top: 8px; left: 10px; font-family: var(--font-mono); font-size: 10px;
-  color: var(--cyan); opacity: 0; transform: translateY(-4px); transition: .35s; text-shadow: 0 0 8px rgba(57,240,255,0.6); }
+.shot .id { position: absolute; top: 8px; left: 10px; font-family: var(--font-mono); font-size: var(--step--2);
+  color: var(--cyan); opacity: 0; transform: translateY(-4px); transition: .35s; text-shadow: var(--glow-signal); }
 .shot .plus { position: absolute; bottom: 8px; right: 10px; font-family: var(--font-mono); font-size: 13px;
   color: var(--cyan); opacity: 0; transition: .35s; }
 .shot:hover .id, .shot:focus-visible .id, .shot:hover .plus, .shot:focus-visible .plus { opacity: 0.95; transform: translateY(0); }
@@ -763,7 +902,7 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
 .shot.lit .media { filter: none; }
 
 /* lightbox */
-.lightbox { position: fixed; inset: 0; z-index: var(--z-lightbox); background: rgba(2,3,6,0.985); /* v3.2o: the photograph is the ONLY light event — scrim sinks a notch shy of solid so the blur still reads as glass */
+.lightbox { position: fixed; inset: 0; z-index: var(--z-lightbox); background: var(--scrim-photo); /* v3.2o: the photograph is the ONLY light event — scrim sinks a notch shy of solid so the blur still reads as glass */
   backdrop-filter: blur(8px); display: flex; flex-direction: column; opacity: 0; pointer-events: none;
   visibility: hidden;
   transition: opacity .4s var(--ease-out), visibility 0s linear .4s; }
@@ -786,14 +925,18 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
    attributes fixed but the axes still constrained, a 2000x1333 photograph
    rendered 1325x720 (92vw x 80vh) instead of 1080x720. `auto` lets the
    attributes contribute the ratio and lets max-* scale it proportionally. */
-.lb-img { max-height: 80vh; max-width: 92vw; width: auto; height: auto; object-fit: contain; border: 1px solid var(--line);
-  box-shadow: 0 0 60px rgba(0,0,0,0.7); transition: opacity .35s, transform .5s var(--ease-out); }
+.lb-img { max-height: 80vh; max-width: 92vw; width: auto; height: auto; object-fit: contain; border: 1px solid var(--line-2);
+  box-shadow: 0 0 60px var(--scrim); transition: opacity .35s, transform .5s var(--ease-out); }
 .lb-img.swapping { opacity: 0; transform: scale(0.98); }
-.lb-corner { position: absolute; width: 30px; height: 30px; border: 1px solid var(--line-strong); }
+.lb-corner { position: absolute; width: 30px; height: 30px; border: 1px solid var(--line-3); }
 .lb-meta { position: absolute; top: clamp(24px,4vw,48px); left: clamp(24px,4vw,48px); font-family: var(--font-mono);
-  font-size: 10px; letter-spacing: var(--track-10); color: var(--cyan); line-height: 1.7; }
+  font-size: var(--step--1); letter-spacing: 0.06em; color: var(--cyan); line-height: 1.7; }
+/* phase 1: 0.06em, not --track-label. The meta shares its rows with the photo's top
+   edge; beside a 3:2 photo at 1440x900 the gutter is 132 px and "SELECTED ARCHIVE" at
+   12 px / 0.14em is 142 px (it ran under the photo). At 0.06em it is 127 px. A photo
+   wider than about 1.9:1 covered it before phase 1 too: phase 8 owns the lightbox. */
 .lb-close { position: absolute; top: clamp(20px,3vw,40px); right: clamp(20px,3vw,40px); font-family: var(--font-mono);
-  font-size: 11px; letter-spacing: 0.18em; color: var(--muted); border: 1px solid var(--line); padding: 7px 13px;
+  font-size: var(--step--1); letter-spacing: var(--track-label); color: var(--muted); border: 1px solid var(--line-2); padding: 7px 13px;
   cursor: none; transition: .25s; }
 .lb-close:hover { color: var(--amber); border-color: var(--amber); }
 .lb-strip { display: flex; gap: 8px; padding: 14px clamp(20px,4vw,48px) clamp(20px,4vw,40px); overflow-x: auto;
@@ -805,9 +948,9 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
 .lb-thumb:last-child { margin-right: auto; }
 .lb-thumb { width: 54px; height: 68px; flex: 0 0 auto; background-size: cover; background-position: center;
   border: 1px solid transparent; opacity: 0.4; filter: grayscale(80%); transition: .3s; cursor: none; }
-.lb-thumb.active { opacity: 1; border-color: var(--cyan); filter: grayscale(0%); box-shadow: 0 0 14px rgba(57,240,255,0.4); }
+.lb-thumb.active { opacity: 1; border-color: var(--cyan); filter: grayscale(0%); box-shadow: var(--glow-signal); }
 .lb-nav { display: flex; align-items: center; justify-content: center; gap: 28px; font-family: var(--font-mono);
-  font-size: 11px; letter-spacing: 0.14em; padding-bottom: 6px; }
+  font-size: var(--step--1); letter-spacing: var(--track-label); padding-bottom: 6px; }
 .lb-nav button { color: var(--cyan); cursor: none; transition: .2s; letter-spacing: 0.14em; }
 .lb-nav button:hover { text-shadow: 0 0 12px var(--cyan); }
 .lb-nav .pos { color: var(--muted); }
@@ -817,22 +960,22 @@ body.revealed .clip-reveal img, body.revealed .clip-reveal .media { transform: n
    ============================================================ */
 .contact { padding-block: clamp(100px, 16vw, 220px); }
 .contact h2 { font-weight: 200; letter-spacing: -0.03em; line-height: 0.9;
-  font-size: clamp(44px, 9.5vw, 150px); max-width: 13ch; color: var(--fg); text-shadow: 0 0 50px rgba(57,240,255,0.18); }
+  font-size: clamp(44px, 9.5vw, 150px); max-width: 13ch; color: var(--fg); text-shadow: 0 0 50px var(--signal-wash); }
 .contact h2 em { font-style: normal; color: var(--cyan); }
 
 /* v3.2f — contact return path: one instrument row in the ledger grammar. The
    address is JS-assembled (never in source); the copy tick is the amber event. */
 .signal-row { display: inline-flex; align-items: baseline; gap: 14px; margin-top: clamp(30px, 4vw, 48px);
   max-width: 100%; flex-wrap: wrap;
-  font-family: var(--font-mono); border: 1px solid var(--line); padding: 13px 20px; cursor: none;
+  font-family: var(--font-mono); border: 1px solid var(--line-2); padding: 13px 20px; cursor: none;
   transition: border-color .3s var(--ease-out), box-shadow .3s var(--ease-out); }
-.signal-row:hover, .signal-row:focus-visible { border-color: var(--cyan); box-shadow: 0 0 18px rgba(57,240,255,0.25); }
-.signal-row .signal-k { font-size: 10px; letter-spacing: var(--track-10); color: var(--muted); text-transform: uppercase; }
+.signal-row:hover, .signal-row:focus-visible { border-color: var(--cyan); box-shadow: var(--glow-signal); }
+.signal-row .signal-k { font-size: var(--step--2); letter-spacing: var(--track-10); color: var(--muted); text-transform: uppercase; }
 .signal-row .signal-addr { min-width: 0; overflow-wrap: anywhere;
   font-size: clamp(13px, 1.5vw, 16px); letter-spacing: var(--track-13); color: var(--cyan); }
-.signal-row .signal-tick { font-size: 10px; letter-spacing: var(--track-10); color: var(--amber);
+.signal-row .signal-tick { font-size: var(--step--1); letter-spacing: var(--track-label); color: var(--amber);
   opacity: 0; transition: opacity .25s; }
-.signal-row.copied .signal-tick { opacity: 1; text-shadow: 0 0 10px rgba(255,158,44,0.6); }
+.signal-row.copied .signal-tick { opacity: 1; text-shadow: var(--glow-event); }
 
 @media (max-width: 400px) {
   .signal-row { display: grid; width: 100%; grid-template-columns: auto minmax(0, 1fr); gap: 8px 12px; }
@@ -861,59 +1004,59 @@ html[lang="ja"] .heading-xl {
 html[lang="ja"] .hero-kicker span { letter-spacing: 0.14em; }
 .pills { display: flex; flex-wrap: wrap; gap: 14px; margin-top: clamp(36px, 5vw, 64px); }
 .pill { font-family: var(--font-mono); font-size: 13px; letter-spacing: var(--track-13); color: var(--cyan);
-  border: 1px solid var(--line); border-radius: 75px; padding: 11px 24px;
+  border: 1px solid var(--line-2); border-radius: 75px; padding: 11px 24px;
   transition: color .3s var(--ease-out), border-color .3s var(--ease-out), box-shadow .3s var(--ease-out);
   position: relative; cursor: none; }
-.pill:hover { color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 28px rgba(57,240,255,0.4); }
+.pill:hover { color: var(--cyan); border-color: var(--cyan); box-shadow: var(--glow-signal); }
 .footer { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px;
-  margin-top: clamp(72px, 12vw, 150px); border-top: 1px solid var(--line); padding-top: 22px;
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  margin-top: clamp(72px, 12vw, 150px); border-top: 1px solid var(--line-1); padding-top: 22px;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .footer .coord { color: var(--cyan); }
 
 /* ============================================================
    CONTROL DECK (HUD settings panel)
    ============================================================ */
 .deck-toggle { position: fixed; bottom: 22px; left: 22px; z-index: var(--z-deck); width: 42px; height: 42px;
-  border: 1px solid var(--line); background: var(--panel-solid); backdrop-filter: blur(8px);
+  border: 1px solid var(--line-2); background: var(--panel-solid); backdrop-filter: blur(8px);
   display: grid; place-items: center; cursor: none; transition: .25s; }
-.deck-toggle:hover { border-color: var(--cyan); box-shadow: 0 0 16px rgba(57,240,255,0.3); }
+.deck-toggle:hover { border-color: var(--cyan); box-shadow: var(--glow-signal); }
 .deck-toggle svg { width: 18px; height: 18px; stroke: var(--cyan); }
 .deck-toggle .gear { transition: transform .6s var(--ease-out); }
 .deck-toggle:hover .gear { transform: rotate(90deg); }
 .deck { position: fixed; bottom: 74px; left: 22px; z-index: var(--z-deck); width: 250px;
-  background: var(--panel-solid); backdrop-filter: blur(12px); border: 1px solid var(--line-strong);
+  background: var(--panel-solid); backdrop-filter: blur(12px); border: 1px solid var(--line-2);
   padding: 16px; transform: translateY(12px) scale(0.96); opacity: 0; pointer-events: none;
   visibility: hidden;
   transition: opacity .3s var(--ease-out), transform .3s var(--ease-out), visibility 0s linear .3s; }
 .deck.open { transform: none; opacity: 1; pointer-events: auto; visibility: visible;
   transition: opacity .3s var(--ease-out), transform .3s var(--ease-out), visibility 0s; }
-.deck h2 { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+.deck h2 { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label); text-transform: uppercase;
   color: var(--cyan); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-.deck h2::before { content: '◆'; color: var(--muted); font-size: 8px; }
+.deck h2::before { content: '◆'; content: '◆' / ''; color: var(--muted); font-size: var(--step--2); }
 /* P8 — worn-hardware read: demote the flat full border to a faint bezel + add crisp
    L-corner brackets (two opposite corners) and a header model-rail, so the deck reads
    as an instrument, not a card. The lightbox stage already wears its combiner frame
    via .lb-corner. Chrome stays crisp; the content layer is untouched. */
-.deck { border-color: var(--line); }
+.deck { border-color: var(--line-2); }
 .deck::before, .deck::after {
   content: ''; position: absolute; width: 13px; height: 13px;
-  border: 0 solid var(--line-strong); pointer-events: none;
+  border: 0 solid var(--line-3); pointer-events: none;
 }
 .deck::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
 .deck::after { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
-.deck h2::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent); }
+.deck h2::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-2), transparent); }
 .deck .grp { margin-bottom: 16px; }
 .deck .grp:last-child { margin-bottom: 0; }
-.deck .grp > .grp-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: var(--track-9);
+.deck .grp > .grp-label { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label);
   text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 8px; }
 .seg { display: flex; gap: 5px; }
-.seg button { flex: 1; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em;
-  color: var(--muted); border: 1px solid var(--line); padding: 7px 4px; cursor: none; transition: .2s;
+.seg button { flex: 1; font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.08em;
+  color: var(--muted); border: 1px solid var(--line-2); padding: 7px 4px; cursor: none; transition: .2s;
   text-transform: uppercase; }
-.seg button:hover { color: var(--cyan); border-color: var(--line-strong); }
-.seg button.on { color: var(--cyan); background: transparent; border-color: var(--cyan); box-shadow: 0 0 14px rgba(57,240,255,0.22); }
+.seg button:hover { color: var(--cyan); border-color: var(--line-3); }
+.seg button.on { color: var(--cyan); background: transparent; border-color: var(--cyan); box-shadow: var(--glow-signal); }
 .deck .toggle-row { display: flex; justify-content: space-between; align-items: center; }
-.switch { width: 38px; height: 20px; border: 1px solid var(--line-strong); border-radius: 20px;
+.switch { width: 38px; height: 20px; border: 1px solid var(--line-3); border-radius: 20px;
   position: relative; cursor: none; transition: .25s; }
 .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
   background: var(--muted); border-radius: 50%; transition: .25s; }
@@ -921,7 +1064,7 @@ html[lang="ja"] .hero-kicker span { letter-spacing: 0.14em; }
 .switch.on::after { left: 19px; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
 
 /* utility: katakana ticker scramble color */
-.scramble-on { color: var(--cyan); text-shadow: 0 0 14px rgba(57,240,255,0.5); }
+.scramble-on { color: var(--cyan); text-shadow: var(--glow-signal); }
 
 /* ============================================================
    v3.1 addendum — accessibility, touch & typographic hardening
@@ -931,11 +1074,11 @@ html[lang="ja"] .hero-kicker span { letter-spacing: 0.14em; }
    without it a keyboard or low-vision user has no idea where they are. */
 :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 .pill:focus-visible, .hud-btn:focus-visible, .boot-skip:focus-visible,
-.lb-close:focus-visible, .mm-close:focus-visible { box-shadow: 0 0 14px rgba(57, 240, 255, 0.4); }
+.lb-close:focus-visible, .mm-close:focus-visible { box-shadow: var(--glow-signal); }
 
 /* skip link — first tab stop, visible only when focused */
 .skip-link { position: fixed; top: 10px; left: 10px; z-index: 9999;
-  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--cyan); background: var(--panel-solid); border: 1px solid var(--cyan);
   padding: 10px 16px; transform: translateY(-200%); transition: transform .2s; }
 .skip-link:focus { transform: none; }
@@ -988,21 +1131,21 @@ section[id] { scroll-margin-top: clamp(64px, 10vh, 96px); }
   .cursor, .cursor-dot, .cursor-label, .scroll-progress, .scroll-hud,
   .boot, .mobile-menu, .lightbox, .deck, .deck-toggle, .nav-burger,
   .lang-btn, .skip-link, .scroll-cue, .typ-caret, .shot .sweep, .signal-tick { display: none !important; }
-  html, body { background: #fff !important; color: #111 !important; cursor: auto; }
+  html, body { background: var(--print-paper) !important; color: var(--print-ink) !important; cursor: auto; }
   .nav { position: static; background: none; }
   .hero { height: auto; min-height: 0; padding-block: 24pt; }
   [data-reveal], .sec-label { opacity: 1 !important; transform: none !important; }
   .clip-reveal::after { display: none; }
   .hero h1, .hero h1 .amberline, .heading-xl, .about-lead, .contact h2, .contact h2 em,
-  .row-title, .about-bio p, .row-desc, .geo-copy { color: #111 !important; text-shadow: none !important; }
+  .row-title, .about-bio p, .row-desc { color: var(--print-ink) !important; text-shadow: none !important; }
   .sec-label .txt, .geo-line, .proj-tech, .stat .n, .brand .name, .nav-meta .clock,
-  .footer .coord, .signal-row .signal-addr, .pill, .tag, .row-arrow, .mm-coord { color: #333 !important; text-shadow: none !important; }
+  .footer .coord, .signal-row .signal-addr, .pill, .tag, .row-arrow, .mm-coord { color: var(--print-ink-2) !important; text-shadow: none !important; }
   .hero-kicker, .sys-online, .row-date, .row-sub, .proj-year, .gallery-count, .stat .l,
-  .geo-kicker, .footer { color: #555 !important; text-shadow: none !important; }
+  .geo-kicker, .footer { color: var(--print-ink-3) !important; text-shadow: none !important; }
   .stat-row, .gallery-grid, .lb-stage { background-image: none; }
   .shot .media, .about-portrait .media { filter: none; }
   .about-portrait .duo, .about-portrait .scanmask { display: none; }
-  .row, .row-end-rule, .footer, .geo-trail, .signal-row, .pill, .tag { border-color: #ccc !important; box-shadow: none !important; }
+  .row, .row-end-rule, .footer, .geo-trail, .signal-row, .pill, .tag { border-color: var(--print-rule) !important; box-shadow: none !important; }
   .row::before { display: none; }
 }
 
@@ -1090,15 +1233,343 @@ body.proj-rail .proj-tech { text-align: right; max-width: none; min-width: 30ch;
    job is still the name and the scene, so these read as instrument controls
    rather than as marketing buttons. */
 .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: clamp(22px, 3.5vw, 34px); }
-.cta {
-  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em;
+.cta, .door-btn {
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label);
   text-transform: uppercase; color: var(--void); background: var(--cyan);
   border: 1px solid var(--cyan); padding: 12px 20px; transition: .25s;
 }
-.cta:hover, .cta:focus-visible { box-shadow: var(--bloom-cyan); }
-.cta-ghost { color: var(--cyan); background: transparent; border-color: var(--line-strong); }
-.cta-ghost:hover, .cta-ghost:focus-visible { border-color: var(--cyan); box-shadow: var(--bloom-cyan); }
+.cta:hover, .cta:focus-visible, .door-btn:hover, .door-btn:focus-visible { box-shadow: var(--bloom-cyan); }
+.cta-ghost, .door-btn { color: var(--cyan); background: transparent; border-color: var(--line-3); }
+.cta-ghost:hover, .cta-ghost:focus-visible, .door-btn:hover, .door-btn:focus-visible { border-color: var(--cyan); box-shadow: var(--bloom-cyan); }
 .contact-guide {
   max-width: 56ch; margin-top: 14px; font-size: 14px; line-height: 1.7;
   color: var(--muted);
+}
+
+/* ============================================================
+   REBUILD PHASE 2 — component states on the graded tokens
+   (docs/rebuild/p2-notes.md; approved designs: docs/rebuild/prototypes/language/,
+   Components). The live look is the base: these rules only make the states of
+   the existing components clearer and alike. Roles: structure --line-1, frame
+   --line-2, emphasised edge --line-3, label --signal-ink, control --signal, the
+   one hot highlight --signal-hot with --glow-signal; amber only for "now".
+   Durations and easings are ones this file already uses (phase 3 owns timing).
+   ============================================================ */
+
+/* ---- Focus: ONE style for every control (the global :focus-visible rule above,
+   2px --signal at 3px). Nothing here removes it; the glow some controls add on
+   focus is the same glow they wear on hover. ---- */
+.nav-burger:focus-visible, .deck-toggle:focus-visible, .seg button:focus-visible,
+.signal-row:focus-visible { box-shadow: var(--glow-signal); }
+
+/* ---- 1. Top nav. Hover and focus light the label in the control colour with
+   neon brackets; amber brackets and the hot hairline mark the current section
+   only (it is "now"). Before this phase hover and current looked the same. ---- */
+.nav-link::before, .nav-link::after { color: var(--signal-ink); }
+.nav-link:hover, .nav-link:focus-visible { text-shadow: var(--glow-signal); }
+.nav-link.active::before, .nav-link.active::after { color: var(--amber); }
+.nav-link:active { color: var(--signal-ink); }
+/* The current-section hairline is a background, so both pseudo-elements stay
+   the brackets; 24px = the two brackets and their 4px margins. */
+.nav-link {
+  background: linear-gradient(var(--signal-hot), var(--signal-hot)) center bottom / 0 1px no-repeat;
+  transition: color .3s, background-size .3s var(--ease-out);
+}
+.nav-link.active { background-size: calc(100% - 24px) 1px; }
+/* The JST readout: the clock is a label, with the amber "now" dot of the approved
+   nav. The dot hangs left of the text, so the block keeps its width (the nav row
+   is tight between 821 and 900 px, see the phase-1 note above). */
+.nav-meta .clock { color: var(--signal-ink); position: relative; }
+.nav-meta .clock::before {
+  content: ''; position: absolute; left: -11px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px;
+  border-radius: 50%; background: var(--amber); box-shadow: var(--glow-event);
+}
+.hud-btn:active, .nav-burger:active, .deck-toggle:active, .mm-close:active,
+.seg button:active { background: var(--ink-3); }
+/* Close is a control, not an event: it lights in the control colour, as every
+   other control does (it lit amber before). */
+.mm-close:hover { color: var(--cyan); border-color: var(--cyan); box-shadow: var(--glow-signal); }
+.mm-links a:focus-visible .mm-label { color: var(--cyan); text-shadow: var(--glow-signal); }
+.mm-links a:focus-visible .mm-ja { color: var(--cyan); }
+/* The gear turns on hover and focus about its own centre. Before this phase it
+   turned about the SVG's top-left corner (the default origin for an SVG <g>), so
+   on hover it swung out of its box and the toggle showed an empty frame
+   (captures/p2-before-deck-1440.jpg, bottom left). */
+.deck-toggle .gear { transform-box: fill-box; transform-origin: center; }
+.deck-toggle:focus-visible .gear { transform: rotate(90deg); }
+
+/* ---- 2. Buttons. Primary: the one filled signal; hover heats the fill to the hot
+   core under the live halo, pressed sinks to the label ink. Secondary: the neon
+   outline; hover washes it and heats the text, pressed sinks to the top surface.
+   44 px tall everywhere (was 42.8): the approved control height. ---- */
+.cta, .door-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; }
+.cta:hover { background: var(--signal-hot); border-color: var(--signal-hot); }
+.cta:active, .door-btn:active { background: var(--signal-ink); border-color: var(--signal-ink); box-shadow: none; transform: scale(0.98); }
+.cta-ghost:hover, .door-btn:hover { background: var(--signal-wash); border-color: var(--cyan); color: var(--signal-hot); }
+.cta-ghost:active, .door-btn:active { background: var(--ink-4); border-color: var(--cyan); color: var(--cyan); }
+.pill:active, .signal-row:active { background: var(--ink-3); }
+/* Copy always wins, for the small controls the veil does not reach: with the new scene the hero's second button and
+   Contact's link pills stand on the floor's reflections, where 12 and 13 px cyan type fell under 4.5:1 on phones
+   (qa:contrast, 2026-11-27). A bed of the page's own ink under them; hover and press keep their own fills. */
+html[data-scene="next"] .hero-cta .cta-ghost:not(:hover, :active),
+html[data-scene="next"] #contact .pill:not(:hover, :active) { background: var(--text-bed); }
+
+/* ---- 3. Section header: the approved marker, a hot hairline before the index
+   (the hero kicker's bar, at section scale); the label in the label ink. Phones
+   keep the line without the marker: at 360 px "[ 04 ] PROJECTS / CASE STUDIES"
+   leaves no room for it. ---- */
+.sec-label::before {
+  content: ''; flex: none; width: 40px; height: 1px;
+  background: var(--signal-hot); box-shadow: var(--glow-signal);
+}
+.sec-label .txt { color: var(--signal-ink); }
+@media (max-width: 600px) { .sec-label::before { display: none; } }
+
+/* ---- 4. Work and project rows. Work rows gain the approved index marker in the
+   site's own index grammar (muted, like the project numbers and the section
+   index); hover or focus lights either index in the label ink; a pressed project
+   row sinks to the pressed surface. The marker is texture for assistive tech
+   (alt text ''), the row's heading names it. ---- */
+[data-stagger] { counter-reset: row; }
+article.row { counter-increment: row; }
+article.row .row-meta::before {
+  content: '[ ' counter(row, decimal-leading-zero) ' ]';
+  content: '[ ' counter(row, decimal-leading-zero) ' ]' / '';
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-11);
+  color: var(--muted); font-variant-numeric: tabular-nums slashed-zero; transition: color .35s;
+}
+.row:hover .row-meta::before, .row:hover .proj-idx,
+.row:focus-visible .proj-idx { color: var(--signal-ink); }
+.proj-idx { transition: color .35s; }
+a.row:active { background: var(--ink-3); }
+
+/* ---- 6. Gallery tile chrome: the approved viewfinder crop marks on hover and
+   keyboard focus (a frame, never a closed box). Chrome only: the rest grade, the
+   touch .lit logic and the lightbox are untouched. ---- */
+.shot::after {
+  content: ''; position: absolute; inset: 12px; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background:
+    linear-gradient(var(--text-1), var(--text-1)) left top / 12px 1px no-repeat,
+    linear-gradient(var(--text-1), var(--text-1)) left top / 1px 12px no-repeat,
+    linear-gradient(var(--text-1), var(--text-1)) right top / 12px 1px no-repeat,
+    linear-gradient(var(--text-1), var(--text-1)) right top / 1px 12px no-repeat,
+    linear-gradient(var(--text-1), var(--text-1)) left bottom / 12px 1px no-repeat,
+    linear-gradient(var(--text-1), var(--text-1)) left bottom / 1px 12px no-repeat,
+    linear-gradient(var(--text-1), var(--text-1)) right bottom / 12px 1px no-repeat,
+    linear-gradient(var(--text-1), var(--text-1)) right bottom / 1px 12px no-repeat;
+}
+.shot:hover::after, .shot:focus-visible::after { opacity: 0.85; }
+
+/* ---- 9. The "Private work" row (the door to the invitation-only Work site).
+   SHIPS DARK: index.html carries it with the `hidden` attribute; the owner turns it
+   on by deleting that attribute (docs/rebuild/p2-notes.md). The [hidden] rule below
+   is load-bearing: `.door { display: grid }` would otherwise beat the user-agent
+   `display: none` and show a row that should not exist yet. ---- */
+.door[hidden] { display: none; }
+.door {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center;
+  gap: 16px 40px; padding: 24px 40px; margin-block: clamp(40px, 6vw, 72px);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  background: linear-gradient(90deg, var(--signal-wash), transparent 55%);
+  transition: box-shadow .3s var(--ease-out);
+}
+/* Under the job it belongs to (the owner's word, 2026-11-27): the door hangs from the row above, inside that row's
+   own bottom space, and leaves the same space below, so the list still reads as three jobs. */
+.row + .door { margin-block: 0 clamp(26px, 3.4vw, 46px); }
+.door::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(var(--line-3), var(--line-3)) left top / 12px 1px no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) left top / 1px 12px no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) right top / 12px 1px no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) right top / 1px 12px no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) left bottom / 12px 1px no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) left bottom / 1px 12px no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) right bottom / 12px 1px no-repeat,
+    linear-gradient(var(--line-3), var(--line-3)) right bottom / 1px 12px no-repeat;
+}
+.door-lock { display: grid; place-items: center; width: 52px; height: 52px; color: var(--cyan);
+  box-shadow: inset 0 0 0 1px var(--line-3); transition: box-shadow .3s var(--ease-out), color .3s; }
+.door-lock svg { width: 24px; height: 24px; }
+.door-copy { display: grid; gap: 8px; min-width: 0; }
+.door-label { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label);
+  text-transform: uppercase; color: var(--signal-ink); }
+.door-title { font-weight: 200; letter-spacing: -0.02em; line-height: 1.05;
+  font-size: clamp(26px, 3vw, 40px); color: var(--fg); transition: text-shadow .35s; }
+.door-text { color: var(--text-2); max-width: 46ch; font-size: clamp(15px, 1.2vw, 18px); line-height: 1.55; }
+/* two ways on: the button (Request access, to Contact) and under it a quiet link for people already invited */
+.door-actions { justify-self: end; display: grid; justify-items: stretch; gap: 6px; }
+.door-btn { white-space: nowrap; }
+.door-in { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding-inline: 12px;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label); text-transform: uppercase;
+  white-space: nowrap; color: var(--text-2); text-decoration: underline; text-decoration-color: var(--line-3);
+  text-underline-offset: 5px; transition: color .25s, text-decoration-color .25s; }
+.door-in:hover, .door-in:focus-visible { color: var(--cyan); text-decoration-color: var(--cyan); }
+/* keep the button clear of the right-hand section rail (.scroll-hud, shown above 760 px) */
+@media (min-width: 761px) { .door-actions { margin-right: 40px; } }
+.door:hover, .door:has(:focus-visible) { box-shadow: inset 0 0 0 1px var(--line-3); }
+.door:hover .door-lock { color: var(--signal-hot); box-shadow: inset 0 0 0 1px var(--cyan), var(--glow-signal); }
+.door:hover .door-title { text-shadow: var(--glow-signal); }
+@media (max-width: 700px) {
+  .door { grid-template-columns: auto minmax(0, 1fr); padding: 24px; gap: 16px 20px; }
+  .door-actions { grid-column: 1 / -1; justify-self: start; justify-items: start; }
+  .door-in { justify-content: flex-start; padding-inline: 0; }   /* its text starts where the button starts */
+}
+
+/* ---- Touch: every control is at least 44 x 44 CSS px on a coarse pointer. The
+   look on a fine pointer is unchanged; where the visual size may stay, the hit
+   area grows by padding or min-size only. (The burger, close buttons, language
+   switch, deck segments and lightbox controls had theirs already, above.) ---- */
+@media (pointer: coarse) {
+  .brand, .nav-link, .pill, .skip-link {
+    min-height: 44px; display: inline-flex; align-items: center; touch-action: manipulation; }
+  .brand { display: flex; }
+  .hud-btn { min-width: 44px; }
+  .deck-toggle { width: 44px; height: 44px; }
+  .signal-row { min-height: 44px; }
+}
+
+/* ============================================================
+   THE OPEN LAYOUT (night over Tokyo): the page around the new scene. The Earth is the opening and the
+   closing shot: it stands beside the copy at the hero and at Contact only, and every section between has
+   the page's full width, as with the scene off. Every rule here hangs from html[data-scene="next"], which
+   the inline script in the head (and js/boot.mjs) sets; with the scene off nothing below matches.
+   ============================================================ */
+
+/* The stage: where the ring stands, css px. js/scene/next.mjs publishes the scene's own numbers on the
+   root (inline, so they win) from the composition it draws with; until it has mounted, the same rule as
+   js/scene/layout.mjs on desktop: centre at 66% of the width and mid-height, radius
+   min(31% of the height, 30% of the width). */
+html[data-scene="next"] {
+  --stage-cx: 66vw; --stage-cy: 50vh; --stage-r: min(31vh, 30vw);
+  --stage-left: calc(var(--stage-cx) - var(--stage-r));
+  /* the room right of the ring. The scene publishes it from the width a fixed element is placed in (a classic
+     scrollbar is not part of it; 100vw counts one, and WebKit's is 8 px) */
+  --stage-room: calc(100vw - var(--stage-cx) - var(--stage-r));
+  --stage-gutter: 24px;
+}
+
+/* The level buttons (js/scene/controls.mjs builds them; their styles were injected from there until L1). */
+html[data-scene="next"] .scene-levels { position: fixed; z-index: var(--z-scrollhud); display: flex; gap: 6px; pointer-events: auto; }
+html[data-scene="next"] .scene-levels[data-axis="column"] { flex-direction: column; }
+html[data-scene="next"] .scene-levels button { min-width: 44px; min-height: 44px; padding: 0 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label); text-transform: uppercase;
+  color: var(--muted); background: var(--panel-bed); border: 1px solid var(--line-2); cursor: pointer; touch-action: manipulation;
+  transition: color var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast); }
+html[data-scene="next"] .scene-levels button:hover { color: var(--signal-ink); border-color: var(--line-3); }
+html[data-scene="next"] .scene-levels button[aria-pressed="true"] { color: var(--cyan); border-color: var(--cyan); box-shadow: var(--glow-signal); }
+html[data-scene="next"] .scene-levels button:focus-visible { box-shadow: var(--glow-signal); }
+@media (prefers-reduced-motion: reduce) { html[data-scene="next"] .scene-levels button { transition: none; } }
+html[data-scene="next"] .scene-instrument { display: none; }
+
+/* The status line under the hero says what the eye says ("NIGHT OVER TOKYO", js/scene/next.mjs), which is
+   longer than SYS//ONLINE: on narrow screens it wraps right-aligned instead of running into the centred scroll
+   cue (half of whose "Scroll to explore", about 63 px, plus a gap stands right of the centre). Where it fits on
+   one line this changes nothing. */
+html[data-scene="next"] .sys-online { max-width: calc(50% - 72px); text-align: right; }
+
+/* One instrument on the right edge, wherever the scene uses its side-by-side composition (the phone test of
+   js/scene/layout.mjs, isPhone, inverted: at least 700 px wide and not portrait): the section ticks above, the
+   three level buttons below, one width, one hairline frame (.scene-instrument, an empty element the controls
+   add). The ticks keep their links, labels and behaviour; only their box is fixed so the frame can be. */
+@media (min-width: 700px) and (min-aspect-ratio: 1/1) {
+  html[data-scene="next"] {
+    /* Review: the instrument gives way to the globe. Its outer width is the room right of the ring (less its
+       own right margin and 8 px of air), never under 74 px, where the three level words still fit, and never
+       over 130 px, its full size. On a 16:10 or 16:9 screen that is always 130 px; on a 4:3 one (an iPad on
+       its side) it narrows instead of standing on the ring's right limb, as it did by 38 px at 1024 x 768.
+       Under 104 px of inner width the active tick's word no longer fits beside its tick, so it is not shown
+       (the nav and the pressed level already say where you are). */
+    --inst-right: 18px; --inst-gap: 12px;
+    --inst-total: clamp(74px, calc(var(--stage-room) - var(--inst-right) - 8px), 130px);
+    --inst-pad: clamp(5px, calc((var(--inst-total) - 72px) / 5.8), 10px);
+    --inst-w: calc(var(--inst-total) - 2 * var(--inst-pad) - 2px);
+    --inst-tick: 18px; --inst-tick-gap: 10px;
+    --inst-ticks-h: calc(6 * var(--inst-tick) + 5 * var(--inst-tick-gap));
+    --inst-levels-h: calc(3 * 44px + 2 * 6px);
+    --inst-h: calc(var(--inst-ticks-h) + var(--inst-gap) + var(--inst-levels-h) + 2 * var(--inst-pad) + 2px);
+    --inst-top: calc(50vh - var(--inst-h) / 2);
+    --inst-in: calc(var(--inst-right) + 1px + var(--inst-pad));
+  }
+  html[data-scene="next"] .scroll-hud { display: flex; top: calc(var(--inst-top) + 1px + var(--inst-pad)); right: var(--inst-in);
+    transform: none; width: var(--inst-w); gap: var(--inst-tick-gap); }
+  html[data-scene="next"] .scroll-hud a { height: var(--inst-tick); }
+  /* the word folds away by its width, not its size (a font size of 0 would read as small type to lint:tokens) */
+  html[data-scene="next"] .scroll-hud .lbl { max-width: clamp(0px, calc((var(--inst-w) - 104px) * 100), 12em); overflow: hidden; white-space: nowrap; }
+  html[data-scene="next"] .scene-levels button { padding-inline: clamp(4px, calc((var(--inst-w) - 52px) / 2), 10px); }
+  html[data-scene="next"] .scene-levels { left: auto; right: var(--inst-in); width: var(--inst-w);
+    top: calc(var(--inst-top) + 1px + var(--inst-pad) + var(--inst-ticks-h) + var(--inst-gap)); }
+  html[data-scene="next"] .scene-levels button { width: 100%; }
+  html[data-scene="next"] .scene-instrument { display: block; position: fixed; z-index: var(--z-scrollhud); pointer-events: none;
+    top: var(--inst-top); right: var(--inst-right); width: calc(var(--inst-w) + 2 * var(--inst-pad) + 2px); height: var(--inst-h);
+    border: 1px solid var(--line-2); }
+  html[data-scene="next"] .scene-instrument::after { content: ''; position: absolute; left: var(--inst-pad); right: var(--inst-pad); height: 1px;
+    top: calc(var(--inst-pad) + var(--inst-ticks-h) + var(--inst-gap) / 2); background: var(--line-1); }
+}
+
+/* The close's column: at Contact, where the Earth stands beside the copy, the copy ends a gutter before the
+   ring. From 1024 px wide (landscape); below that the column would be under 380 px and the page keeps
+   today's layout. --col-w runs from the shell's left padding to the ring's edge less the gutter. The shell
+   is min(1440px, 100%) wide, centred, padded clamp(20px, 4vw, 40px) (.shell above); 100vw also counts a
+   classic scrollbar, which only makes the column narrower. The label's rule, the door, the signal rows and
+   the footer end with the column as well: left to run on under the scene they drew lines across the
+   globe's face and took the presses meant for it. About, Work, Gallery and Projects are not narrowed. */
+@media (min-width: 1024px) and (min-aspect-ratio: 1/1) {
+  html[data-scene="next"] {
+    --col-w: calc(var(--stage-left) - var(--stage-gutter) - max(0px, (100vw - 1440px) / 2) - clamp(20px, 4vw, 40px));
+  }
+  html[data-scene="next"] #contact :is(.sec-label, .door, .signal-row, .pills, .footer) { max-width: var(--col-w); }
+  html[data-scene="next"] #contact h2 { max-width: min(13ch, var(--col-w)); font-size: min(clamp(44px, 9.5vw, 150px), calc(var(--col-w) * 0.17)); }
+  html[data-scene="next"] #contact .contact-guide { max-width: min(56ch, var(--col-w)); }
+}
+
+/* ============================================================
+   PHONES (night over Tokyo, design section 16): the page around the new scene on phones. The hero and Contact
+   open with the Earth standing still at the top, the copy under it, and the scene fades the Earth out as the
+   copy comes up (js/scene/next.mjs, the stage's strength); the sections between open as with the scene off.
+   The disc never moves with the scroll. The phone test is js/scene/layout.mjs's isPhone as a media query.
+   Every rule hangs from html[data-scene="next"], which the inline script in the head sets before the first paint.
+   ============================================================ */
+
+/* The phone stage, in viewport units only, so nothing moves when the scene mounts: the disc's top under the nav,
+   its radius, and the room an opening leaves for it (the disc and a gap). layout.mjs (STAGE, stageRadius) uses
+   the same formula; tests/browser/scene-open.spec.mjs holds the two together. */
+/* Review of this step. The top is 82 px, not 66: once the page has scrolled the nav has a background down to
+   72 px, and at 66 it cut the top of the ring at every section's opening. The radius is the smallest of four
+   limits, and never under 44 px:
+     30vw                     the look: the Earth about three fifths of the width;
+     50vw - 82px              room on the right for the level buttons (50 px wide, 22 px from the ring, inside
+                              a width WebKit narrows by its 8 px scrollbar);
+     (100svh - 549px) / 2     the hero's two buttons end above the fixed theme button: the top (82), the gap
+                              (24), the hero's copy (369 px at 360 wide) and the theme button's corner (74)
+                              come to 549. As first built (13.4svh) the theme button stood on "Start a
+                              conversation" at 360 x 640 and 375 x 667;
+     160px                    a tablet held upright does not need a larger one. */
+html[data-scene="next"] {
+  --stage-top-m: 82px; --stage-gap-m: 24px;
+  --stage-r-m: max(44px, min(30vw, 50vw - 82px, (100svh - 549px) / 2, 160px));
+  --stage-open-m: calc(var(--stage-top-m) + 2 * var(--stage-r-m) + var(--stage-gap-m));
+}
+@media (max-width: 699.98px), (orientation: portrait) {
+  html[data-scene="next"] { --stage-cx: 50vw; --stage-cy: calc(var(--stage-top-m) + var(--stage-r-m)); --stage-r: var(--stage-r-m); }
+  /* the close begins with empty room for the stage; an anchor jump lands at that opening */
+  html[data-scene="next"] #contact { padding-top: var(--stage-open-m); scroll-margin-top: 0; }
+  /* the hero's copy starts under the stage, not centred; on a short screen the hero grows past one screen
+     rather than let anything overlap (360 x 640), and the scroll cue and status line follow the copy */
+  html[data-scene="next"] .hero { height: auto; min-height: max(620px, 100svh); justify-content: flex-start;
+    padding-top: var(--stage-open-m); padding-bottom: clamp(22px, 4vw, 40px); overflow-x: clip; }
+  /* the name's entrance scramble now and then sets a glyph wide enough to wrap a line for a frame (the L1 review);
+     where the hero is as tall as its copy (360 x 640) that frame moved every section below by a line, 52 px. Each
+     line of the name stays one line; a wide frame runs past the edge, clipped, and nothing below moves */
+  html[data-scene="next"] .hero h1 .line { white-space: nowrap; }
+  html[data-scene="next"] .hero-foot { position: relative; left: auto; right: auto; bottom: auto;
+    margin-top: auto; padding-top: var(--stage-gap-m); min-height: calc(64px + var(--stage-gap-m)); }
+  /* the level buttons stand right of the disc (controls.mjs places them), 12 px clear of the ring's glow: their
+     words keep the label tracking, the padding gives way (each stays at least 44 px wide) */
+  html[data-scene="next"] .scene-levels button { padding-inline: 2px; }
+}
+
+@media print {
+  html[data-scene="next"] :is(.scroll-hud, .scene-levels, .scene-instrument) { display: none; }
 }

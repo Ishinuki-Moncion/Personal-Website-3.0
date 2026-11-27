@@ -25,6 +25,10 @@
     void stateFlashEl.offsetWidth;                 // reflow → restart the snap-in
     stateFlashEl.classList.add('show');
   }
+  /* The new scene (Night over Tokyo, step 2; the default, the old one behind ?scene=live) sets window.__sceneOwnsStateWord and names the
+     LEVEL (ORBIT, JAPAN, TOKYO) through this same word when its view arrives, once per arrival; the section
+     change below then leaves the word alone. The live scene never sets it: unchanged there. */
+  window.__flashState = flashState;
   const GLYPHS = 'ｱｲｳｴｵｶｷｸ01<>/\\#$%日本開発ABCDEF';
 
   /* ---- text scramble / decrypt ----
@@ -156,7 +160,7 @@
     if (active !== lastActive) {
       lastActive = active;
       if (window.__sceneFocus) window.__sceneFocus(active);
-      flashState(active);
+      if (!window.__sceneOwnsStateWord) flashState(active);
     }
     ticking = false;
   }

@@ -19,18 +19,18 @@
   position: sticky; top: 0; z-index: 5;
   display: flex; align-items: center; justify-content: space-between;
   gap: 16px; padding: 14px clamp(20px, 5vw, 64px);
-  background: rgba(5, 6, 10, 0.86);
+  background: var(--veil);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-1);
 }
 .packet-home {
-  font-family: var(--font-mono); font-size: 11px; letter-spacing: var(--track-11, 0.12em);
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-11, 0.12em);
   text-transform: uppercase; color: var(--muted); transition: color .25s;
 }
 .packet-home:hover, .packet-home:focus-visible { color: var(--cyan); }
 .packet-idx {
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.24em;
-  color: var(--cyan); text-shadow: 0 0 12px rgba(57, 240, 255, 0.4);
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label);
+  color: var(--cyan); text-shadow: var(--glow-signal);
 }
 
 /* ---------- measure ----------
@@ -44,7 +44,7 @@
 }
 
 .packet-kicker {
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.24em;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label);
   text-transform: uppercase; color: var(--cyan); margin-bottom: 14px;
 }
 .packet h1 {
@@ -60,19 +60,19 @@
 .packet-meta {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 18px 28px; padding: 20px 0; margin-bottom: 28px;
-  border-block: 1px solid var(--line);
+  border-block: 1px solid var(--line-2);
 }
 .packet-meta dt {
-  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.2em;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label);
   text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
 }
 .packet-meta dd { font-size: 13px; line-height: 1.5; }
 
 .packet-links { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 32px; }
 .packet-link {
-  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--cyan);
-  border: 1px solid var(--line); padding: 9px 16px; transition: .25s;
+  border: 1px solid var(--line-2); padding: 9px 16px; transition: .25s;
 }
 .packet-link:hover, .packet-link:focus-visible {
   border-color: var(--cyan); box-shadow: var(--bloom-cyan);
@@ -82,11 +82,11 @@
    Given prominence on purpose: stating plainly what is and is not being claimed
    is part of the work, not a disclaimer bolted to the end of it. */
 .packet-evidence {
-  border-left: 2px solid var(--amber); background: rgba(255, 158, 44, 0.045);
+  border-left: 2px solid var(--amber); background: var(--event-bed);
   padding: 18px 22px; margin-bottom: 40px;
 }
 .packet-evidence h2 {
-  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.22em;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label);
   text-transform: uppercase; color: var(--amber); margin-bottom: 10px;
 }
 .packet-evidence p { font-size: 13.5px; line-height: 1.65; color: var(--muted); }
@@ -94,7 +94,7 @@
 /* ---------- contents ---------- */
 .packet-contents { margin-bottom: 52px; }
 .packet-contents h2 {
-  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.22em;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label);
   text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
 }
 .packet-contents ol {
@@ -104,7 +104,7 @@
 .packet-contents li { counter-increment: toc; }
 .packet-contents li::before {
   content: counter(toc, decimal-leading-zero) " ";
-  font-family: var(--font-mono); font-size: 10px; color: var(--cyan); margin-right: 10px;
+  font-family: var(--font-mono); font-size: var(--step--1); color: var(--cyan); margin-right: 10px;
 }
 .packet-contents a { font-size: 14px; color: var(--muted); transition: color .2s; }
 .packet-contents a:hover, .packet-contents a:focus-visible { color: var(--fg); }
@@ -131,15 +131,15 @@
 .packet-metrics { margin: 22px 0 6px; overflow-x: auto; }
 .packet-metrics table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .packet-metrics caption {
-  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label);
   text-transform: uppercase; color: var(--muted);
   text-align: left; padding-bottom: 10px;
 }
 .packet-metrics th, .packet-metrics td {
-  text-align: left; padding: 9px 14px 9px 0; border-bottom: 1px solid var(--line);
+  text-align: left; padding: 9px 14px 9px 0; border-bottom: 1px solid var(--line-2);
 }
 .packet-metrics thead th {
-  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.16em;
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--track-label);
   text-transform: uppercase; color: var(--muted);
 }
 .packet-metrics tbody th { font-weight: 400; color: var(--muted); }
@@ -150,8 +150,8 @@
 /* ---------- foot ---------- */
 .packet-foot {
   display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px;
-  margin-top: 64px; padding-top: 26px; border-top: 1px solid var(--line);
-  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em;
+  margin-top: 64px; padding-top: 26px; border-top: 1px solid var(--line-1);
+  font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 .packet-foot a { color: var(--muted); transition: color .25s; }
@@ -162,16 +162,16 @@
    somebody plausibly prints or exports to PDF for a hiring conversation, so it
    inverts to ink-on-paper and prints link destinations rather than dead text. */
 @media print {
-  .packet-body { background: #fff; color: #111; }
+  .packet-body { background: var(--print-paper); color: var(--print-ink); }
   .packet-head, .packet-foot, .skip-link { display: none; }
   .packet { max-width: none; padding: 0; }
-  .packet h1, .packet-section h2 .anchor { color: #000; }
-  .packet-section p, .packet-summary { color: #111; opacity: 1; }
-  .packet-kicker, .packet-idx { color: #444; }
-  .packet-evidence { border-left-color: #888; background: #f4f4f4; }
-  .packet-evidence p, .packet-meta dt, .packet-contents a { color: #333; }
-  .packet-link::after, .packet-links a::after { content: " (" attr(href) ")"; font-size: 0.8em; color: #555; }
-  .packet-metrics td:last-child { color: #000; font-weight: 600; }
+  .packet h1, .packet-section h2 .anchor { color: var(--print-ink); }
+  .packet-section p, .packet-summary { color: var(--print-ink); opacity: 1; }
+  .packet-kicker, .packet-idx { color: var(--print-ink-2); }
+  .packet-evidence { border-left-color: var(--print-ink-3); background: var(--print-wash); }
+  .packet-evidence p, .packet-meta dt, .packet-contents a { color: var(--print-ink-2); }
+  .packet-link::after, .packet-links a::after { content: " (" attr(href) ")"; font-size: 0.8em; color: var(--print-ink-3); }
+  .packet-metrics td:last-child { color: var(--print-ink); font-weight: 600; }
   .packet-section { break-inside: avoid; }
   .packet-section h2 .anchor::after { content: ""; }
 }
@@ -182,11 +182,11 @@
 .packet-figure { margin: 8px auto 44px; max-width: 520px; }
 .packet-figure figcaption { margin-top: 12px; font-size: 13px; line-height: 1.55; color: var(--muted); }
 .dg { display: block; width: 100%; height: auto; overflow: visible; }
-.dg-box { fill: var(--void-2); stroke: var(--line-strong); stroke-width: 1; }
+.dg-box { fill: var(--void-2); stroke: var(--line-3); stroke-width: 1; }
 .dg-kit { stroke: var(--amber); }
 .dg-core { stroke: var(--cyan); stroke-width: 1.4; }
 .dg-out { stroke: var(--cyan-dim); }
-.dg-rule { stroke: var(--line); stroke-width: 1; fill: none; }
+.dg-rule { stroke: var(--line-2); stroke-width: 1; fill: none; }
 .dg-a { stroke: var(--cyan-dim); stroke-width: 1.4; fill: none; }
 .dg-a-kit { stroke: var(--amber-dim); }
 .dg-head { fill: var(--cyan-dim); }
@@ -195,4 +195,23 @@
 .dg-strong { font-size: 15px; font-weight: 400; }
 .dg-m { fill: var(--muted); font-family: var(--font-display); font-size: 12px; }
 .dg-n { fill: var(--cyan); font-family: var(--font-mono); font-size: 13px; }
-@media print { .dg-box { fill: none; } .dg-t { fill: #111; } }
+@media print { .dg-box { fill: none; } .dg-t { fill: var(--print-ink); } }
+
+/* ---------- rebuild phase 2: the shared controls' states ----------
+   The same grammar as the home page (css/site.css, "REBUILD PHASE 2"): the global
+   2px --signal focus ring at 3px is the one focus style; a framed control glows on
+   hover and focus and sinks to the pressed surface; the back link lights in the
+   control colour. On a coarse pointer every control here is at least 44 px tall. */
+.packet-link { display: inline-flex; align-items: center; }
+.packet-link:hover, .packet-link:focus-visible { background: var(--signal-wash); }
+.packet-link:active { background: var(--ink-3); box-shadow: none; }
+.packet-home:active, .packet-foot a:active { color: var(--signal-ink); }
+@media (pointer: coarse) {
+  .packet-link, .packet-contents a {
+    min-height: 44px; display: inline-flex; align-items: center; touch-action: manipulation; }
+  .packet-contents ol { gap: 0; }
+  /* The back link and the foot links grow their hit area, not the layout: the
+     sticky header would otherwise take 27 px more of a phone's reading height. */
+  .packet-home, .packet-foot a {
+    display: inline-block; padding-block: 14px; margin-block: -14px; touch-action: manipulation; }
+}

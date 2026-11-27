@@ -4,12 +4,19 @@ window.__TIER_PROBE = null;
 window.__CURSOR_ACTIVE = false;
 window.__SCENE_READY_FIRED = false;
 
+/* The page's layout follows the scene engine through html[data-scene="next"]. That attribute is set by the inline
+   script in the page's head, before the stylesheet and the first paint (step L2;
+   tests/unit/scene-switch.test.mjs holds that script to chooseEngine()). Step L1 set it from here, by importing
+   the scene's bootstrap first. That fetched a scene module before the page had painted, on every visit, new
+   scene or not: against the rule this file opens with, and tests/browser/boot-isolation.spec.mjs failed on it
+   when the whole suite was next run. Nothing of the scene is imported here before the page's own behaviour. */
+
 /* Bumped for every module this branch modified: js/background.js (postFX
    re-gate + timebase reset), js/boot.js (navigation-anchored cap) and
    js/app.js (ownership-scoped inert + per-photo lightbox sizing). Without
    these, a returning visitor keeps the CACHED module and none of the fixes —
    including the Critical inert lockout — ever reach them. */
-const V = { bg: '8.0', boot: '3.4', cursor: '3.2', fx: '3.8', app: '5.1', probe: '6' };
+const V = { bg: '8.0', boot: '3.4', cursor: '3.2', fx: '3.9', app: '5.1', probe: '6', next: '3' };
 
 /* v3.4b: this is a COORDINATOR, not a serial dependency chain (spec 2026-07-21
    §A3). It shipped as four unguarded sequential `await import()` calls, so a
@@ -77,8 +84,8 @@ await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(r
    whether the scene fails, or the thing that catches scene failures fails. */
 let status;
 try {
-  const { bootstrapScene } = await import('./scene-bootstrap.mjs?v=1');
-  status = await bootstrapScene({ version: V.bg, probeVersion: V.probe });
+  const { bootstrapScene } = await import('./scene-bootstrap.mjs?v=2');
+  status = await bootstrapScene({ version: V.bg, probeVersion: V.probe, nextVersion: V.next });
 } catch (error) {
   document.getElementById('scene-root')?.replaceChildren();
   document.body.dataset.scene = 'unavailable';

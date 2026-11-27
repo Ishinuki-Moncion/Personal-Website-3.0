@@ -29,7 +29,24 @@
      (site.css) and stays unfetched here, so it is deliberately not preloaded. -->
 <link rel="preload" href="fonts/hanken-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
 <link rel="preload" href="fonts/mplus-rounded-1c-400.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
-<link rel="stylesheet" href="css/site.css?v=3.42" />
+<!-- Step L2: the page's layout follows the scene engine, and on phones it moves whole sections, so the switch is
+     set here, before the stylesheet and the first paint. The same rule as chooseEngine() in js/scene-bootstrap.mjs
+     (tests/unit/scene-switch.test.mjs runs both over one table): the new scene is the default; ?scene=live
+     keeps the old scene for the tab, ?scene=next clears that choice; with storage unavailable, the query alone. -->
+<script id="scene-switch">
+(function () {
+  var asked = new URLSearchParams(location.search).get('scene'), next;
+  try {
+    if (asked === 'live') sessionStorage.setItem('scene.engine', 'live');
+    else if (asked === 'next') sessionStorage.removeItem('scene.engine');
+    next = sessionStorage.getItem('scene.engine') !== 'live';
+  } catch (e) {
+    next = asked !== 'live';
+  }
+  if (next) document.documentElement.dataset.scene = 'next';
+})();
+</script>
+<link rel="stylesheet" href="css/site.css?v=3.45" />
 <noscript>
   <style>
     /* No-JS truth: kill the boot screen and reveal everything the engine would */
@@ -268,8 +285,8 @@
       <a class="cta cta-ghost" href="#contact" data-cursor="expand" data-en="Start a conversation" data-ja="ご相談はこちら">Start a conversation</a>
     </div>
     <div class="hero-foot">
-      <div class="scroll-cue"><span class="track"></span><span data-en="Scroll to explore" data-ja="スクロール">Scroll to explore</span></div>
-      <div class="sys-online" translate="no">● SYS//ONLINE</div>
+      <div class="scroll-cue" aria-hidden="true"><span class="track"></span><span data-en="Scroll to explore" data-ja="スクロール">Scroll to explore</span></div>
+      <div class="sys-online" translate="no" aria-hidden="true">● SYS//ONLINE</div>
     </div>
   </section>
 
@@ -281,12 +298,11 @@
       <p class="about-lead" data-reveal data-en="A Tokyo-based technical producer who designs AI tools — and a photographer." data-ja="AI ツールを設計する、東京のテクニカルプロデューサー。写真家でもあります。">A Tokyo-based technical producer who designs AI tools — and a photographer.</p>
       <div class="about-grid">
         <div class="about-bio">
-          <p data-reveal data-reveal-delay="0.05s" data-en="I’m Ishinuki Daikie, a developer who likes turning ideas into things people actually use. I studied Computer Science at The University of Texas at Dallas and work across the stack — React, Next.js, and Node/Express on PostgreSQL and REST APIs. Today I’m a Technical Producer at SeenThis Japan. I build and convert ad materials into ad banners for the open web, and I’ve delivered 300+ campaigns and mockups so far. I also design the AI tools my team uses. Night-Shift Studio drafts ad directions overnight, and the production kit holds our rules in a form an AI can follow. I specify each tool and build it with Claude Code." data-ja="Ishinuki Daikie です。アイデアを、実際に人が使うものへ変えていくことが好きな開発者です。テキサス大学ダラス校でコンピュータサイエンスを学び、React・Next.js から Node/Express、PostgreSQL、REST API まで幅広く手がけています。現在は SeenThis Japan のテクニカルプロデューサーとして、広告素材をオープンウェブのディスプレイ広告へ制作・変換しています。これまでに300件を超えるキャンペーンとモックアップを、制作から配信まで一貫して担当してきました。キャンペーン制作と並行して、チームが使う AI ツールも設計しています。Night-Shift Studio は夜のうちに広告の方向性を下書きし、プロダクションキットは制作ルールを AI が守れる形にまとめたものです。どちらも仕様を書き、Claude Code で構築しています。">I’m Ishinuki Daikie, a developer who likes turning ideas into things people actually use. I studied Computer Science at The University of Texas at Dallas and work across the stack — React, Next.js, and Node/Express on PostgreSQL and REST APIs. Today I’m a Technical Producer at SeenThis Japan. I build and convert ad materials into ad banners for the open web, and I’ve delivered 300+ campaigns and mockups so far. I also design the AI tools my team uses. Night-Shift Studio drafts ad directions overnight, and the production kit holds our rules in a form an AI can follow. I specify each tool and build it with Claude Code.</p>
-          <p data-reveal data-reveal-delay="0.12s" data-en="I’m based in Tokyo by way of Dallas. After UTD I moved to Japan and completed a Post-Graduate Program in Japan Studies at Soka University. I speak native English and conversational Japanese (JLPT N3). Photography is a real practice for me — it’s where the engineer and the artist in me meet." data-ja="ダラスを経て、東京を拠点にしています。UTD 卒業後に来日し、創価大学で日本研究のポストグラデュエート・プログラムを修了しました。英語はネイティブ、日本語は日常会話レベル（JLPT N3）です。写真は趣味を超えた実践で、エンジニアとしての自分とアーティストとしての自分が出会う場所です。">I’m based in Tokyo by way of Dallas. After UTD I moved to Japan and completed a Post-Graduate Program in Japan Studies at Soka University. I speak native English and conversational Japanese (JLPT N3). Photography is a real practice for me — it’s where the engineer and the artist in me meet.</p>
+          <p data-reveal data-reveal-delay="0.05s" data-en="I’m Ishinuki Daikie, a Technical Producer at SeenThis Japan. I build and convert ad creative into banners for the open web, and have delivered 300+ campaigns and mockups. I also design the AI tools my team uses: Night-Shift Studio drafts ad directions overnight, and the production kit holds our rules in a form an AI can follow. I specify each tool and build it with Claude Code." data-ja="Ishinuki Daikie です。アイデアを、実際に人が使うものへ変えていくことが好きな開発者です。テキサス大学ダラス校でコンピュータサイエンスを学び、React・Next.js から Node/Express、PostgreSQL、REST API まで幅広く手がけています。現在は SeenThis Japan のテクニカルプロデューサーとして、広告素材をオープンウェブのディスプレイ広告へ制作・変換しています。これまでに300件を超えるキャンペーンとモックアップを、制作から配信まで一貫して担当してきました。キャンペーン制作と並行して、チームが使う AI ツールも設計しています。Night-Shift Studio は夜のうちに広告の方向性を下書きし、プロダクションキットは制作ルールを AI が守れる形にまとめたものです。どちらも仕様を書き、Claude Code で構築しています。">I’m Ishinuki Daikie, a Technical Producer at SeenThis Japan. I build and convert ad creative into banners for the open web, and have delivered 300+ campaigns and mockups. I also design the AI tools my team uses: Night-Shift Studio drafts ad directions overnight, and the production kit holds our rules in a form an AI can follow. I specify each tool and build it with Claude Code.</p>
+          <p data-reveal data-reveal-delay="0.12s" data-en="I came to Tokyo by way of Dallas. I studied Computer Science at The University of Texas at Dallas, then completed a post-graduate program in Japan Studies at Soka University. I speak native English and conversational Japanese (JLPT N3). Photography is where the engineer and the artist in me meet." data-ja="ダラスを経て、東京を拠点にしています。UTD 卒業後に来日し、創価大学で日本研究のポストグラデュエート・プログラムを修了しました。英語はネイティブ、日本語は日常会話レベル（JLPT N3）です。写真は趣味を超えた実践で、エンジニアとしての自分とアーティストとしての自分が出会う場所です。">I came to Tokyo by way of Dallas. I studied Computer Science at The University of Texas at Dallas, then completed a post-graduate program in Japan Studies at Soka University. I speak native English and conversational Japanese (JLPT N3). Photography is where the engineer and the artist in me meet.</p>
           <div class="geo-trail" data-reveal data-reveal-delay="0.16s">
             <span class="geo-kicker" translate="no">ROUTE // PERSONAL VECTOR</span>
             <span class="geo-line" translate="no">Dallas → Tokyo</span>
-            <span class="geo-copy" data-en="The globe traces the same move in the background: UTD and Dallas as the origin point, Tokyo as the current base for development, production, and photography." data-ja="背景の地球儀も同じ移動を描いています。UTD とダラスを起点に、開発・制作・写真の現在地である東京へ。">The globe traces the same move in the background: UTD and Dallas as the origin point, Tokyo as the current base for development, production, and photography.</span>
           </div>
           <div class="stat-row">
             <div class="stat" data-reveal data-reveal-delay="0.18s"><div class="n readout"><span data-count="300" aria-hidden="true">88</span><span class="readout-unit" aria-hidden="true">+</span><span class="sr-only">300+</span></div><div class="l" data-en="Campaigns &amp; mockups" data-ja="キャンペーン・モック">Campaigns &amp; mockups</div></div>
@@ -342,11 +358,32 @@
               <div class="row-sub" data-en="SeenThis Japan — Tokyo, Japan" data-ja="SeenThis Japan — 東京, 日本">SeenThis Japan — Tokyo, Japan</div>
             </div>
             <div>
-              <p class="row-desc" data-en="Build and convert ad creative into open-web ad banners in HTML, CSS &amp; JavaScript. Design the team’s AI tools: Night-Shift Studio and the production kit. Delivered 300+ campaigns and mockups end to end." data-ja="広告クリエイティブを HTML・CSS・JavaScript でオープンウェブのディスプレイ広告に制作・変換。チームの AI ツール（Night-Shift Studio とプロダクションキット）を設計。300件を超えるキャンペーンとモックアップを一貫して担当。">Build and convert ad creative into open-web ad banners in HTML, CSS &amp; JavaScript. Design the team’s AI tools: Night-Shift Studio and the production kit. Delivered 300+ campaigns and mockups end to end.</p>
+              <p class="row-desc" data-en="Build and convert ad creative into open-web banners in HTML, CSS and JavaScript. Design the team’s AI tools. Delivered 300+ campaigns and mockups." data-ja="広告クリエイティブを HTML・CSS・JavaScript でオープンウェブのディスプレイ広告に制作・変換。チームの AI ツール（Night-Shift Studio とプロダクションキット）を設計。300件を超えるキャンペーンとモックアップを一貫して担当。">Build and convert ad creative into open-web banners in HTML, CSS and JavaScript. Design the team’s AI tools. Delivered 300+ campaigns and mockups.</p>
               <div class="tags"><span class="tag">HTML</span><span class="tag">CSS</span><span class="tag">JavaScript</span><span class="tag">Premiere</span><span class="tag">Photoshop</span><span class="tag">Claude Code</span></div>
             </div>
           </div>
         </article>
+        <!-- PRIVATE WORK (rebuild phase 2, decision 11): the door to the invitation-only Work site.
+             It stands directly under the Technical Producer row, on the owner's word (2026-11-27):
+             that row claims the campaigns, and this is the way to see them. Switched on by the owner
+             the same day (it shipped dark until then, because the employer had not been asked). No
+             client and no count belong in it. It has two ways on: Request access, to Contact, and
+             one outside link, the Work site's own sign-in, for people already invited (the owner's
+             word, 2026-11-27; the sign-in protects the ads, not a hidden address). Its copy has no Japanese
+             (data-ja) on purpose: Japanese wording needs the owner's approval, so the Japanese page
+             shows it in English, marked lang="en". -->
+        <div class="door" id="private-work" lang="en" role="group" aria-labelledby="private-work-title">
+          <span class="door-lock" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" focusable="false"><path d="M6.5 9V6.5a3.5 3.5 0 0 1 7 0V9" fill="none" stroke="currentColor" stroke-width="1.25"/><rect x="4.5" y="9" width="11" height="8" fill="none" stroke="currentColor" stroke-width="1.25"/><rect x="9.4" y="11.5" width="1.2" height="3" fill="currentColor"/></svg></span>
+          <div class="door-copy">
+            <p class="door-label">PRIVATE</p>
+            <h3 class="door-title" id="private-work-title">Ad portfolio</h3>
+            <p class="door-text">Live ad creatives, shown by invitation. Ask for access.</p>
+          </div>
+          <div class="door-actions">
+            <a class="door-btn" href="#contact" data-cursor="request →">Request access <span aria-hidden="true">→</span></a>
+            <a class="door-in" href="https://work-8cuwkxn9p5.pages.dev/" target="_blank" rel="noopener" data-cursor="open ↗">Have access? Sign in <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
         <article class="row" data-reveal>
           <div class="work-grid">
             <div>
@@ -375,6 +412,7 @@
         </article>
       </div>
       <div class="row-end-rule"></div>
+
 
       <!-- Education lives inside Work / Experience rather than as a sixth
            top-level section: promoting it would renumber Gallery, Projects and
@@ -471,7 +509,7 @@
             <span class="proj-idx">03</span>
             <div>
               <h3 class="row-title">Open-Web Campaign Production</h3>
-              <p class="row-sub" data-en="Technical Producer at SeenThis Japan — building and converting advertising creative into open-web display formats inside strict weight budgets, across 300+ campaigns and mockups." data-ja="SeenThis Japan のテクニカルプロデューサーとして、厳しい容量制限のもとで広告クリエイティブをオープンウェブの表示フォーマットへ制作・変換。300件を超えるキャンペーンとモックアップを担当。">Technical Producer at SeenThis Japan — building and converting advertising creative into open-web display formats inside strict weight budgets, across 300+ campaigns and mockups.</p>
+              <p class="row-sub" data-en="Ad creative built and converted into open-web display formats, inside strict weight budgets." data-ja="SeenThis Japan のテクニカルプロデューサーとして、厳しい容量制限のもとで広告クリエイティブをオープンウェブの表示フォーマットへ制作・変換。300件を超えるキャンペーンとモックアップを担当。">Ad creative built and converted into open-web display formats, inside strict weight budgets.</p>
             </div>
             <div class="proj-end"><span class="proj-tech">HTML · CSS · JavaScript</span><span class="proj-year">2025 — <span class="row-arrow" aria-hidden="true">→</span></span></div>
           </div>
@@ -481,7 +519,7 @@
             <span class="proj-idx">04</span>
             <div>
               <h3 class="row-title">daikieOS — Personal Website 3.0</h3>
-              <p class="row-sub" data-en="This site. A portfolio with no build step and an optional real-time 3D scene. Quality follows the device’s measured speed, and the page keeps working if every optional part fails." data-ja="このサイト。ビルド工程のないポートフォリオに、任意で動くリアルタイム 3D シーンを載せています。画質は端末の実測速度で決まり、任意の部品がすべて失敗してもページは動き続けます。">This site. A portfolio with no build step and an optional real-time 3D scene. Quality follows the device’s measured speed, and the page keeps working if every optional part fails.</p>
+              <p class="row-sub" data-en="This site. No build step, and an optional real-time 3D scene. The page keeps working if every optional part fails." data-ja="このサイト。ビルド工程のないポートフォリオに、任意で動くリアルタイム 3D シーンを載せています。画質は端末の実測速度で決まり、任意の部品がすべて失敗してもページは動き続けます。">This site. No build step, and an optional real-time 3D scene. The page keeps working if every optional part fails.</p>
             </div>
             <div class="proj-end"><span class="proj-tech">three.js · GLSL · ES modules</span><span class="proj-year">2026 <span class="row-arrow" aria-hidden="true">→</span></span></div>
           </div>
@@ -501,7 +539,7 @@
             <span class="proj-idx">06</span>
             <div>
               <h3 class="row-title">Tokyo Apartment Hunt</h3>
-              <p class="row-sub" data-en="An apartment search that runs itself on a schedule, with a Japanese and English interface. It runs only on my own computer, and its local server stops when the last tab closes." data-ja="自動で走る住まい探し。日英どちらでもサーバー側で描画される画面を持ち、動くのは自分の端末の中だけ。ホスティングは無く、最後のタブを閉じるとローカルサーバーは自ら停止します。">An apartment search that runs itself on a schedule, with a Japanese and English interface. It runs only on my own computer, and its local server stops when the last tab closes.</p>
+              <p class="row-sub" data-en="An apartment search that runs itself on a schedule, in Japanese and English. It runs only on my own computer." data-ja="自動で走る住まい探し。日英どちらでもサーバー側で描画される画面を持ち、動くのは自分の端末の中だけ。ホスティングは無く、最後のタブを閉じるとローカルサーバーは自ら停止します。">An apartment search that runs itself on a schedule, in Japanese and English. It runs only on my own computer.</p>
             </div>
             <div class="proj-end"><span class="proj-tech">Python · Server-rendered · Scheduled</span><span class="proj-year">2026 <span class="row-arrow" aria-hidden="true">→</span></span></div>
           </div>
@@ -574,7 +612,7 @@
            runtime-assembled address — with the action appended as visible-to-AT
            text rather than overriding it. -->
       <button class="signal-row" type="button" data-reveal data-reveal-delay="0.05s" data-cursor="copy" translate="no">
-        <span class="signal-k">SIGNAL //</span>
+        <span class="signal-k" aria-hidden="true">SIGNAL //</span>
         <span class="signal-addr" data-addr>KEY//STANDBY</span>
         <span class="sr-only" data-en=" — copy email address to clipboard" data-ja=" — メールアドレスをコピー"> — copy email address to clipboard</span>
         <span class="signal-tick" aria-hidden="true">✓ COPIED</span>
@@ -709,6 +747,6 @@ document.getElementById('year').textContent = new Date().getFullYear();
 })();
 </script>
 
-<script type="module" src="js/boot.mjs?v=46"></script>
+<script type="module" src="js/boot.mjs?v=49"></script>
 </body>
 </html>
