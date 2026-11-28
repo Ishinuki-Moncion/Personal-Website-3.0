@@ -43,7 +43,7 @@ const LIGHT_GAIN = 7.0;                     // night lights: glow = 1 - exp(-gai
 export const TILE_NEAR_OPEN = [0.62, 1.2], TILE_ZOOM_OPEN = [1.2, 2.4];
 const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const glf = v => v.toFixed(2);
-const SWAY_SPIN = 4 * Math.PI / 180, SWAY_TILT = 1.5 * Math.PI / 180, SWAY_S = 48;   // the idle sway round the rest pose
+const SWAY_SPIN = 8 * Math.PI / 180, SWAY_TILT = 2.5 * Math.PI / 180, SWAY_S = 32;   // the idle sway round the rest pose
 const IDLE_MAX = (2 * Math.PI) / 180;       // rad/s: the idle never moves faster than the old full turn did
 /* MAX blending: the small Tokyo pieces (markers, pillar, halo sprites) were additive and stacked into a
    neutral-white core over the hot city dots (measured 254,255,255). Blended by MAX they can light the

@@ -15,7 +15,7 @@
      event. Outside the hero the browser keeps every gesture (pinch-zoom included); the buttons and the
      keyboard work everywhere.
    Styles: css/site.css, under html[data-scene="next"] (step L1); nothing inline in the HTML. */
-import { LEVELS, LADDER } from './story.mjs?v=4';
+import { LEVELS, LADDER } from './story.mjs?v=5';
 
 const IGNORE = 'a, button, input, select, textarea, label, summary, [role="button"], [role="link"], [contenteditable], nav, img, picture, video, .shot, .lightbox, .mobile-menu, .deck, .deck-toggle, .scene-levels';
 const DRAG_PX = 4;           // mouse: movement before a press becomes a drag

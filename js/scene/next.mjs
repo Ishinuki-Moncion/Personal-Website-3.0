@@ -33,12 +33,12 @@
 import * as THREE from 'three';
 import { classifyTier } from '../quality-policy.mjs?v=5';
 import { composition, isPhone, pixelRatioFor, readHeroAnchors, PIXEL_BUDGET, STAGE } from './layout.mjs?v=1';
-import { createGlobe, INTRO_S } from './globe.mjs?v=5';
+import { createGlobe, INTRO_S } from './globe.mjs?v=6';
 import { createStars } from './stars.mjs?v=1';
 import { createWeather, LIGHTS, LIGHT_FEATHER } from './weather.mjs?v=2';
-import { createEye } from './eye.mjs?v=4';
+import { createEye } from './eye.mjs?v=5';
 import { createOverlay } from './overlay.mjs?v=2';
-import { createStory, createVeil, SECTIONS } from './story.mjs?v=4';
+import { createStory, createVeil, SECTIONS } from './story.mjs?v=5';
 import { PHOTO_PLACES } from './data/places.mjs?v=2';
 
 const scriptStart = performance.now();
@@ -126,6 +126,18 @@ export function mountScene({ probe = null } = {}) {
   const cloudsAgeIgnore = sceneDebug && query.get('cloudsAge') === 'ignore';
   let clouds = null;
   const cloudState = { state: 'off', t: null, ageH: null };
+  /* EB2, the aurora (aurora.mjs, aurora-math.mjs): on at the Earth, loaded after the first frame on the tiers that load
+     the detail (never on lite), beside the clouds. ?aurora=0 turns it off for the tab (sessionStorage['scene.aurora'] =
+     '0'; ?aurora=1 back on). A failure to load leaves the scene as it was, silently. */
+  const AURORA_KEY = 'scene.aurora';
+  let auroraOff = query.get('aurora') === '0';
+  try {
+    const asked = query.get('aurora');
+    if (asked === '0' || asked === '1') sessionStorage.setItem(AURORA_KEY, asked);
+    auroraOff = sessionStorage.getItem(AURORA_KEY) === '0';
+  } catch { /* privacy modes: the address alone chooses */ }
+  let aurora = null;
+  const auroraState = { state: 'off' };
   const eye =createEye({ globe, detail: tier !== 'lite' });   // lite: a point and its label
   globe.root.add(eye.mesh);
   const veil = createVeil(light && LIGHTS[light].feather !== false ? { feather: LIGHT_FEATHER } : {});   // step 2: copy always wins (story.mjs); T2: softer edges when lit
@@ -526,6 +538,7 @@ export function mountScene({ probe = null } = {}) {
     follow();                // T2a: before the globe composes its pose for this frame
     globe.update(dt);
     if (clouds) clouds.update();   // CL2: the zoom fade
+    if (aurora) aurora.update(dt); // EB2: its clock and the zoom fade
     eye.update(dt, !still && story.eyeDrifts());
     weather.update(dt);
     motion();
@@ -569,7 +582,14 @@ export function mountScene({ probe = null } = {}) {
     if (primeVeil) veil.mesh.visible = false;
     drawCalls = renderer.info.render.calls;
     frames++;
-    if (firstFrameAt === null) { firstFrameAt = performance.now(); starsAtFirstFrame = stars.count; scheduleDetail(); scheduleRestStars(); scheduleLate(); loadClouds(); }
+    if (firstFrameAt === null) { firstFrameAt = performance.now(); starsAtFirstFrame = stars.count; scheduleDetail(); scheduleRestStars(); scheduleLate(); loadClouds(); loadAurora(); }
+  }
+  /* EB2: the aurora, after the first frame, once, on the tiers that load the detail. */
+  function loadAurora() {
+    if (!profile.detail || auroraOff || auroraState.state !== 'off') return;
+    auroraState.state = 'loading';
+    import('./aurora.mjs?v=1').then(m => { aurora = m.createAurora({ globe, still }); aurora.update(0); auroraState.state = 'on'; redraw(); })
+      .catch(() => { aurora = null; auroraState.state = 'off'; });
   }
   /* CL2: the live clouds, after the first frame, once, on the tiers that load the detail. Missing, malformed or stale:
      nothing is drawn and nothing is logged; the file is not asked for again. */
@@ -581,7 +601,7 @@ export function mountScene({ probe = null } = {}) {
         const read = D.readClouds(doc, Date.now(), { ignoreAge: cloudsAgeIgnore });
         Object.assign(cloudState, { state: read.state === 'on' ? 'loading' : read.state, t: read.t, ageH: read.ageH });
         if (read.state !== 'on') return null;
-        return import('./clouds.mjs?v=1').then(m => m.createClouds({ globe, data: read })).then(c => { clouds = c; clouds.update(); cloudState.state = 'on'; redraw(); });
+        return import('./clouds.mjs?v=2').then(m => m.createClouds({ globe, data: read })).then(c => { clouds = c; clouds.update(); cloudState.state = 'on'; redraw(); });
       })
       .catch(() => { clouds = null; if (cloudState.state === 'loading') cloudState.state = 'missing'; });
   }
@@ -628,7 +648,7 @@ export function mountScene({ probe = null } = {}) {
   function loadControls() {
     if (late.controls !== 'waiting') return;
     late.controls = 'loading';
-    import('./controls.mjs?v=5').then(m => {
+    import('./controls.mjs?v=6').then(m => {
       controls = m.createControls({ story, globe, overlay, onChange: redraw, follow: true });
       controls.place(comp, W, H);
       controls.setLevel(story.level());
@@ -805,6 +825,7 @@ export function mountScene({ probe = null } = {}) {
       dots: globe.count, candidates: globe.candidates, streaks: weather.streaks, ripples: weather.ripples, stars: stars.count,
       beam: profile.beam, mode, arrived, modeLog: [...modeLog], section: story.section(), light: { ...weather.lightDebug(), veil: veilScale },
       ...story.debug(), arrivals: [...arrivals], veilMask: veil.debug(), controls: controls?.debug() ?? null, late: { ...late }, cities: globe.citiesSet(), clouds: { ...cloudState, lines: clouds ? clouds.lines() : 0, zoomK: clouds ? +clouds.zoomK().toFixed(3) : 0, buildMs: clouds ? clouds.buildMs : null },
+      aurora: aurora ? (({ dark, zoomK }) => ({ state: auroraState.state, dark, zoomK }))(aurora.debug()) : { state: auroraState.state, dark: 0, zoomK: 0 },
       canvas: [canvas.width, canvas.height], pixels: canvas.width * canvas.height, pixelBudget: PIXEL_BUDGET,
       presence: { e: +PRES.e.toFixed(4), y: Math.round(PRES.y), closeAt: Math.round(PRES.closeAt), disc: { cx: Math.round(disc.cx), cy: Math.round(disc.cy), r: Math.round(disc.r) } },
       stageBands: (() => { const out = [], zt = scrollY + stage.zone[0] + PRES.dy, zb = scrollY + stage.zone[1] + PRES.dy + PRES.dr * 2; for (let i = 0; i < stage.n && out.length < 8; i++) if (stage.bands[2 * i + 1] > zt && stage.bands[2 * i] < zb) out.push([Math.round(stage.bands[2 * i]), Math.round(stage.bands[2 * i + 1])]); return { zone: [Math.round(zt), Math.round(zb)], in: out, moving: stage.moving.map(m => [Math.round(m.top), Math.round(m.bottom), m.k]) }; })(),
