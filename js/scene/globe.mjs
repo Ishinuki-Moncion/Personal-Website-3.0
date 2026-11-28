@@ -925,8 +925,10 @@ export function createGlobe({ candidates, sunHour = null, footDim = 0 }) {
   const setHover = id => { U.uHover.value = id == null ? -1 : id; };
   /** The point of the Earth under a screen point (css px), or null off the Earth or outside the lens. */
   const ray = new THREE.Vector3(), hit = new THREE.Vector3();
+  let standIn = 0;
+  const shown = () => Math.max(U.uFade.value, standIn);
   function pickAt(x, y) {
-    if (!inLens(x, y) || U.uFade.value < 0.5) return null;
+    if (!inLens(x, y) || shown() < 0.5) return null;
     ray.set((x / L.w) * 2 - 1, 1 - (y / L.h) * 2, 0.5).unproject(camera).sub(camera.position).normalize();
     const o = camera.position, b = o.dot(ray), c = o.lengthSq() - 1, disc = b * b - c;
     if (disc < 0) return null;
@@ -1047,5 +1049,11 @@ export function createGlobe({ candidates, sunHour = null, footDim = 0 }) {
     view: () => { const d = camera.position.z; return { dist: d, fov: camera.fov, limbPx: (Math.tan(Math.asin(1 / d)) / Math.tan(camera.fov * DEG / 2)) * (L.h / 2), ringPx: L.r }; },
     pose: () => ({ spin, tilt }), zoom: () => zoomZ, hero: () => ({ spin: BASE_SPIN, tilt: BASE_TILT }),
     setFade(a) { U.uFade.value = a; }, fade: () => U.uFade.value,
+    /** LV1: another level's drawing of this Earth (the Japan map) shows its face with this share; the hologram's own
+        share and it together are how much of the Earth can be picked and handled (shown()). */
+    setStandIn(a) { standIn = a; }, shown,
+    /** LV1c: the detail's textures (the land texture, the two night-light pictures) as uniform slots: another level's
+        drawing of this Earth (the Japan level's ink globe) samples the same ones, blank until the detail lands. */
+    tex: TX,
   };
 }

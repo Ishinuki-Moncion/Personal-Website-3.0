@@ -33,12 +33,12 @@
 import * as THREE from 'three';
 import { classifyTier } from '../quality-policy.mjs?v=5';
 import { composition, isPhone, pixelRatioFor, readHeroAnchors, PIXEL_BUDGET, STAGE } from './layout.mjs?v=1';
-import { createGlobe, INTRO_S } from './globe.mjs?v=6';
+import { createGlobe, INTRO_S, GLSL_GLOBE } from './globe.mjs?v=7';
 import { createStars } from './stars.mjs?v=1';
 import { createWeather, LIGHTS, LIGHT_FEATHER } from './weather.mjs?v=2';
-import { createEye } from './eye.mjs?v=5';
+import { createEye } from './eye.mjs?v=6';
 import { createOverlay } from './overlay.mjs?v=2';
-import { createStory, createVeil, SECTIONS } from './story.mjs?v=5';
+import { createStory, createVeil, SECTIONS, LEAVE_E } from './story.mjs?v=6';
 import { PHOTO_PLACES } from './data/places.mjs?v=2';
 
 const scriptStart = performance.now();
@@ -159,9 +159,25 @@ export function mountScene({ probe = null } = {}) {
   /* The orbit level's draw set is the globe, the eye and the marks; the Japan and Tokyo stand-ins share it until
      steps 3 and 4 give them their own. The ring level draws none. */
   /* Step L2: the journey's share (drawA) is multiplied by the stage's strength (stage.k, below) wherever it is set. */
-  let drawA = 1;
+  /* LV1: the Japan level has its own draw set, the ink map (japan.mjs), loaded the first time the visitor heads for that
+     level or shows the intent to (loadMap). Until it has landed (or if it fails) the hologram stands in for it: the
+     globe takes the map's share too. */
+  let drawA = 1, japanA = 0, globeA = 1;
   const stage = { k: 1, y: 0, zone: [0, 0], bands: new Float64Array(0), n: 0, moving: [], measures: 0 };
-  const drawSets = { globe: { set(a) { drawA = a; globe.setFade(a * stage.k); eye.setFade(a * stage.k); } } };
+  const mapS = { state: 'waiting', requestedAt: null, landedAt: null, buildMs: null, why: null, plate: 'off', plateFile: null, plateMs: null };
+  let map = null;
+  function applyDraw() {
+    const landed = map ? 1 : 0;
+    globeA = Math.min(1, drawA + japanA * (1 - landed));
+    globe.setFade(globeA * stage.k); eye.setFade(globeA * stage.k);
+    if (map) map.setFade(japanA * stage.k);
+    globe.setStandIn(map ? japanA * stage.k : 0);
+  }
+  const mapFade = () => (map ? map.fade() : 0);
+  const drawSets = {
+    globe: { set(a) { drawA = a; applyDraw(); } },
+    japan: { set(a) { japanA = a; applyDraw(); } },
+  };
   let controls = null;
   const arrivals = [];
   /* The open layout. The owner, 2026-11-26: "The globe seems to be the main focus like this design. Maybe the
@@ -378,6 +394,7 @@ export function mountScene({ probe = null } = {}) {
     stars.resize(w, h, dpr, comp.cx, comp.cy);
     stars.setHorizon(comp.horizon, h, dpr);
     eye.setPhone(comp.phone);
+    map?.setScale(comp.r);
     weather.place({ w, h, dpr, disc: comp, horizon: comp.horizon, reflCap: comp.reflCap });
     weather.U.uRes.value.copy(buffer);
     if (w !== W || h !== H) veil.invalidate();
@@ -527,17 +544,20 @@ export function mountScene({ probe = null } = {}) {
       }
     }
     story.update(dt);
+    if (mapS.state === 'waiting' && story.viewLevel() === 'japan') loadMap('level');   // LV1: first need, at the latest
     stage.y = scrollY;
     const pathK = presence();
+    if (PRES.e > LEAVE_E) story.leave();   // LV1: the Earth has left: a held level ends, and the Earth returns at orbit
     stage.k = pathK * (stageOn ? stageAt(stage.y) : 1);
-    globe.setFade(drawA * stage.k); eye.setFade(drawA * stage.k);
-    eye.mesh.visible = drawA * stage.k > 0.002;   // at 0 the Earth is not drawn at all (the globe hides its own meshes)
+    applyDraw();
+    eye.mesh.visible = globeA * stage.k > 0.002;   // at 0 the Earth is not drawn at all (the globe hides its own meshes)
     weather.setStage(stage.k);
     weather.setAway(smooth(0.25, 1, PRES.e));   // the room's own light as the Earth goes
     applyStage();
     follow();                // T2a: before the globe composes its pose for this frame
     globe.update(dt);
     if (clouds) clouds.update();   // CL2: the zoom fade
+    map?.update(dt);         // LV1: after the globe has posed the Earth (the follow included): the map is fixed to it
     if (aurora) aurora.update(dt); // EB2: its clock and the zoom fade
     eye.update(dt, !still && story.eyeDrifts());
     weather.update(dt);
@@ -547,7 +567,8 @@ export function mountScene({ probe = null } = {}) {
     const e = 1 - Math.pow(1 - rimIn, 3);
     weather.setRing(solid * stage.k, RIM * e * stage.k, 3 * DPR * (1 - solid));   // L2: the ring and its body go with the stage
     /* the disc is opaque wherever the Earth is drawn in it (it fills the disc at every level) or the ring's body is */
-    stars.setDisc(disc.cx, disc.cy, disc.r, H, DPR, Math.max(solid * stage.k, Math.min(1, globe.reveal() * globe.fade())));
+    /* LV1: the Earth is the hologram and the map together (the map is drawn on the same black ball) */
+    stars.setDisc(disc.cx, disc.cy, disc.r, H, DPR, Math.max(solid * stage.k, Math.min(1, globe.reveal() * Math.min(1, globe.fade() + mapFade()))));
     globe.tokyo(tk);
     const qx = (tk.x - disc.cx) / disc.r, qy = -(tk.y - disc.cy) / disc.r;
     weather.setTokyo(qx, qy, smooth(0, 0.35, tk.facing) * globe.fade() * (globe.zoom() > 1.001 ? 1 - smooth(0.95, 1.1, Math.hypot(qx, qy)) : 1));
@@ -588,7 +609,7 @@ export function mountScene({ probe = null } = {}) {
   function loadAurora() {
     if (!profile.detail || auroraOff || auroraState.state !== 'off') return;
     auroraState.state = 'loading';
-    import('./aurora.mjs?v=1').then(m => { aurora = m.createAurora({ globe, still }); aurora.update(0); auroraState.state = 'on'; redraw(); })
+    import('./aurora.mjs?v=2').then(m => { aurora = m.createAurora({ globe, still }); aurora.update(0); auroraState.state = 'on'; redraw(); })
       .catch(() => { aurora = null; auroraState.state = 'off'; });
   }
   /* CL2: the live clouds, after the first frame, once, on the tiers that load the detail. Missing, malformed or stale:
@@ -601,7 +622,8 @@ export function mountScene({ probe = null } = {}) {
         const read = D.readClouds(doc, Date.now(), { ignoreAge: cloudsAgeIgnore });
         Object.assign(cloudState, { state: read.state === 'on' ? 'loading' : read.state, t: read.t, ageH: read.ageH });
         if (read.state !== 'on') return null;
-        return import('./clouds.mjs?v=2').then(m => m.createClouds({ globe, data: read })).then(c => { clouds = c; clouds.update(); cloudState.state = 'on'; redraw(); });
+        /* LV1d: the Japan level's ink globe washes the same field in (if the map has landed; else loadMap passes it on) */
+        return import('./clouds.mjs?v=3').then(m => m.createClouds({ globe, data: read })).then(c => { clouds = c; clouds.update(); cloudState.state = 'on'; map?.setClouds(c.field); redraw(); });
       })
       .catch(() => { clouds = null; if (cloudState.state === 'loading') cloudState.state = 'missing'; });
   }
@@ -648,12 +670,17 @@ export function mountScene({ probe = null } = {}) {
   function loadControls() {
     if (late.controls !== 'waiting') return;
     late.controls = 'loading';
-    import('./controls.mjs?v=6').then(m => {
+    import('./controls.mjs?v=7').then(m => {
       controls = m.createControls({ story, globe, overlay, onChange: redraw, follow: true });
       controls.place(comp, W, H);
       controls.setLevel(story.level());
       controls.setSection(story.section());
       controls.setStrength(stage.k);
+      /* LV1: a pointer over the level buttons, or focus on them, is the intent: the map loads then, so it is ready
+         before the press's move reaches its midpoint */
+      const intent = () => loadMap('intent');
+      controls.group.addEventListener('pointerover', intent, { once: true, passive: true });
+      controls.group.addEventListener('focusin', intent, { once: true });
       late.controls = 'loaded';
     }, () => { late.controls = 'failed'; });
   }
@@ -661,6 +688,86 @@ export function mountScene({ probe = null } = {}) {
     if (late.cities !== 'waiting') return;
     late.cities = 'loading';
     import('./data/cities.mjs?v=1').then(m => { globe.setCities(m.cities()); late.cities = 'loaded'; redraw(); }, () => { late.cities = 'failed'; });
+  }
+  /* LV1: the Japan level's ink map (japan.mjs, its data and the Japan coast: about 20 KB gzipped, the coast shared
+     with the detail where that has loaded it). Requested on the visitor's intent or first need, never before, on
+     every tier; built in one go (a few ms), its program compiled off the frame where the driver can. Any failure
+     leaves the hologram standing in for it, silently. */
+  async function loadMap(why) {
+    if (mapS.state !== 'waiting') return;
+    mapS.state = 'loading'; mapS.why = why;
+    mapS.requestedAt = Math.round(performance.now());
+    try {
+      /* LV1c: on the tiers that load the Earth's detail, the ink globe also draws the world coast beyond the Japan box and
+         washes the land from the Japan tile: the same two modules (and URLs) the detail loads, so nothing more is
+         fetched; the lite tier loads neither */
+      const [J, CW, LJ] = await Promise.all([
+        import('./japan.mjs?v=1'),
+        profile.detail ? import('./data/coast-world.mjs?v=2').catch(() => null) : null,
+        profile.detail ? import('./data/land-japan.mjs?v=1').catch(() => null) : null,
+      ]);
+      const t0 = performance.now();
+      const built = J.buildMap({ world: CW ? CW.decodeCoastWorld() : null, relief: globe.relief });
+      /* LV1b: ?sceneDebug=1&season=spring|summer|autumn|winter picks the drifters (renders, tests); else Japan's date */
+      const m = J.createJapanMap({ THREE, globe, GLSL: GLSL_GLOBE, still, built, tile: LJ, landTexture: Boolean(profile.detail), season: sceneDebug ? query.get('season') : null,
+        cloudStyle: sceneDebug && query.has('jclouds') ? query.get('jclouds') : '0' });   // LV1f: ?sceneDebug=1&jclouds=a|b|c|g|0, the clouds' trial; JP1: off unless asked
+      mapS.buildMs = Math.round(performance.now() - t0);
+      m.setScale(comp.r);
+      m.setFade(0);
+      scene.add(m.mesh);
+      if (typeof renderer.compileAsync === 'function') {
+        m.mesh.visible = true;   // compiled while hidden from the picture: its share is 0
+        await Promise.race([Promise.resolve().then(() => renderer.compileAsync(m.mesh, globe.camera, scene)).catch(() => {}), new Promise(r => setTimeout(r, 1500))]);
+        m.mesh.visible = false;
+      }
+      map = m;
+      if (clouds) map.setClouds(clouds.field);   // LV1d: today's clouds, when the Earth level has them (fresh): never fetched twice
+      map.update(0);
+      applyDraw();
+      mapS.state = 'landed';
+      mapS.landedAt = Math.round(performance.now());
+      redraw();
+      loadPlate();
+    } catch {
+      mapS.state = 'failed';
+      map = null;
+    }
+  }
+  /* JP1: the Japan level's map plate (tools/build-japan-plate.mjs), on the tiers with the detail only (the lite tier keeps
+     the procedural map): the 4096 px picture, the 2048 px one on the phone profile; AVIF, else the JPEG. Until it lands
+     the level shows the procedural paper; then the plate fades in (japan.mjs). A failed load changes nothing, silently. */
+  async function loadPlate() {
+    if (!profile.detail || !map || mapS.plate !== 'off') return;
+    mapS.plate = 'loading';
+    const t0 = performance.now(), size = profile.detail === 'phone' ? 2048 : 4096;
+    const image = ext => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onerror = () => reject(new Error('plate'));
+      img.onload = () => (typeof img.decode === 'function' ? img.decode().then(() => resolve(img), () => resolve(img)) : resolve(img));
+      img.src = new URL(`../../images/plate/japan-plate-${size}.${ext}`, import.meta.url).href;
+    });
+    try {
+      let img, ext = 'avif';
+      try { img = await image(ext); } catch { ext = 'jpg'; img = await image(ext); }
+      if (!map) return;
+      /* JP2: upload it now and ask WebGL whether it took the pixels (a decoded picture can still be refused: an AVIF of odd
+         height was, "texSubImage2D: bad image data"); if not, the procedural map stays. ?sceneDebug=1&plate=refuse adds a
+         real GL error after the upload, so the fallback can be seen working (tests). */
+      const gl = renderer.getContext();
+      for (let i = 0; i < 16 && gl.getError() !== gl.NO_ERROR; i++) { /* drain errors that are not the plate's */ }
+      const tex = map.setPlate(img);
+      renderer.initTexture(tex);
+      if (sceneDebug && query.get('plate') === 'refuse') gl.texParameteri(gl.TEXTURE_2D, 0x7fff, 0);
+      const err = gl.getError();
+      mapS.plateFile = `japan-plate-${size}.${ext}`; mapS.plateMs = Math.round(performance.now() - t0);
+      if (err !== gl.NO_ERROR) { map.clearPlate(); mapS.plate = 'refused'; mapS.plateErr = err; redraw(); return; }
+      mapS.plate = 'landed';
+      if (sceneDebug) window.__sceneDebugPlateBlank = on => { const r = map?.debugBlankPlate(on); redraw(); return r ?? null; };
+      redraw();
+    } catch {
+      mapS.plate = 'failed';
+    }
   }
   function scheduleLate() {
     loadControls();
@@ -849,11 +956,35 @@ export function mountScene({ probe = null } = {}) {
       // F1a
       dotsDrawn: globe.dotsDrawn(), japanBoxDots: globe.japanBoxDots(), detail: { ...detailState, ...globe.detail() },
       footprint: (() => { const f = globe.footprint(); return { x: +f.x.toFixed(1), y: +f.y.toFixed(1), r: +f.r.toFixed(2), alpha: +f.alpha.toFixed(3), drawn: f.alpha > 0.002 }; })(),
-      japan: (() => { const j = globe.japan(); return { x: +j.x.toFixed(1), y: +j.y.toFixed(1), off: +j.off.toFixed(4) }; })(),
+      /* Japan's centre on screen (F1a), and LV1's ink map: its state, its alpha as drawn (the draw set's share times the
+         stage's strength), the hologram's alpha, what it holds, and its draw-in (drawn: 1 once done; draws: how many
+         times it has run this page, never more than 1) */
+      japan: (() => {
+        const j = globe.japan(), s = map?.stats;
+        return {
+          x: +j.x.toFixed(1), y: +j.y.toFixed(1), off: +j.off.toFixed(4),
+          state: mapS.state, why: mapS.why, plate: { state: mapS.plate, file: mapS.plateFile, ms: mapS.plateMs, err: mapS.plateErr ?? null, ...(map?.plate?.() ?? {}) }, alpha: +mapFade().toFixed(4), share: +japanA.toFixed(4), globeAlpha: +globe.fade().toFixed(4),
+          visible: map?.mesh.visible ?? false, instances: map?.count ?? 0,
+          coastLines: s?.coastLines ?? 0, coastStrokes: s?.coastStrokes ?? 0, mist: s?.mist ?? 0, washTriangles: s?.washTriangles ?? 0, dabs: s?.dabs ?? 0, peaks: s?.peaks ?? 0, peaksShown: map ? map.peaks() : false,
+          stations: s?.stations ?? 0, roadPieces: s?.roadPieces ?? 0, seals: s?.seals ?? 0,
+          /* LV1c: the ink globe: the neighbours' and the world's coast lines, the neighbours' peaks, Fuji, the roads and air
+             routes, every line's light, and what the paper is */
+          neighbourLines: s?.neighbourLines ?? 0, worldLines: s?.worldLines ?? 0, nearPeaks: s?.nearPeaks ?? 0, fuji: s?.fuji ?? 0,
+          roads: s?.roads ?? 0, airRoutes: s?.airRoutes ?? 0, lights: map ? map.lights() : [], paper: map ? map.paper() : null,
+          /* LV1d: the sea (the currents' lines, their drift clock, the compass) and today's clouds as wash */
+          currents: s?.currents ?? 0, currentNames: s?.currentNames ?? 0, compass: s?.compass ?? 0, flow: map ? +map.flow().toFixed(3) : 0,
+          cloudWash: map ? map.clouds() : null, compassAt: map ? map.compassAt() : null,
+          season: map ? map.season() : null, drifters: map ? map.drifters() : 0, driftClock: map ? +map.driftClock().toFixed(3) : 0,
+          drawn: map ? +map.progress().toFixed(3) : 0, drawing: map?.drawing() ?? false, draws: map?.draws() ?? 0, light: map ? +map.light().toFixed(4) : -1, labels: map ? map.labels() : [],
+          scale: map ? +map.scale().toFixed(3) : null, requestedAt: mapS.requestedAt, landedAt: mapS.landedAt, buildMs: mapS.buildMs,
+        };
+      })(),
       pose: (() => { const p = globe.pose(), h = globe.hero(); return { spin: +p.spin.toFixed(4), tilt: +p.tilt.toFixed(4), heroSpin: +h.spin.toFixed(4), heroTilt: +h.tilt.toFixed(4) }; })(),
     });
     /** Tile dots facing the viewer inside a screen rectangle (css px); null before the detail lands. */
     window.__sceneDebugLandIn = (x0, y0, x1, y1) => globe.tileDotsIn(x0, y0, x1, y1);
+    /** LV1d: the Japan level's drawn clouds on (the Earth level's field, if it has one) or off, and one redraw (tests). */
+    window.__sceneDebugCloudWash = on => { map?.setClouds(on && clouds ? clouds.field : null); redraw(); return map ? map.clouds().on : null; };
     /** Run the scene's own clock forward by `seconds` in `dt` steps (no drawing) and report Japan's largest offset from
         the disc's centre, in disc radii: the rest-pose test reads scene time, never the wall clock. */
     window.__sceneDebugRun = (seconds, dt = 1 / 30) => {

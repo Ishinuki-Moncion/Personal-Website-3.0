@@ -15,7 +15,7 @@
    along the oval and the curtain breathes (tens of seconds); under reduced motion the clock is not advanced.
    One mesh, one draw call; update() writes three numbers, no allocation. */
 import * as THREE from 'three';
-import { GLSL_GLOBE } from './globe.mjs?v=6';
+import { GLSL_GLOBE } from './globe.mjs?v=7';
 import { OVAL_R, OVAL_SHIFT, DARK_FULL, DARK_GONE, poleVec, ovalFrame, ovalPoint, darkness } from './aurora-math.mjs?v=1';
 
 const SEG = 720;                       // segments round each oval

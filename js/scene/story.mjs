@@ -18,23 +18,29 @@
    The eye guides: in each move it travels along its ring to the point in front of the Earth, over the place
    the view faces; it drifts only when nothing asks it to move (the hero). The ring level: it is gone with the Earth.
 
-   Taking over (controls.mjs): the visitor can change the level and turn or pan the view; after IDLE_MS with
-   no input the view eases back to the section's own.
+   Taking over (controls.mjs): the visitor can change the level and turn or pan the view. A level reached by a
+   button, a double-click, a pinch or the keyboard STAYS (LV1, 2026-11-28): it ends only when the visitor presses
+   another level or EARTH, presses Escape, or scrolls the Earth away (next.mjs calls leave() once presence.e passes
+   LEAVE_E), and then the view is back at the section's own by the time the Earth returns. No timer returns it. A
+   take-over at the section's own level (a drag or a turn at orbit) still lapses after IDLE_MS with no input, and the
+   view eases back to the section's own; a drag below orbit lapses for the cursor follow only (handled()).
 
    Copy always wins: the veil (createVeil, below) dims the scene under the section's text, every frame,
    wherever that text sits; the hero is the approved composition and is left as it is. */
 import * as THREE from 'three';
 import { TOKYO, DALLAS, latLonToXYZ, xyzToLatLon } from './data/places.mjs?v=2';
-import { EYE_PERIOD_S } from './eye.mjs?v=5';
+import { EYE_PERIOD_S } from './eye.mjs?v=6';
 
 export const IDLE_MS = 4000;
+/** The Earth's presence (next.mjs, presence.e: 0 in its place, 1 gone) past which a held level ends. */
+export const LEAVE_E = 0.5;
 const LZ_FULL = Math.log(8);
 
 /** The levels. depth orders the three the visitor can choose (orbit, japan, tokyo); no section names the ring now (it stays for the arrival's look and a caller's own table). */
 export const LEVELS = {
   ring: { name: 'ring', depth: -1, zoom: 1, draw: null, word: null },
   orbit: { name: 'orbit', depth: 0, zoom: 1, draw: 'globe', word: 'ORBIT', label: 'EARTH' },
-  japan: { name: 'japan', depth: 1, zoom: 3.6, draw: 'globe', word: 'JAPAN', label: 'JAPAN', place: { lat: 36.6, lon: 137.6 } },
+  japan: { name: 'japan', depth: 1, zoom: 5.0, draw: 'japan', word: 'JAPAN', label: 'JAPAN', place: { lat: 38.2, lon: 137.9 } },
   tokyo: { name: 'tokyo', depth: 2, zoom: 5.4, draw: 'globe', word: 'TOKYO', label: 'TOKYO', place: { lat: TOKYO.lat, lon: TOKYO.lon } },
 };
 export const LADDER = ['orbit', 'japan', 'tokyo'];
@@ -83,7 +89,9 @@ export function createStory({ globe, eye, drawSets, still = false, onArrive = ()
     spin: channel(p0.spin, 9), tilt: channel(p0.tilt, 9), lz: channel(0, 8.5),
     eye: channel(eye.angle(), 7.5), solid: channel(0, 7.5), veil: channel(0, 8),
   };
-  const alpha = Object.fromEntries(Object.keys(drawSets).map(k => [k, channel(1, 9)]));
+  /* each draw set starts at its share of the orbit level, where every page starts (with a second draw set, starting
+     every set at 1 left the map's share at 1 on the hero under reduced motion, which never steps it) */
+  const alpha = Object.fromEntries(Object.keys(drawSets).map(k => [k, channel(LEVELS.orbit.draw === k ? 1 : 0, 9)]));
   // the target view
   const T = { spin: p0.spin, tilt: p0.tilt, lz: 0, eye: 'drift', solid: 0, veil: 0, level: 'orbit', free: true };
   let section = 'home', dominant = 'orbit';
@@ -202,6 +210,8 @@ export function createStory({ globe, eye, drawSets, still = false, onArrive = ()
   function focus(id) {
     const next = SECTIONS[id] ? id : 'home';
     if (next === section && !takenOver) return;   // the same section again: nothing to do
+    /* a level the visitor chose holds over a section change: it ends when the Earth leaves (leave()), Escape or a press */
+    if (levelHeld() && SECTIONS[next].level === SECTIONS[section]?.level) { section = next; return; }
     section = next;
     takenOver = false; handOn = false; clearTimeout(idleTimer);
     leaveFree();
@@ -210,9 +220,15 @@ export function createStory({ globe, eye, drawSets, still = false, onArrive = ()
   }
 
   // ---------------------------------------------------------------- taking over (controls.mjs)
+  /** The visitor holds a level other than the section's own: it stays until they leave it (LV1). */
+  const levelHeld = () => takenOver && T.level !== (SECTIONS[section] || SECTIONS.home).level;
   function armIdle() {
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => { if (holding) armIdle(); else if (takenOver) release(); }, IDLE_MS);
+    idleTimer = setTimeout(() => {
+      if (holding) armIdle();
+      else if (levelHeld()) handOn = false;   // a drag below orbit lapses for the cursor follow; the level stays
+      else if (takenOver) release();
+    }, IDLE_MS);
   }
   function takeOver({ level = null, lat = null, lon = null, why = 'controls' } = {}) {
     takenOver = true; armIdle();
@@ -258,17 +274,19 @@ export function createStory({ globe, eye, drawSets, still = false, onArrive = ()
     startMove('return');
   }
   function hold(on) { holding = on; if (on) handOn = true; if (!on && takenOver) armIdle(); }
+  /** The Earth has left (next.mjs: presence.e past LEAVE_E): any take-over ends, so the Earth comes back at the section's own view. */
+  function leave() { if (takenOver) release(); }
   const moving = () => Boolean(move);
 
   return {
-    LEVELS, focus, update, takeOver, stepLevel, nudge, release, hold,
+    LEVELS, focus, update, takeOver, stepLevel, nudge, release, hold, leave, levelHeld,
     section: () => section, level: () => dominant, sectionLevel: () => (SECTIONS[section] || SECTIONS.home).level,
     viewLevel: () => T.level, takenOver: () => takenOver, moving, isFree: () => free && !move,
     /** T2a: a drag's take-over: from the drag's start until the take-over lapses or is released. */
     handled: () => holding || (takenOver && handOn),
     solid: () => C.solid.b, veil: () => C.veil.b, eyeDrifts: () => free && !move && T.eye === 'drift',
     debug: () => ({
-      level: dominant, sectionLevel: (SECTIONS[section] || SECTIONS.home).level, viewLevel: T.level, takenOver, moving: Boolean(move),
+      level: dominant, sectionLevel: (SECTIONS[section] || SECTIONS.home).level, viewLevel: T.level, takenOver, held: levelHeld(), moving: Boolean(move),
       zoom: +Math.exp(C.lz.b).toFixed(3), free, moves: stats.moves, cuts: stats.cuts, retargets: stats.retargets,
       userTurn: stats.userTurn, lastPick: stats.lastPick, lastMoveS: stats.lastMoveS, veil: +C.veil.b.toFixed(3), solid: +C.solid.b.toFixed(3),
       fade: Object.fromEntries(Object.entries(alpha).map(([k, c]) => [k, +c.b.toFixed(3)])),

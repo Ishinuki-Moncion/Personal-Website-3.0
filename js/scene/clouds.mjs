@@ -10,7 +10,7 @@
    with the draw set, fades out between zoom 1.6 and 2.6 (the Japan and Tokyo levels are clear) and toward the poles
    from 60 to 72 degrees (the source mirrors its polar data there). On a small Earth (the phone) the outer line goes. */
 import * as THREE from 'three';
-import { GLSL_GLOBE } from './globe.mjs?v=6';
+import { GLSL_GLOBE } from './globe.mjs?v=7';
 
 const FW = 1024, FH = 512;          // the working field (the trial's r4 look was tuned at this size)
 const ZOOM_IN = 1.6, ZOOM_OUT = 2.6;
@@ -148,5 +148,8 @@ export async function createClouds({ globe, data }) {
     lines: () => (!mesh.visible ? 0 : (U.uObjPx.value / U.uDpr.value > 150 ? 3 : 2)),
     zoomK: () => U.uZoomK.value,
     buildMs: +buildMs.toFixed(1),
+    /** LV1d: the blurred field itself, so the Japan level's ink globe washes the same clouds in (japan.mjs setClouds)
+        without a second fetch or build. Read only: this layer's own drawing is unchanged. */
+    field: tex,
   };
 }
