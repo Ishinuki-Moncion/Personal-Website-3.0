@@ -113,7 +113,20 @@ export function mountScene({ probe = null } = {}) {
     light = lightOf(sessionStorage.getItem(LIGHT_KEY));
   } catch { /* privacy modes: the address alone chooses */ }
   weather.setLight(light);
-  const eye = createEye({ globe, detail: tier !== 'lite' });   // lite: a point and its label
+  /* CL2, the live clouds (clouds.mjs, clouds-data.mjs): on at the Earth when images/live/clouds.json is fresh (MAX_AGE_H),
+     loaded after the first frame on the tiers that load the detail (never on lite). ?clouds=0 turns them off for the
+     tab (sessionStorage['scene.clouds'] = '0'; ?clouds=1 back on); ?sceneDebug=1&cloudsAge=ignore shows an old file. */
+  const CLOUDS_KEY = 'scene.clouds';
+  let cloudsOff = query.get('clouds') === '0';
+  try {
+    const asked = query.get('clouds');
+    if (asked === '0' || asked === '1') sessionStorage.setItem(CLOUDS_KEY, asked);
+    cloudsOff = sessionStorage.getItem(CLOUDS_KEY) === '0';
+  } catch { /* privacy modes: the address alone chooses */ }
+  const cloudsAgeIgnore = sceneDebug && query.get('cloudsAge') === 'ignore';
+  let clouds = null;
+  const cloudState = { state: 'off', t: null, ageH: null };
+  const eye =createEye({ globe, detail: tier !== 'lite' });   // lite: a point and its label
   globe.root.add(eye.mesh);
   const veil = createVeil(light && LIGHTS[light].feather !== false ? { feather: LIGHT_FEATHER } : {});   // step 2: copy always wins (story.mjs); T2: softer edges when lit
   /* Step L1: ?sceneDebug=1&veil=0 switches the veil off, so tests and the contrast gate can show that the
@@ -512,6 +525,7 @@ export function mountScene({ probe = null } = {}) {
     applyStage();
     follow();                // T2a: before the globe composes its pose for this frame
     globe.update(dt);
+    if (clouds) clouds.update();   // CL2: the zoom fade
     eye.update(dt, !still && story.eyeDrifts());
     weather.update(dt);
     motion();
@@ -555,7 +569,21 @@ export function mountScene({ probe = null } = {}) {
     if (primeVeil) veil.mesh.visible = false;
     drawCalls = renderer.info.render.calls;
     frames++;
-    if (firstFrameAt === null) { firstFrameAt = performance.now(); starsAtFirstFrame = stars.count; scheduleDetail(); scheduleRestStars(); scheduleLate(); }
+    if (firstFrameAt === null) { firstFrameAt = performance.now(); starsAtFirstFrame = stars.count; scheduleDetail(); scheduleRestStars(); scheduleLate(); loadClouds(); }
+  }
+  /* CL2: the live clouds, after the first frame, once, on the tiers that load the detail. Missing, malformed or stale:
+     nothing is drawn and nothing is logged; the file is not asked for again. */
+  function loadClouds() {
+    if (!profile.detail || cloudsOff || cloudState.state !== 'off') return;
+    cloudState.state = 'loading';
+    Promise.all([fetch(new URL('../../images/live/clouds.json', import.meta.url).href).then(r => (r.ok ? r.json() : null)), import('./clouds-data.mjs?v=1')])
+      .then(([doc, D]) => {
+        const read = D.readClouds(doc, Date.now(), { ignoreAge: cloudsAgeIgnore });
+        Object.assign(cloudState, { state: read.state === 'on' ? 'loading' : read.state, t: read.t, ageH: read.ageH });
+        if (read.state !== 'on') return null;
+        return import('./clouds.mjs?v=1').then(m => m.createClouds({ globe, data: read })).then(c => { clouds = c; clouds.update(); cloudState.state = 'on'; redraw(); });
+      })
+      .catch(() => { clouds = null; if (cloudState.state === 'loading') cloudState.state = 'missing'; });
   }
 
   // ---------------------------------------------------------------- F1a: the Earth's detail, after the first view
@@ -776,7 +804,7 @@ export function mountScene({ probe = null } = {}) {
       renderPath: 'direct', fps: Math.round(fpsEMA), drawCalls, frames, running, programs: renderer.info.programs?.length ?? null,
       dots: globe.count, candidates: globe.candidates, streaks: weather.streaks, ripples: weather.ripples, stars: stars.count,
       beam: profile.beam, mode, arrived, modeLog: [...modeLog], section: story.section(), light: { ...weather.lightDebug(), veil: veilScale },
-      ...story.debug(), arrivals: [...arrivals], veilMask: veil.debug(), controls: controls?.debug() ?? null, late: { ...late }, cities: globe.citiesSet(),
+      ...story.debug(), arrivals: [...arrivals], veilMask: veil.debug(), controls: controls?.debug() ?? null, late: { ...late }, cities: globe.citiesSet(), clouds: { ...cloudState, lines: clouds ? clouds.lines() : 0, zoomK: clouds ? +clouds.zoomK().toFixed(3) : 0, buildMs: clouds ? clouds.buildMs : null },
       canvas: [canvas.width, canvas.height], pixels: canvas.width * canvas.height, pixelBudget: PIXEL_BUDGET,
       presence: { e: +PRES.e.toFixed(4), y: Math.round(PRES.y), closeAt: Math.round(PRES.closeAt), disc: { cx: Math.round(disc.cx), cy: Math.round(disc.cy), r: Math.round(disc.r) } },
       stageBands: (() => { const out = [], zt = scrollY + stage.zone[0] + PRES.dy, zb = scrollY + stage.zone[1] + PRES.dy + PRES.dr * 2; for (let i = 0; i < stage.n && out.length < 8; i++) if (stage.bands[2 * i + 1] > zt && stage.bands[2 * i] < zb) out.push([Math.round(stage.bands[2 * i]), Math.round(stage.bands[2 * i + 1])]); return { zone: [Math.round(zt), Math.round(zb)], in: out, moving: stage.moving.map(m => [Math.round(m.top), Math.round(m.bottom), m.k]) }; })(),

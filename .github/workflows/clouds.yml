@@ -1,0 +1,79 @@
+# The cloud map for the site's Earth (images/live/clouds.json). Live since 2026-11-28.
+#
+# What it does: every 3 hours it fetches the world cloud map, checks it, shrinks it to a small grey picture,
+# writes it into images/live/clouds.json and publishes THAT ONE FILE. The owner allowed this on 2026-11-28
+# ("Yes, timed job"): the public site may update this one file by itself; everything else still waits for his word.
+#
+# The site never serves the downloaded bytes: the picture is decoded and re-encoded here first.
+# If the fetch fails or a check fails, nothing is published and the site's own 9-hour age rule hides the clouds.
+# Source: https://github.com/matteason/live-cloud-maps (free to use; credit "Contains modified EUMETSAT data").
+name: Cloud map
+
+on:
+  schedule:
+    - cron: '17 */3 * * *'   # the source refreshes every 3 hours; 17 past avoids the top-of-hour queue
+  workflow_dispatch:
+
+permissions:
+  contents: write   # to commit images/live/clouds.json
+  pages: write      # to ask for a Pages build after the commit
+
+concurrency:
+  group: cloud-map
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+        with:
+          ref: main
+
+      - name: Fetch, check and shrink the cloud map
+        run: |
+          set -euo pipefail
+          # the picture tools, if this runner image does not carry them
+          command -v convert >/dev/null && command -v identify >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick; }
+          src="https://clouds.matteason.co.uk/images/1024x512/clouds.jpg"
+          tmp="$(mktemp -d)"
+          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+               --max-time 60 --max-filesize 2000000 --retry 2 -o "$tmp/in.jpg" "$src"
+          # it must be the 1024 x 512 JPEG we expect
+          test "$(identify -format '%m %w %h' "$tmp/in.jpg[0]")" = "JPEG 1024 512"
+          convert "$tmp/in.jpg[0]" -resize '256x128!' -colorspace Gray -strip -quality 60 "$tmp/out.jpg"
+          size="$(stat -c %s "$tmp/out.jpg")"
+          test "$size" -gt 1500
+          test "$size" -lt 40000
+          # not blank: the mean brightness is between 3% and 97%
+          mean="$(identify -format '%[fx:int(mean*100)]' "$tmp/out.jpg")"
+          test "$mean" -ge 3
+          test "$mean" -le 97
+          new="$(base64 -w0 "$tmp/out.jpg")"
+          old=""
+          if [ -f images/live/clouds.json ]; then old="$(jq -r '.jpg // ""' images/live/clouds.json)"; fi
+          if [ "$new" = "$old" ]; then
+            echo "The picture has not changed; the file keeps its time."
+            exit 0
+          fi
+          mkdir -p images/live
+          jq -n --arg t "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg jpg "$new" \
+             '{v: 1, t: $t, w: 256, h: 128, jpg: $jpg}' > images/live/clouds.json
+
+      - name: Publish that one file
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git add images/live/clouds.json
+          # nothing else may have changed in the checkout
+          other="$(git status --porcelain | grep -v '^[AM]  images/live/clouds.json$' || true)"
+          if [ -n "$other" ]; then echo "Unexpected changes:"; echo "$other"; exit 1; fi
+          if git diff --cached --quiet; then echo "Nothing to publish."; exit 0; fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "clouds: the world cloud map at $(jq -r .t images/live/clouds.json)"
+          git push origin HEAD:main
+          # a push made with this token may not start a Pages build by itself: ask for one
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/builds" --silent || echo "The build request was refused; the push may have started one."
