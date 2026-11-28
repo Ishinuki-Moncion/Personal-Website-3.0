@@ -49,7 +49,7 @@ export async function loadDetail() {
   });
   const [land05, japan, coastW, coastJ, lights, lightsW, lightsJ] = await Promise.all([
     import('./data/land-05.mjs?v=1'), import('./data/land-japan.mjs?v=1'),
-    import('./data/coast-world.mjs?v=1'), import('./data/coast-japan.mjs?v=1'), import('./data/lights.mjs?v=1'),
+    import('./data/coast-world.mjs?v=2'), import('./data/coast-japan.mjs?v=1'), import('./data/lights.mjs?v=1'),
     image('lights-world.png'), image('lights-japan.png'),
   ]);
   return { land05, japan, coastW, coastJ, lights, lightsW, lightsJ };
@@ -79,9 +79,11 @@ export async function buildFineDots({ land05, japan }, { phone = false, relief =
   const cap = Math.ceil((W5 * H5) / (step * step)) + WJ * HJ;
   const pos = new Float32Array(cap * 4), aux = new Float32Array(cap * 3), geo = new Float32Array(cap * 2);
   let n = 0;
-  /* kind (aux.x): 0 the world; 0.5 the tile's orbit set (every second cell each way: it stands for four cells
-     until the view comes down); 1 the tile's zoom-only set (the other three in four, which arrive as a halftone
-     opens). scale: the seam's feather (below), as a share of the dot's area. */
+  /* kind (aux.x): 0 the world; 0.25 the tile's far set (one cell per block of the world's cell size: the only tile
+     set at orbit); 0.5 its near set (every second cell each way, the far set's cells left out: it arrives first as
+     the view comes down); 1 its zoom-only set (the rest, which arrive as a halftone opens). The globe's dot shader
+     opens them (js/scene/globe.mjs, TILE_NEAR_OPEN / TILE_ZOOM_OPEN). scale: the seam's feather (below), as a
+     share of the dot's area. */
   const push = (lat, lon, spacing, coast, i, kind = 0, scale = 1) => {
     xyz(lat, lon, 1, pos, n * 4);
     const hill = relief(lon, lat) ? 1 : 0;
@@ -110,6 +112,22 @@ export async function buildFineDots({ land05, japan }, { phone = false, relief =
     const p = pause(); if (p) await p;
   }
   const worldCount = n;
+  /* The tile's far set. At orbit the world beside the tile is half-degree cells (one-degree on the phone); the
+     tile's own cells are five (ten) times finer, and even one in four of them read as a sharper patch over Japan
+     and Korea. So each BLOCK x BLOCK block of the tile, the world's cell size, with land in at least 30% of its
+     cells gives ONE cell to the far set: its land cell with the lowest hash, so the set has no rows. */
+  const BLOCK = Math.max(1, Math.round(step * cell5 / cellJ));
+  const farSet = new Uint8Array(WJ * HJ);
+  for (let by = 0; by < HJ; by += BLOCK) for (let bx = 0; bx < WJ; bx += BLOCK) {
+    let best = -1, bestH = 2, landCells = 0;
+    for (let y = by; y < Math.min(HJ, by + BLOCK); y++) for (let x = bx; x < Math.min(WJ, bx + BLOCK); x++) {
+      if (!bit(bj, y * WJ + x)) continue;
+      landCells++;
+      const h = hash(x + 3, y + 5);
+      if (h < bestH) { bestH = h; best = y * WJ + x; }
+    }
+    if (best >= 0 && landCells >= BLOCK * BLOCK * 0.3) farSet[best] = 1;
+  }
   // the Japan tile: every land cell, a third of a cell of jitter so the grid makes no moire at orbit
   for (let y = 0; y < HJ; y++) {
     const lat = BOX.north - (y + 0.5) * cellJ;
@@ -120,12 +138,12 @@ export async function buildFineDots({ land05, japan }, { phone = false, relief =
       const share = tileShare(lat, lon);
       if (share < 0.04) continue;
       const coast = !landJ(x - 1, y) || !landJ(x + 1, y) || !landJ(x, y - 1) || !landJ(x, y + 1);
-      const kind = (x & 1) === 0 && (y & 1) === 0 ? 0.5 : 1;
+      const kind = farSet[y * WJ + x] ? 0.25 : ((x & 1) === 0 && (y & 1) === 0 ? 0.5 : 1);
       push(lat + (hash(x, y + 9) - 0.5) * 0.33 * cellJ, lon + (hash(y, x + 9) - 0.5) * 0.33 * cellJ, spacing, coast, 1e6 + y * WJ + x, kind, share);
     }
     if ((y & 7) === 7) { const p = pause(); if (p) await p; }
   }
-  return { pos: pos.slice(0, n * 4), aux: aux.slice(0, n * 3), geo: geo.slice(0, n * 2), count: n, worldCount, tileCount: n - worldCount, boxCount: n - worldCount };
+  return { pos: pos.slice(0, n * 4), aux: aux.slice(0, n * 3), geo: geo.slice(0, n * 2), count: n, worldCount, tileCount: n - worldCount, boxCount: n - worldCount, block: BLOCK };
 }
 
 /** The land texture: 720 x 360, RG, R = land (255), G = land blurred (box, radius 3 cells each way). */
@@ -157,7 +175,7 @@ export async function buildLandTexture({ land05 }, { pause = () => null } = {}) 
 }
 
 /** Coast segments in object space at radius r: seg = (ax, ay, az, bx, by, bz, kind) per segment.
-    kind 1 = the world coast (faint), 2 = the Japan coast (brighter inside the footprint). */
+    kind 1 = the world coast, 2 = the Japan coast (brighter inside the footprint). */
 export function buildCoastSegments({ coastW, coastJ }, { r = 1.0015 } = {}) {
   const lines = [[coastW.decodeCoastWorld(), 1], [coastJ.decodeCoastJapan(), 2]];
   let total = 0;

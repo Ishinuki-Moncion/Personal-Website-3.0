@@ -25,7 +25,7 @@
    wherever that text sits; the hero is the approved composition and is left as it is. */
 import * as THREE from 'three';
 import { TOKYO, DALLAS, latLonToXYZ, xyzToLatLon } from './data/places.mjs?v=2';
-import { EYE_PERIOD_S } from './eye.mjs?v=3';
+import { EYE_PERIOD_S } from './eye.mjs?v=4';
 
 export const IDLE_MS = 4000;
 const LZ_FULL = Math.log(8);

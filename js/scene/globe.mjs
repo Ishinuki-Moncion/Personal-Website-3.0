@@ -37,6 +37,12 @@ export const FOOT_DEG = 14;
 export const DETAIL_S = 1.2;
 const TOKYO_MARK = 0.0085, MARK_Q = 2.4;     // Tokyo's point: disc radius (Earth radii) and its quad's reach
 const LIGHT_GAIN = 7.0;                     // night lights: glow = 1 - exp(-gain * linear light)
+/* The Japan tile's three dot sets open on sp, the css px between neighbouring tile cells: the near set over NEAR_OPEN,
+   the zoom-only set over ZOOM_OPEN (smoothstep edges); the far set always stands. The dot shader and
+   __sceneDebug().detail.tile read the same numbers. */
+export const TILE_NEAR_OPEN = [0.62, 1.2], TILE_ZOOM_OPEN = [1.2, 2.4];
+const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const glf = v => v.toFixed(2);
 const SWAY_SPIN = 4 * Math.PI / 180, SWAY_TILT = 1.5 * Math.PI / 180, SWAY_S = 48;   // the idle sway round the rest pose
 const IDLE_MAX = (2 * Math.PI) / 180;       // rad/s: the idle never moves faster than the old full turn did
 /* MAX blending: the small Tokyo pieces (markers, pillar, halo sprites) were additive and stacked into a
@@ -268,13 +274,14 @@ export function createGlobe({ candidates, sunHour = null, footDim = 0 }) {
     uniforms: {
       ...pick(U, 'uSun', 'uExposure', 'uReveal', 'uTime', 'uFocus', 'uZoom', 'uDotK', 'uObjPx', 'uFootN', 'uFootK'),
       uLightsW: TX.lightsW, uLightsJ: TX.lightsJ, uDprD: U.uDpr, uFine: { value: fine ? 1 : 0 }, uMeshA: { value: fine ? 0 : 1 },
+      uFarK: { value: 5 },   // the tile's far dots at orbit: radius x the tile cells across a block (5, the phone 10)
       cIce: col(C.ice), cTeal: col(C.teal), cDeep: col(C.deep), cEvent: col(C.event), cEventHot: col(C.eventHot), cHot: col(C.signalHot),
     },
     vertexShader: /* glsl */`
       attribute vec4 aPos; attribute vec3 aAux;   // x city light (coarse), y flicker phase, z relief (0|1)
       attribute vec2 aGeo;                        // u, v on the world's equirectangular images (row 0 = 90N)
       uniform vec3 uSun, cIce, cTeal, cDeep, cEvent, cHot, uFootN, uFootK; uniform float uTime, uReveal, uZoom, uDotK, uObjPx, uFine, uMeshA; uniform vec4 uFocus;
-      uniform sampler2D uLightsW, uLightsJ; uniform float uDprD;
+      uniform sampler2D uLightsW, uLightsJ; uniform float uDprD, uFarK;
       varying vec2 vUv; varying vec3 vCol; varying float vGlow; varying float vQuad; varying float vA;
       void main(){
         vec3 n = aPos.xyz;
@@ -305,15 +312,20 @@ export function createGlobe({ candidates, sunHour = null, footDim = 0 }) {
         float r = aPos.w * rev * (0.8 + 0.25 * glow * glow + (glow > 0.002 ? 0.0 : 0.2)) * (far ? 0.75 : 1.0) * (1.0 + 0.5 * lit) * zk;
         vA = uMeshA;
         if (uFine > 0.5) {
-          /* The tile's level of detail (aAux.x: 0 the world, 0.5 the tile's orbit set, 1 its zoom-only set). At
-             orbit the tile's cells are under a pixel apart, and drawing them all gave a flat pale patch by day. So
-             one cell in four is drawn there, twice the radius (it stands for four), and the rest arrive as the
-             view comes down and the cells open into a halftone. sp: css px between neighbouring tile cells
-             (0.1 degree = 0.0017453 rad). */
+          /* The tile's level of detail (aAux.x: 0 the world; 0.25 the tile's far set, one cell per half-degree block;
+             0.5 its near set, every second cell each way; 1 its zoom-only set, the rest). At orbit the tile's cells
+             are under a pixel apart, and even one in four of them read as a sharper patch over Japan and Korea
+             beside the half-degree world. So only the far set stands there, at uFarK times the radius (the tile
+             cells across its block, 5; 10 on the phone's one-degree world: the world's dot size, as it stands for
+             its block); the near set arrives first as the view comes down (openB, at twice
+             the radius: it stands for four), then the zoom-only set as the cells open into a halftone (open), and
+             every set ends at its own radius. sp: css px between neighbouring tile cells (0.1 degree = 0.0017453 rad). */
           float sp = 0.0017453 * uObjPx / uDprD;
-          float open = smoothstep(1.2, 2.4, sp);
+          float open = smoothstep(${glf(TILE_ZOOM_OPEN[0])}, ${glf(TILE_ZOOM_OPEN[1])}, sp);
+          float openB = smoothstep(${glf(TILE_NEAR_OPEN[0])}, ${glf(TILE_NEAR_OPEN[1])}, sp);
           if (aAux.x > 0.75) vA *= open;
-          else if (aAux.x > 0.25) r *= mix(2.0, 1.0, open);
+          else if (aAux.x > 0.375) { vA *= openB; r *= mix(2.0, 1.0, open); }
+          else if (aAux.x > 0.125) r *= mix(mix(uFarK, 2.0, openB), 1.0, open);
           // never larger than 1.7 css px: the coarser world beside the tile stays a halftone below orbit
           float rpx = min(r * uObjPx, 1.7 * uDprD), rd = max(rpx, 0.75);
           r = rpx / uObjPx;
@@ -562,8 +574,9 @@ export function createGlobe({ candidates, sunHour = null, footDim = 0 }) {
   // ---------------------------------------------------------------- F1a: thin lines on the surface: the eye's footprint and the coasts
   /* One mesh, instanced segments drawn as screen-space ribbons of a fixed css width, depth-tested against the body so
      the far side is hidden like the other lines. kind 0: the footprint (one thin cyan circle round Japan, no fill;
-     gone below orbit), 1: the world coast (faint), 2: the Japan coast (brightest inside the footprint, falling off
-     outside it). The first view draws the footprint alone; the coasts join it when the detail lands (not on lite). */
+     gone below orbit), 1: the world coast (Japan's width, at the strength the Japan coast falls to outside the
+     footprint, so the whole world's outline reads alike), 2: the Japan coast (brighter inside the footprint, falling
+     off to the world's strength outside it). The first view draws the footprint alone; the coasts join it when the detail lands (not on lite). */
   const FOOT_SEG = 120;
   const footSegs = new Float32Array(FOOT_SEG * 7);
   {
@@ -596,16 +609,16 @@ export function createGlobe({ candidates, sunHour = null, footDim = 0 }) {
         vec2 d = sb - sa; vec2 dir = dot(d, d) > 1e-8 ? normalize(d) : vec2(1.0, 0.0); vec2 nrm = vec2(-dir.y, dir.x);
         vec4 c = position.x > 0.5 ? cb : ca;
         vec3 p = position.x > 0.5 ? aB : aA;
-        float core = aKind < 0.5 ? 0.55 : (aKind < 1.5 ? 0.38 : 0.45);       // half the line's width, css px
+        float core = aKind < 0.5 ? 0.55 : 0.45;       // half the line's width, css px
         float hw = core * uDpr + 1.0;                                          // device px, with room for the edge's AA
         c.xy += nrm * position.y * hw / (uRes * 0.5) * c.w;
         vD = position.y * hw; vHw = core * uDpr;
-        // brightness: the footprint (gone below orbit), the faint world coast, the Japan coast by the footprint's falloff
+        // brightness: the footprint (gone below orbit), the world coast, the Japan coast by the footprint's falloff down to the world's
         float f = smoothstep(uFootK.y, uFootK.x, dot(normalize(p), uFootN));
         vec3 nw = normalize(mat3(modelMatrix) * p);
         vec3 w = (modelMatrix * vec4(p, 1.0)).xyz;
         float face = smoothstep(0.0, 0.2, dot(nw, normalize(cameraPosition - w)));
-        vK = (aKind < 0.5 ? 0.85 * uFootA : (aKind < 1.5 ? 0.16 : mix(0.20, 0.75, f))) * face * smoothstep(0.6, 1.0, uReveal);
+        vK = (aKind < 0.5 ? 0.85 * uFootA : (aKind < 1.5 ? 0.58 : mix(0.58, 0.75, f))) * face * smoothstep(0.6, 1.0, uReveal);
         gl_Position = vK < 0.002 ? vec4(2.0, 2.0, 2.0, 1.0) : c;
       }`,
     fragmentShader: GLSL_GLOBE + /* glsl */`
@@ -954,7 +967,9 @@ export function createGlobe({ candidates, sunHour = null, footDim = 0 }) {
       const old = lines.geometry; lines.geometry = lineGeo(all); old.dispose();
       coastCount = coast.count;
     }
-    fineMesh = add(new THREE.Mesh(g, dotMaterial(true)), 3, { screen: true });
+    const fineMat = dotMaterial(true);
+    fineMat.uniforms.uFarK.value = dots.block ?? 5;
+    fineMesh = add(new THREE.Mesh(g, fineMat), 3, { screen: true });
     fineDots = dots;
     detailK = fade ? 0 : 1;
     setDetailK(detailK);
@@ -988,6 +1003,22 @@ export function createGlobe({ candidates, sunHour = null, footDim = 0 }) {
   /** Land dots inside the Japan tile's box: the drawn set (coarse until the detail lands). */
   const japanBoxDots = () => (fineDots ? fineDots.boxCount : coarseBox);
   /** How many of the tile's dots facing the viewer fall inside a screen rectangle (css px): the label test. */
+  /** The tile's three dot sets as the dot shader opens them now: each set's dot count and its opacity weight
+      (far always 1; near and zoom from sp, the css px between neighbouring tile cells). null before the detail lands. */
+  let tileCounts = null;
+  function tileSets() {
+    if (!fineDots) return null;
+    if (!tileCounts) {
+      tileCounts = { far: 0, near: 0, zoom: 0 };
+      for (let i = fineDots.worldCount; i < fineDots.count; i++) {
+        const k = fineDots.aux[i * 3];
+        if (k > 0.75) tileCounts.zoom++; else if (k > 0.375) tileCounts.near++; else if (k > 0.125) tileCounts.far++;
+      }
+    }
+    const sp = 0.0017453 * U.uObjPx.value / U.uDpr.value;
+    return { sp: +sp.toFixed(3), counts: { ...tileCounts }, farK: fineMesh?.material.uniforms.uFarK.value ?? null, far: 1,
+      near: +smooth(TILE_NEAR_OPEN[0], TILE_NEAR_OPEN[1], sp).toFixed(3), zoom: +smooth(TILE_ZOOM_OPEN[0], TILE_ZOOM_OPEN[1], sp).toFixed(3) };
+  }
   const tw = new THREE.Vector3(), to = { x: 0, y: 0 };
   function tileDotsIn(x0, y0, x1, y1) {
     if (!fineDots) return null;
@@ -1005,7 +1036,7 @@ export function createGlobe({ candidates, sunHour = null, footDim = 0 }) {
   return {
     // F1a
     setDetail, footprint, japan, tokyoMarkPx, japanBoxDots, tileDotsIn, relief,
-    detail: () => ({ landed: fineMesh !== null, k: +detailK.toFixed(3), dots: fineDots?.count ?? 0, coarse: coarseCount, coast: coastCount }),
+    detail: () => ({ landed: fineMesh !== null, k: +detailK.toFixed(3), dots: fineDots?.count ?? 0, coarse: coarseCount, coast: coastCount, tile: tileSets() }),
     root, camera, baseCamera, meshes, U, count: coarseCount, dotsDrawn: () => (fineDots && detailK >= 1 ? fineDots.count : coarseCount), candidates: N, resize, update, assemble, settle, hide, tokyo, reveal: () => U.uReveal.value, layout: L,
     setCities, citiesSet: () => citiesSet, orbit, earth, sun: sunObj, tokyoIsNight, geoOf, facing, project, projectBase, marks, placeMarks, setHover, turnTo, hold,
     turning: () => (turn ? { lat: turn.lat, lon: turn.lon, landed: turn.landed } : null),

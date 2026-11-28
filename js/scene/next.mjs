@@ -33,12 +33,12 @@
 import * as THREE from 'three';
 import { classifyTier } from '../quality-policy.mjs?v=5';
 import { composition, isPhone, pixelRatioFor, readHeroAnchors, PIXEL_BUDGET, STAGE } from './layout.mjs?v=1';
-import { createGlobe, INTRO_S } from './globe.mjs?v=4';
+import { createGlobe, INTRO_S } from './globe.mjs?v=5';
 import { createStars } from './stars.mjs?v=1';
 import { createWeather, LIGHTS, LIGHT_FEATHER } from './weather.mjs?v=2';
-import { createEye } from './eye.mjs?v=3';
+import { createEye } from './eye.mjs?v=4';
 import { createOverlay } from './overlay.mjs?v=2';
-import { createStory, createVeil, SECTIONS } from './story.mjs?v=3';
+import { createStory, createVeil, SECTIONS } from './story.mjs?v=4';
 import { PHOTO_PLACES } from './data/places.mjs?v=2';
 
 const scriptStart = performance.now();
@@ -573,7 +573,7 @@ export function mountScene({ probe = null } = {}) {
     detailState.state = 'loading';
     detailState.requestedAt = Math.round(performance.now());
     try {
-      const D = await import('./detail.mjs?v=1');
+      const D = await import('./detail.mjs?v=2');
       const mods = await D.loadDetail();
       detailState.state = 'building';
       const pause = D.slicer(6), rest = async () => { const p = pause(); if (p) await p; };
@@ -600,7 +600,7 @@ export function mountScene({ probe = null } = {}) {
   function loadControls() {
     if (late.controls !== 'waiting') return;
     late.controls = 'loading';
-    import('./controls.mjs?v=4').then(m => {
+    import('./controls.mjs?v=5').then(m => {
       controls = m.createControls({ story, globe, overlay, onChange: redraw, follow: true });
       controls.place(comp, W, H);
       controls.setLevel(story.level());
