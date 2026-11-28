@@ -600,7 +600,7 @@ export function mountScene({ probe = null } = {}) {
   function loadControls() {
     if (late.controls !== 'waiting') return;
     late.controls = 'loading';
-    import('./controls.mjs?v=3').then(m => {
+    import('./controls.mjs?v=4').then(m => {
       controls = m.createControls({ story, globe, overlay, onChange: redraw, follow: true });
       controls.place(comp, W, H);
       controls.setLevel(story.level());

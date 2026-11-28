@@ -161,6 +161,13 @@ export function createControls({ story, globe, overlay, onChange = () => {}, fol
     story.nudge(dx, dy, true); onChange();
   }, { passive: true });
   const endPress = e => { if (press && e.pointerId === press.id) { if (press.dragging) story.hold(false); press = null; } };
+  /* A press that is the globe's never starts a text selection. The press usually lands on the hero's heading (its box
+     spans the page), so the browser anchors a selection there. Clearing it once when the drag begins is enough in
+     Chromium, which then leaves it alone; WebKit starts it again on the next move and paints the label and the name
+     as the hand passes over them (the owner saw this, 2026-11-28). selectstart is asked before every such start, in
+     both engines, so refusing it while the press is ours stops it at the source. It is not a pointer, touch or wheel
+     event: the rule at the top of this file stands, and a press that starts on text is never ours (allowed()). */
+  addEventListener('selectstart', e => { if (press) e.preventDefault(); });
   addEventListener('pointerup', endPress, { passive: true });
   addEventListener('pointercancel', endPress, { passive: true });
   addEventListener('dblclick', e => {

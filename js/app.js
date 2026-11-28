@@ -152,17 +152,50 @@
     try { const s = localStorage.getItem('daikie-lang'); if (s === 'en' || s === 'ja') lang = s; } catch (e) {}
   }
 
+  /* J1 (2026-11-28): the served page's markup is the truth for its own language.
+     ja/index.html ships each Japanese string with <wbr> phrase breaks
+     (tools/build-locale.mjs), and textContent would flatten them, so an element
+     whose served text already matches is left alone, and after a toggle back its
+     served markup is put back. Only elements that carry that markup (<wbr> and
+     the build's .jp-glue spans) are kept this way, so the English page behaves
+     exactly as before. */
+  const servedHtml = new Map();
+  $$('[data-en]').forEach(el => { if (el.querySelector('wbr, .jp-glue')) servedHtml.set(el, el.innerHTML); });
+  function restoreServed(el, target) {
+    if (lang === servedLang && servedHtml.has(el) && el.textContent === target) el.innerHTML = servedHtml.get(el);
+  }
+
+  /* The hero sentence is typed from data-text (and sized by data-ghost), not set
+     as text, so it is swapped here. The Japanese page ships data-text in Japanese
+     with a data-text-en twin; the English page ships data-text in English with a
+     data-text-ja twin (same for data-ghost on .hero-sub). */
+  const subGhost = sub && sub.closest('.hero-sub');
+  const subSources = sub ? {
+    en: [sub.dataset.textEn || sub.dataset.text, subGhost && (subGhost.dataset.ghostEn || subGhost.dataset.ghost)],
+    ja: [sub.dataset.textJa || sub.dataset.text, subGhost && (subGhost.dataset.ghostJa || subGhost.dataset.ghost)]
+  } : null;
+
   function applyLang(animate) {
     const els = $$('[data-en]');
     els.forEach(el => {
       const target = lang === 'ja' ? (el.dataset.ja || el.dataset.en) : el.dataset.en;
       if (el.dataset.ja) el.classList.toggle('is-jp', lang === 'ja');
+      if (!animate && servedHtml.has(el) && el.textContent === target) return;
       if (animate && !reduced && window.scramble && el.offsetParent !== null) {
-        window.scramble(el, target, { duration: 520 });
+        window.scramble(el, target, { duration: 520 }).then(() => restoreServed(el, target));
       } else {
         el.textContent = target;
+        restoreServed(el, target);
       }
     });
+    if (subSources) {
+      const [text, ghost] = subSources[lang];
+      if (text && sub.dataset.text !== text) {
+        sub.dataset.text = text;
+        if (subGhost && ghost) subGhost.dataset.ghost = ghost;
+        if (animate) typeSub();
+      }
+    }
     const btn = $('.lang-btn .swap');
     if (btn) btn.textContent = lang === 'en' ? 'EN / 日本' : '日本 / EN';
     const langBtn = $('.lang-btn');
