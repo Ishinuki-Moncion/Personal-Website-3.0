@@ -24,6 +24,22 @@ const CAM_H = 1.6;                                  // camera height above the w
 const TAN = Math.tan((50 / 2) * Math.PI / 180);     // 50 degree vertical field of view
 const Z0 = 2, Z1 = 40;                              // rain volume depth
 const FOCAL = 12;                                   // focal plane (m)
+// AWAY_GLOW and AWAY_RAIN, today's room light, are GLSL constants in COMMON (7.0 and 0.13); lightDebug reports them
+const AWAY_GLOW = 7.0, AWAY_RAIN = 0.13;
+/* TRIAL T2, the middle sections' light, three variants the owner chooses from (?light=a|b|c, next.mjs). Hues from his
+   photographs of Tokyo Bay at dusk (docs/rebuild/references/owner-bay/, patch averages); the strengths are the
+   scene's own, set low so the copy wins: sky/band are linear multipliers of the colour, floor how much of it the wet
+   floor mirrors, rain how much the rain and the ripple rings catch. bandW: the afterglow's height (NDC). */
+export const LIGHTS = {
+  a: { name: 'teal dusk', sky: '#6da3a8', band: '#d99c8a', skyK: 0.035, bandK: 0.2, bandW: 0.07, floorK: 1.3, rainK: 0.05, veil: 2.2 },
+  b: { name: 'ember', sky: '#bc6d52', band: '#ef7c3e', skyK: 0.012, bandK: 0.21, bandW: 0.07, floorK: 1.3, rainK: 0.05, veil: 2.2 },
+  c: { name: 'cyan', sky: '#2f8fa8', band: '#5cc9de', skyK: 0.03, bandK: 0.18, bandW: 0.07, floorK: 1.3, rainK: 0.05, veil: 0, dim: 1.0, feather: false },
+};
+/* With a variant lit, the floor under the copy is lit too and the veil has more to take away: it is stronger (veil,
+   a factor on the section's veil, capped at 1) and its edge is a wide smoothstep ramp (fourteen cells, 112 css px,
+   against today's four): neighbouring boxes on a row merge into one soft dimming and the light gives way round the
+   copy instead of a dark card being cut out of it. */
+export const LIGHT_FEATHER = [0.013, 0.049, 0.104, 0.175, 0.259, 0.352, 0.45, 0.55, 0.648, 0.741, 0.825, 0.896, 0.951, 0.987];
 
 const COMMON = /* glsl */`
 precision highp float;
@@ -71,6 +87,17 @@ vec3 encode(vec3 c) {               // roll hot values off by the brightest chan
 }
 // screen distance from the disc centre in disc radii
 float discDist(vec2 nd) { return length(vec2((nd.x - uGlobeS.x) * uAspect, nd.y - uGlobeS.y)) / uGlobeSR; }
+// TRIAL T2, the middle sections' light (?light=a|b|c, LIGHTS below): with the Earth away, a dusk of the owner's Tokyo Bay
+// photographs: a sky colour that thins upward and a low afterglow band at the horizon, both mirrored by the wet floor.
+// uLit is 0 with no variant chosen: every term of it is then multiplied out and the scene is today's.
+uniform float uLit, uBandW; uniform vec3 uSkyC, uBandC; uniform vec4 uLightK;   // uLightK: sky, band, floor, rain
+vec3 duskSky(float h, float x) {
+  h = max(h, 0.0);
+  float uneven = 0.65 + 0.7 * vnoise(vec2(x * 0.8 + 2.3, 0.5));   // the afterglow is uneven along the horizon (fixed)
+  vec3 sky = uSkyC * uLightK.x * (0.3 + 0.7 * exp(-h * 2.0));
+  vec3 band = uBandC * uLightK.y * uneven * (0.7 * exp(-h / uBandW) + 0.4 * exp(-h / (uBandW * 3.5)));
+  return sky + band;
+}
 `;
 const FRAG_OUT = 'layout(location = 0) out highp vec4 fragColor;\n';
 
@@ -97,6 +124,9 @@ export function createWeather({ streaks: nStreaks, ripples: nRipples, beam, stil
     uSunQ: { value: new THREE.Vector3(1, 0, 0) },   // F1a: the sun's direction on screen (x, y, unit) and how much of it lies across the view (z)
     uRimMode: { value: new THREE.Vector3(1, 1, 0) },   // x: the inner limb light, y: the amber Tokyo point, z: ring pushed out (device px)
     uEdge: { value: 1 },            // the floor's mirrored halo falls off past the ring's sides
+    // T2 (trial): the middle sections' light; uLit 0 = none chosen, today's scene exactly
+    uLit: { value: 0 }, uBandW: { value: 0.05 }, uSkyC: { value: new THREE.Vector3() }, uBandC: { value: new THREE.Vector3() },
+    uLightK: { value: new THREE.Vector4(0, 0, 0, 0) },
   };
   const meshes = [];
   const add = (geo, mat, order) => { const m = new THREE.Mesh(geo, mat); m.frustumCulled = false; m.renderOrder = order; meshes.push(m); return m; };
@@ -154,6 +184,7 @@ export function createWeather({ streaks: nStreaks, ripples: nRipples, beam, stil
           // night sky: void (the base below), lifted a touch toward the horizon (city haze)
           col = hCol * 0.0007 * exp(-max(dyH, 0.0) * 2.5) * uHaze * awayK;
           col += hCol * (exp(-abs(dyH) * 26.0) * 0.005 + exp(-abs(dyH) * 120.0) * 0.012) * under * uHaze * uGround * awayK;
+          if (uLit * uAway > 0.0) col += duskSky(dyH, n.x * uAspect) * uAway * uLit;   // T2: the dusk over the horizon
         } else {
           // ---- wet ground
           float z = uCamH / (-dyH * uTan);
@@ -220,6 +251,23 @@ export function createWeather({ streaks: nStreaks, ripples: nRipples, beam, stil
           vec3 fogC = hCol * 0.0035 * under * uHaze * awayK;
           col = mix(col, fogC, fogK * 0.9);
           col += hCol * (exp(-abs(dyH) * 26.0) * 0.005 + exp(-abs(dyH) * 120.0) * 0.012) * under * uHaze * awayK;
+          // T2: the wet floor mirrors the dusk. A point hm below the horizon shows the sky hm above it; the damp ground
+          // smears that into long vertical streaks (sharper in the puddles), the ripples bend it and the water's own
+          // swell breaks it into dashes. Drawn after the fog: the far water is where the afterglow lies brightest.
+          if (uLit * uAway > 0.0) {
+            float hm = -dyH;
+            float sB = mix(6.0, 1.5, pud);
+            float hq = max(hm + rn.y * mix(0.03, 0.08, pud) + (wob * 0.025 + mr * 0.012) * (1.0 - pud), 0.0) / sB;
+            float xq = n.x * uAspect + rn.x * 0.35 + wob * 0.18;
+            float brk = smoothstep(0.35, 0.75, vnoise(vec2(G.x * 2.2 + wob * 1.5, z * 1.6)));
+            float ln0 = vnoise(vec2(G.x * 4.5 + wob * 2.0, log(z) * 2.2));
+            float lane = mix(0.15 + 1.4 * ln0 * ln0, 1.0, 0.6 * pud);
+            float rk = (0.06 + 0.95 * F) * mix(0.55, 1.25, pud) * mix(0.2, 1.0, brk) * lane;
+            rk *= mix(0.5, 1.0, smoothstep(2.0, 10.0, z));   // the near water stays dark (bay-3), its puddles only tinted
+            rk *= 1.0 - 0.45 * exp(-hm * 30.0);               // a darker line of far water under the horizon, as in the photographs
+            col += duskSky(hq, xq) * rk * uLightK.z * uAway * uLit;
+            col += uBandC * uLightK.y * length(rn) * pud * 0.3 * uLightK.z * uAway * uLit;   // ripple crests pick up the band
+          }
         }
         // the beam body, seen from the front: evaluated on the vertical plane through the globe's centre,
         // thickest on its axis, with a faint low-frequency mist drifting upward
@@ -312,7 +360,8 @@ export function createWeather({ streaks: nStreaks, ripples: nRipples, beam, stil
       float amb = exp(-abs((sn.x - uMirTokyoX) * uAspect) / uGlobeSR * 7.0) * uTokyoK;
       float fog = exp(-c.y / 26.0);
       vis = uGround * (c.y > uGlobe.z ? mix(0.5 * (1.0 - uSolid), 1.0, smoothstep(0.98, 1.05, discDist(sn))) : 1.0);
-      return (mix(CYAN, HOT, 0.25) * (0.02 + (0.8 * col * uHaze + 0.25 * pool) * uStage) + AMBER * amb * 0.7) * fog * vis;
+      return (mix(CYAN, HOT, 0.25) * (0.02 + (0.8 * col * uHaze + 0.25 * pool) * uStage) + AMBER * amb * 0.7
+        + uBandC * uLightK.w * 0.8 * uAway * uLit) * fog * vis;   // T2: away, a ring on the water catches the dusk
     }
   `;
   const rippleGeo = quadGeometry(-1, 1);
@@ -430,6 +479,7 @@ export function createWeather({ streaks: nStreaks, ripples: nRipples, beam, stil
         float sdT = length(vec2((nh.x - uTokyoS.x) * uAspect, nh.y - uTokyoS.y)) / uGlobeSR;
         float catchA = (1.1 * exp(-dT * 5.0) + front * 0.9 * exp(-sdT * 5.0)) * uTokyoK;
         vec3 col = mix(CYAN, HOT, smoothstep(0.9, 2.6, catchC)) * catchC + AMBER * catchA + vec3(0.30, 0.42, 0.52) * 0.012;
+        col += uBandC * uLightK.w * uAway * uLit;   // T2: away, the rain catches the dusk
         float occl = front > 0.5 ? 1.0 : mix(0.45 * (1.0 - uSolid), 1.0, smoothstep(0.97, 1.04, sd));   // the ring's body hides drops behind it; the hologram dims them
         float far = mix(1.0, 0.35, smoothstep(14.0, 40.0, z));
         vCol = col * occl * far * energy * (0.55 + 0.9 * h2.y) * 0.17;
@@ -511,6 +561,25 @@ export function createWeather({ streaks: nStreaks, ripples: nRipples, beam, stil
   }
   /** TRIAL, the open layout: how far the Earth has gone, 0..1; the room's own light comes up with it. */
   function setAway(a) { U.uAway.value = a; }
+  /** T2: how much of the light is on, 0..1 (next.mjs lowers it evenly where a section's text needs it, in place of boxes). */
+  function setLit(k) { U.uLit.value = lightKey ? Math.max(0, Math.min(1, k)) : 0; }
+  /** T2 (trial): the middle sections' light, a key of LIGHTS or null (today's scene). */
+  let lightKey = null;
+  function setLight(key) {
+    const L = key ? LIGHTS[key] : null;
+    lightKey = L ? key : null;
+    U.uLit.value = L ? 1 : 0;
+    const lin = hex => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };   // sRGB hex to the linear working space
+    U.uSkyC.value.set(...(L ? lin(L.sky) : [0, 0, 0]));
+    U.uBandC.value.set(...(L ? lin(L.band) : [0, 0, 0]));
+    U.uLightK.value.set(L?.skyK ?? 0, L?.bandK ?? 0, L?.floorK ?? 0, L?.rainK ?? 0);
+    U.uBandW.value = L?.bandW ?? 0.05;
+  }
+  function lightDebug() {
+    const L = lightKey ? LIGHTS[lightKey] : null;
+    return { variant: lightKey, lit: U.uLit.value, away: +U.uAway.value.toFixed(4), sky: L?.sky ?? null, band: L?.band ?? null,
+      k: U.uLightK.value.toArray().map(v => +v.toFixed(4)), bandW: U.uBandW.value, glow: AWAY_GLOW, rain: AWAY_RAIN };
+  }
   function setRing(solid, rim, outPx) { U.uSolid.value = solid; U.uRim.value = rim; U.uRimMode.value.set(solid, solid, outPx); }
 
   // ---------------------------------------------------------------- clock: the wind leans, with slow gusts
@@ -524,5 +593,5 @@ export function createWeather({ streaks: nStreaks, ripples: nRipples, beam, stil
     U.uTime.value = time;
   }
 
-  return { meshes, U, streaks: nStreaks, ripples: nRipples, place, setTokyo, setRing, setSun, setStage, setAway, update };
+  return { meshes, U, streaks: nStreaks, ripples: nRipples, place, setTokyo, setRing, setSun, setStage, setAway, setLight, setLit, lightDebug, update };
 }

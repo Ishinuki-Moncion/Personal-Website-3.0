@@ -1311,6 +1311,10 @@ body.proj-rail .proj-tech { text-align: right; max-width: none; min-width: 30ch;
 /* Copy always wins, for the small controls the veil does not reach: with the new scene the hero's second button and
    Contact's link pills stand on the floor's reflections, where 12 and 13 px cyan type fell under 4.5:1 on phones
    (qa:contrast, 2026-11-27). A bed of the page's own ink under them; hover and press keep their own fills. */
+/* The middle sections have light of their own (2026-11-28: the cyan dusk the owner chose), and he asked for no
+   visible shadow behind the text. So where the scene is lit the quiet text steps up one tone instead of the scene
+   stepping down: --text-3 (5.67:1 on the page's ink) fell to 3.3:1 on the lit horizon; --text-2 holds 4.5:1 there. */
+html[data-scene="next"] :is(#about, #work, #gallery, #projects) { --muted: var(--text-2); }
 html[data-scene="next"] .hero-cta .cta-ghost:not(:hover, :active),
 html[data-scene="next"] #contact .pill:not(:hover, :active) { background: var(--text-bed); }
 

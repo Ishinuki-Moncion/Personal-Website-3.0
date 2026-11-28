@@ -35,10 +35,10 @@ import { classifyTier } from '../quality-policy.mjs?v=5';
 import { composition, isPhone, pixelRatioFor, readHeroAnchors, PIXEL_BUDGET, STAGE } from './layout.mjs?v=1';
 import { createGlobe, INTRO_S } from './globe.mjs?v=4';
 import { createStars } from './stars.mjs?v=1';
-import { createWeather } from './weather.mjs?v=1';
+import { createWeather, LIGHTS, LIGHT_FEATHER } from './weather.mjs?v=2';
 import { createEye } from './eye.mjs?v=3';
 import { createOverlay } from './overlay.mjs?v=2';
-import { createStory, createVeil, SECTIONS } from './story.mjs?v=2';
+import { createStory, createVeil, SECTIONS } from './story.mjs?v=3';
 import { PHOTO_PLACES } from './data/places.mjs?v=2';
 
 const scriptStart = performance.now();
@@ -100,13 +100,28 @@ export function mountScene({ probe = null } = {}) {
     rest: globe.hero(),   // the sky is the room's: it stays put when the Earth turns
   });
   const weather = createWeather({ streaks: profile.streaks, ripples: profile.ripples, beam: profile.beam, still });
+  /* T2, the middle sections' light (weather.mjs LIGHTS). The owner chose the cyan (2026-11-28), with the veil as it
+     was: it is the look. ?light=a|b shows the other two he saw and ?light=0 the unlit floor, each kept for the tab in
+     sessionStorage['scene.light'], for comparing; ?light=c goes back to the look. */
+  const LIGHT_KEY = 'scene.light', DEFAULT_LIGHT = 'c';
+  const isLight = v => v === 'a' || v === 'b' || v === 'c';
+  const lightOf = v => (v === '0' ? null : isLight(v) ? v : DEFAULT_LIGHT);
+  let light = lightOf(query.get('light'));
+  try {
+    const asked = query.get('light');
+    if (asked === '0' || isLight(asked)) sessionStorage.setItem(LIGHT_KEY, asked);
+    light = lightOf(sessionStorage.getItem(LIGHT_KEY));
+  } catch { /* privacy modes: the address alone chooses */ }
+  weather.setLight(light);
   const eye = createEye({ globe, detail: tier !== 'lite' });   // lite: a point and its label
   globe.root.add(eye.mesh);
-  const veil = createVeil();               // step 2: copy always wins (story.mjs)
+  const veil = createVeil(light && LIGHTS[light].feather !== false ? { feather: LIGHT_FEATHER } : {});   // step 2: copy always wins (story.mjs); T2: softer edges when lit
   /* Step L1: ?sceneDebug=1&veil=0 switches the veil off, so tests and the contrast gate can show that the
      desktop layout no longer needs it. Without sceneDebug=1 the switch is ignored. */
   const veilOff = sceneDebug && query.get('veil') === '0';
-  const veilK = () => (veilOff ? 0 : story.veil());
+  /* T2: a variant lights the floor under the copy, so its veil is stronger (LIGHTS[].veil; 1 with none chosen) */
+  const veilScale = light ? LIGHTS[light].veil : 1;
+  const veilK = () => (veilOff ? 0 : Math.min(1, story.veil() * veilScale));
   /* Step L1: the eye's words for Tokyo, one source for its label and for the page's status line. */
   const eyeWords = () => (globe.tokyoIsNight() ? 'NIGHT OVER TOKYO' : 'DAY OVER TOKYO');
   const statusLine = document.querySelector('.sys-online');
@@ -511,6 +526,9 @@ export function mountScene({ probe = null } = {}) {
     weather.setTokyo(qx, qy, smooth(0, 0.35, tk.facing) * globe.fade() * (globe.zoom() > 1.001 ? 1 - smooth(0.95, 1.1, Math.hypot(qx, qy)) : 1));
     weather.setSun(globe.U.uSun.value.x, globe.U.uSun.value.y);   // F1a: the ring lifts on the sun's side
     globe.footprint();
+    /* T2: the look has no boxes behind the text (the owner saw them as shadows). The section's light comes down evenly
+       instead, by the section's own veil value (story.mjs SECTIONS) times the variant's dim. */
+    if (light && LIGHTS[light].dim) weather.setLit(1 - LIGHTS[light].dim * story.veil());
     veil.update(veilK(), W, H, comp, DPR);
     /* the status line under the hero (aria-hidden, as before) says what the eye says about Tokyo */
     const nightNow = globe.tokyoIsNight();
@@ -582,7 +600,7 @@ export function mountScene({ probe = null } = {}) {
   function loadControls() {
     if (late.controls !== 'waiting') return;
     late.controls = 'loading';
-    import('./controls.mjs?v=2').then(m => {
+    import('./controls.mjs?v=3').then(m => {
       controls = m.createControls({ story, globe, overlay, onChange: redraw, follow: true });
       controls.place(comp, W, H);
       controls.setLevel(story.level());
@@ -757,7 +775,7 @@ export function mountScene({ probe = null } = {}) {
       dpr: Math.min(globalThis.devicePixelRatio || 1, profile.dprCap), rendererDpr: renderer.getPixelRatio(),
       renderPath: 'direct', fps: Math.round(fpsEMA), drawCalls, frames, running, programs: renderer.info.programs?.length ?? null,
       dots: globe.count, candidates: globe.candidates, streaks: weather.streaks, ripples: weather.ripples, stars: stars.count,
-      beam: profile.beam, mode, arrived, modeLog: [...modeLog], section: story.section(),
+      beam: profile.beam, mode, arrived, modeLog: [...modeLog], section: story.section(), light: { ...weather.lightDebug(), veil: veilScale },
       ...story.debug(), arrivals: [...arrivals], veilMask: veil.debug(), controls: controls?.debug() ?? null, late: { ...late }, cities: globe.citiesSet(),
       canvas: [canvas.width, canvas.height], pixels: canvas.width * canvas.height, pixelBudget: PIXEL_BUDGET,
       presence: { e: +PRES.e.toFixed(4), y: Math.round(PRES.y), closeAt: Math.round(PRES.closeAt), disc: { cx: Math.round(disc.cx), cy: Math.round(disc.cy), r: Math.round(disc.r) } },

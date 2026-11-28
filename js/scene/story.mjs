@@ -48,9 +48,11 @@ const HERO_VIEW = { level: 'orbit', look: 'hero', eye: 'drift' };
 export const SECTIONS = {
   /* veil 0.4, not 1: with the Earth gone there is only the room's low light under the copy, and a full veil cut
      dark boxes out of the glow along the horizon. Projects takes 0.75: its rows carry small muted lines (14 px on
-     phones) that stood on the horizon's glow at 4.04:1 with 0.4 and 4.45:1 with 0.6 (qa:contrast, 2026-11-27) */
+     phones) that stood on the horizon's glow at 4.04:1 with 0.4 and 4.45:1 with 0.6 (qa:contrast, 2026-11-27).
+     0.85 since 2026-11-28: with the cyan light the value lowers the section's light evenly (no boxes), and 0.75
+     left that line at exactly 4.50:1 */
   home: { ...HERO_VIEW, veil: 0 }, about: { ...HERO_VIEW, veil: 0.4 }, work: { ...HERO_VIEW, veil: 0.4 },
-  gallery: { ...HERO_VIEW, veil: 0.4 }, projects: { ...HERO_VIEW, veil: 0.75 }, contact: { ...HERO_VIEW, veil: 0 },
+  gallery: { ...HERO_VIEW, veil: 0.4 }, projects: { ...HERO_VIEW, veil: 0.85 }, contact: { ...HERO_VIEW, veil: 0 },
 };
 const SECTIONS_TABLE = SECTIONS;   // createStory's own SECTIONS shadows the export
 const wrapPi = a => Math.atan2(Math.sin(a), Math.cos(a));
@@ -295,7 +297,7 @@ const FEATHER = [0.1, 0.24, 0.45, 0.72];      // the mask's soft edge, outermost
 const VOID = [5 / 255, 6 / 255, 10 / 255];
 const SKIP = '.sr-only, .scene-levels, .scene-targets, script, style, noscript, template';
 
-export function createVeil() {
+export function createVeil({ feather = FEATHER } = {}) {   // T2: a lit variant passes a wider, softer feather
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d', { alpha: false });
   const tex = new THREE.CanvasTexture(canvas);
@@ -389,12 +391,12 @@ export function createVeil() {
     any = false;
     for (const [x, yd, w, h, k = 1] of boxes) {
       const top = yd - y;
-      if (top > H + FEATHER.length * CELL || top + h < -FEATHER.length * CELL || x > W || x + w < 0) continue;
+      if (top > H + feather.length * CELL || top + h < -feather.length * CELL || x > W || x + w < 0) continue;
       const x0 = Math.floor(x / CELL), y0 = Math.floor(top / CELL);
       const x1 = Math.ceil((x + w) / CELL), y1 = Math.ceil((top + h) / CELL);
       // the feather: softer rings of cells from the outside in, then the box itself
-      for (let i = 0; i <= FEATHER.length; i++) {
-        const ring = FEATHER.length - i, v = Math.round(255 * k * (i < FEATHER.length ? FEATHER[i] : 1));
+      for (let i = 0; i <= feather.length; i++) {
+        const ring = feather.length - i, v = Math.round(255 * k * (i < feather.length ? feather[i] : 1));
         ctx.fillStyle = `rgb(${v},${v},${v})`;
         ctx.fillRect(x0 - ring, y0 - ring, x1 - x0 + 2 * ring, y1 - y0 + 2 * ring);
       }
